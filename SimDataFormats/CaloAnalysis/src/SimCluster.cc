@@ -28,36 +28,14 @@ SimCluster::SimCluster(const SimTrack &simtrk) {
   theMomentum_.SetPxPyPzE(
       simtrk.momentum().px(), simtrk.momentum().py(), simtrk.momentum().pz(), simtrk.momentum().E());
   pdgId_ = simtrk.type();
+
+  impactMomentum_ = simtrk.getMomentumAtBoundary();
+  impactPoint_ = simtrk.getPositionAtBoundary();
 }
 
 SimCluster::SimCluster(EncodedEventId eventID, uint32_t particleID) {
   event_ = eventID;
   particleId_ = particleID;
-}
-
-SimCluster::SimCluster(const std::vector<SimTrack> &simtrks, int pdgId) {
-  if (simtrks.size() > 0) {
-    double sumPx = 0.;
-    double sumPy = 0.;
-    double sumPz = 0.;
-    double sumE = 0.;
-
-    for (const SimTrack &t : simtrks) {
-      addG4Track(t);
-      sumPx += t.momentum().px();
-      sumPy += t.momentum().py();
-      sumPz += t.momentum().pz();
-      sumE += t.momentum().E();
-    }
-
-    theMomentum_.SetPxPyPzE(sumPx, sumPy, sumPz, sumE);
-
-    // set event and particle ID (!= pdgID) from the first track for consistency
-    event_ = simtrks[0].eventId();
-    particleId_ = simtrks[0].trackId();
-  }
-
-  pdgId_ = pdgId;
 }
 
 math::XYZTLorentzVectorF SimCluster::impactMomentumMuOnly() const {
