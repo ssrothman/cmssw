@@ -1063,7 +1063,7 @@ simmerger::simmerger(const edm::ParameterSet& iConfig) :
     tokenSimTracks(consumes<edm::SimTrackContainer>(edm::InputTag("g4SimHits"))),
     tokenSimVertices(consumes<edm::SimVertexContainer>(edm::InputTag("g4SimHits"))),
     simClustersToken_(consumes<SimClusterCollection>(edm::InputTag("mix:MergedCaloTruth"))),
-    simTrackToSimClusterToken_(consumes<edm::Association<SimClusterCollection>>(edm::InputTag("simTrackToSimCluster")))
+    simTrackToSimClusterToken_(consumes<edm::Association<SimClusterCollection>>(edm::InputTag("simTrackToSimCluster"))),
     mergeThresholdsTransv_(iConfig.getParameter<vector<double > > ( "MergeTheresholdsTransv" )),
     mergeThresholdsLongitud_(iConfig.getParameter<vector<double > > ( "MergeTheresholdsLongitud" ))
     {
