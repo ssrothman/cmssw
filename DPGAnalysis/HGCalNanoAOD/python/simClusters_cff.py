@@ -37,12 +37,17 @@ simClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
     )
 )
 
+simClusterToCaloPart = cms.EDProducer("SimClusterToCaloParticleAssociationProducer",
+    caloParticles = cms.InputTag("mix:MergedCaloTruth"),
+    simClusters = cms.InputTag("mix:MergedCaloTruth"),
+)
+
 simClusterToCaloPartTable = cms.EDProducer("SimClusterToCaloParticleIndexTableProducer",
     cut = simClusterTable.cut,
     src = simClusterTable.src,
     objName = simClusterTable.name,
     branchName = cms.string("CaloPart"),
-    objMap = cms.InputTag("mix:simClusterToCaloParticle"),
+    objMap = cms.InputTag("simClusterToCaloPart"),
     docString = cms.string("Index of CaloPart containing SimCluster")
 )
 
@@ -75,6 +80,6 @@ mergedToUnmergedSCTable = cms.EDProducer("SimClusterToSimClustersIndexTableProdu
     docString = cms.string("Index of Merged SimCluster containing SimCluster")
 )
 
-simClusterTables = cms.Sequence(simClusterTable+simClusterToCaloPartTable)
+simClusterTables = cms.Sequence(simClusterTable+simClusterToCaloPart+simClusterToCaloPartTable)
 
 mergedSimClusterTables = cms.Sequence(hgcSimTruth+mergedSimClusterTable+hgcSimTruthDR+mergedSimClusterDRTable+mergedToUnmergedSCTable+simClusterToMergedSCTable)

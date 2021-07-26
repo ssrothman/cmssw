@@ -61,8 +61,8 @@ hgcSimHitsSequence = cms.Sequence(hgcEESimHitsTable+hgcHEbackSimHitsTable+hgcHEf
                 +hgcEESimHitsPositionTable
                 +hgcHEfrontSimHitsPositionTable
                 +hgcHEbackSimHitsPositionTable
-                +hgcEEHitsToSimClusterTable
-                +hgcHEfrontHitsToSimClusterTable
-                +hgcHEbackHitsToSimClusterTable
+                #+hgcEEHitsToSimClusterTable
+                #+hgcHEfrontHitsToSimClusterTable
+                #+hgcHEbackHitsToSimClusterTable
                 +hgcHEfrontSimHitsTable+hgcHEbackSimHitsTable)
 

@@ -29,13 +29,18 @@ simTrackTable = cms.EDProducer("SimpleSimTrackFlatTableProducer",
     )
 )
 
+simTrackToSimCluster = cms.EDProducer("SimTrackToSimClusterAssociationProducer",
+    simClusters = cms.InputTag("mix:MergedCaloTruth"),
+    simTracks = cms.InputTag("g4SimHits"),
+)
+
 simTrackToSimClusterTable = cms.EDProducer("SimTrackToSimClusterIndexTableProducer",
     cut = simTrackTable.cut,
     src = simTrackTable.src,
     objName = simTrackTable.name,
     branchName = cms.string("SimCluster"),
-    objMap = cms.InputTag("mix:simTrackToSimCluster"),
+    objMap = cms.InputTag("simTrackToSimCluster"),
     docString = cms.string("SimCluster containing track")
 )
 
-simTrackTables = cms.Sequence(simTrackTable+simTrackToSimClusterTable)
+simTrackTables = cms.Sequence(simTrackTable+simTrackToSimCluster+simTrackToSimClusterTable)
