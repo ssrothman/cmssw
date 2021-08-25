@@ -113,8 +113,16 @@ BoostedJetONNXJetTagsProducer::BoostedJetONNXJetTagsProducer(const edm::Paramete
       const auto &group_pset = prep_pset.getParameterSet(group_name);
       auto &prep_params = prep_info_map_[group_name];
       prep_params.var_names = group_pset.getParameter<std::vector<std::string>>("var_names");
-      prep_params.min_length = group_pset.getParameter<unsigned>("var_length");
-      prep_params.max_length = prep_params.min_length;
+      //prep_params.min_length = group_pset.getParameter<unsigned>("var_length");
+      //prep_params.max_length = prep_params.min_length;
+      if (group_pset.exists("var_length")) {
+        prep_params.min_length = group_pset.getParameter<unsigned>("var_length");
+        prep_params.max_length = prep_params.min_length;
+      } else {
+        prep_params.min_length = group_pset.getParameter<unsigned>("min_length");
+        prep_params.max_length = group_pset.getParameter<unsigned>("max_length");
+        input_shapes_.push_back({1, (int64_t)prep_params.var_names.size(), -1});
+      }
       const auto &var_info_pset = group_pset.getParameterSet("var_infos");
       for (const auto &var_name : prep_params.var_names) {
         const auto &var_pset = var_info_pset.getParameterSet(var_name);
