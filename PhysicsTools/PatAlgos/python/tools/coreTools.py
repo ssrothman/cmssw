@@ -148,19 +148,42 @@ class RemoveMCMatching(ConfigToolBase):
             if( names[obj] == 'Jets'      or names[obj] == 'All' ):
                 print("removing MC dependencies for jets")
                 jetPostfixes = []
+                print("Jet producers:")
                 for mod in process.producerNames().split():
                     if mod.startswith('patJets') and getattr(process,mod).type_() == "PATJetProducer":
+                        print(mod)
                         jetPostfixes.append(getattr(process, mod).label_().replace("patJets",""))
                 for pfix in jetPostfixes:
                     ## remove mc extra configs for jets
                     jetProducer = getattr(process, jetCollectionString()+pfix)
+                    print("pfix={}".format(pfix))
+                    print(jetProducer)
+                    jetProducerNullArgs = {
+                        "addGenPartonMatch": False,
+                        "embedGenPartonMatch": False,
+                        "genPartonMatch": '',
+                        "addGenJetMatch": False,
+                        "genJetMatch": '', 
+                        "getJetMCFlavour": False, 
+                        "useLegacyJetMCFlavour": False, 
+                        "addJetFlavourInfo": False, 
+                        "JetPartonMapSource": '', 
+                        "JetFlavourInfoSource": '', 
+                    }
+                    for argName, argVal in jetProducerNullArgs.iteritems():
+                        if hasattr(jetProducer, argName):
+                            setattr(jetProducer, argName, argVal)
+                    attrsToDelete += ['slimmedGenJets'+pfix]
+                    '''
                     jetProducer.addGenPartonMatch   = False
                     jetProducer.embedGenPartonMatch = False
                     #attrsToDelete += [jetProducer.genPartonMatch.getModuleLabel()] #MM needed for potential jet backuping
-                    jetProducer.genPartonMatch      = ''
+                    if hasattr(jetProducer, "genPartonMatch"):
+                        jetProducer.genPartonMatch      = ''
                     jetProducer.addGenJetMatch      = False
                     #attrsToDelete += [jetProducer.genJetMatch.getModuleLabel()]  #MM needed for potential jet backuping
-                    jetProducer.genJetMatch         = ''
+                    if hasattr(jetProducer, "genJetMatch"):
+                        jetProducer.genJetMatch         = ''
                     jetProducer.getJetMCFlavour     = False
                     jetProducer.useLegacyJetMCFlavour = False
                     jetProducer.addJetFlavourInfo   = False
@@ -169,6 +192,7 @@ class RemoveMCMatching(ConfigToolBase):
                     #attrsToDelete += [jetProducer.JetFlavourInfoSource.getModuleLabel()]  #MM needed for potential jet backuping
                     jetProducer.JetFlavourInfoSource = ''
                     attrsToDelete += ['slimmedGenJets'+pfix]
+                    '''
                 ## adjust output
                 for outMod in outputModules:
                     if hasattr(process,outMod):
