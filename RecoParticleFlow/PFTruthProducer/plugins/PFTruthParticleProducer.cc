@@ -170,6 +170,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       TrackingParticleRefVector tprefs;
       const SimClusterRefVector& screfs = cp.simClusters();
 
+      bool hasfulltrack=false;
       //match the tracking particle(s)
       for(size_t i=0; i< tpCollection->size(); i++){
           if(std::find(matchedtptocp.begin(),matchedtptocp.end(), i) != matchedtptocp.end())
@@ -178,21 +179,48 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
           TrackingParticleRef tpref(tpCollection, i);
           if(tpref->g4Tracks().size()<1)
               continue;
+
+          if(!tpref->charge())
+              continue; //only charged ones
+
+          if(tpref->numberOfTrackerLayers() < 5)
+              continue; //not reconstrucable: simple approx for now needs to be refined with tracking POG selection on input level
+
+          if(tpref->pt() < 0.5)//throw out very low energy: simple approx...
+              continue;
+
           //go through whole history
           auto stp = getRoot(& tpref->g4Tracks().at(0),
                   *stCollection,*svCollection, trackIdToTrackIdxAsso);
 
+
           //match
+          //this needs some more logic
           if(stp->trackId() == cp.g4Tracks().at(0).trackId()
                   && stp->eventId() == cp.g4Tracks().at(0).eventId()){
               matchedtptocp.push_back(i);
               tprefs.push_back(tpref);
+
+              std::cout << "added track " << tpref->pdgId() << " "<< tpref->momentum() << ", pt " << tpref->pt()<< std::endl;//DEBUG
           }
+
+          for(const auto g4t: tpref->g4Tracks()){
+              if(g4t.trackId() == cp.g4Tracks().at(0).trackId()
+                      && g4t.eventId() == cp.g4Tracks().at(0).eventId()){
+                  hasfulltrack=true;
+              }
+          }
+
       }
+
+      std::cout << "PF particle with "<< tprefs.size() << " attached tracking particles " <<std::endl;//DEBUG
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setP4(cp.p4());
       pftp.setPdgId(cp.pdgId());
-      pftp.setCharge(cp.charge());
+      if(hasfulltrack)
+          pftp.setCharge(cp.charge());
+      else
+          pftp.setCharge(0);
       int vidx = cp.g4Tracks().at(0).vertIndex();
       auto vertpos = svCollection->at(vidx).position();
 
@@ -202,7 +230,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       idealPFTruth.push_back(pftp);
   }
 
-  std::cout << "ideal PF truth built, splitting" << std::endl;
+  std::cout << "ideal PF truth built, splitting" << std::endl;//DEBUG
 
 
   // --- now we have the ideal PF truth, far from realistic.
@@ -221,7 +249,10 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
 
       //consider the ones without tracking particles // this is not the same as the ones without charge,
       // because e.g. a very early converting photon would have charge 0, but two tracking particles associated
-      if(! pftp.trackingParticles().size()) {
+      if(! pftp.charge()) {
+
+          size_t pre = PFtruth->size();
+
           for(const auto& sc: pftp.simClusters()){
               //create PF particle per SimCluster
               //vertex position will remain the initial CP one (timing)
@@ -235,6 +266,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
               npftp.setPdgId(sc->pdgId()); //to be discussed
               PFtruth->push_back(npftp);
           }
+          std::cout << "Split PF Particle to "<< PFtruth->size()-pre << " neutrals " <<std::endl;//DEBUG
           continue;
       }
       //remaining: the ones that have tracking particles associated
@@ -257,7 +289,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   }
 
 
-  std::cout << "putting PFTruthParticles" << std::endl;
+  std::cout << "putting PFTruthParticles" << std::endl;//DEBUG
 
   iEvent.put(std::move(PFtruth));
 
