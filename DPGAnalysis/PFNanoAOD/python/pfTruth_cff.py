@@ -6,8 +6,8 @@ from DPGAnalysis.TrackNanoAOD.trackingParticles_cff import trackingParticleTable
 pfTruthParticles = cms.EDProducer("PFTruthParticleProducer",
     trackingParticles= cms.InputTag("mix:MergedTrackTruth"),
     caloParticles= cms.InputTag("mix:MergedCaloTruth"),
-    simVertices= cms.InputTag("SimVertices"),
-    simTracks= cms.InputTag("SimTracks"),
+    simVertices= cms.InputTag("g4SimHits"),
+    simTracks= cms.InputTag("g4SimHits"),
 )
 
 pfTruthTable = cms.EDProducer("SimplePFTruthParticleFlatTableProducer",
