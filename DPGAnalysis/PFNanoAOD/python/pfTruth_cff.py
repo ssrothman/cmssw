@@ -41,5 +41,5 @@ trackingPartToPFTruthTable = cms.EDProducer("TrackingParticleToPFTruthParticleIn
     docString = cms.string("PFTruth particle to which the TrackingPart is associated")
 )
 
-pfTruth = cms.Sequence(pfTruthParticles+pfTruthTable+simClusterToPFTruthTable+trackingPartToPFTruthTable)
+pfTruth = cms.Sequence(pfTruthParticles+pfTruthTable)#+simClusterToPFTruthTable+trackingPartToPFTruthTable)
 

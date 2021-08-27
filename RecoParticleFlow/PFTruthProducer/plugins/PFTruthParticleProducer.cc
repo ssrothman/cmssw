@@ -157,6 +157,12 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   std::vector<size_t> matchedtptocp;
   PFTruthParticleCollection idealPFTruth;
 
+  // Used to fill the associations in the ntuples
+  //auto tpAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
+  //auto scAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
+
+  //edm::Association<PFTruthParticleCollection>::Filler tpFiller(*tpAssoc);
+
   for(const auto& cp: *cpCollection){
 
       TrackingParticleRefVector tprefs;
@@ -215,8 +221,8 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
               //create PF particle per SimCluster
               //vertex position will remain the initial CP one (timing)
               auto npftp = pftp;
-              npftp.trackingParticles().clear();
-              npftp.simClusters().clear();
+              npftp.clearTrackingParticles();
+              npftp.clearSimClusters();
               npftp.addSimCluster(sc);
               //this is now defined to be a neutral PF Particle. Even if the SC happens to be charged
               npftp.setCharge(0);

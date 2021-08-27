@@ -47,8 +47,8 @@ public:
     void addSimCluster(const SimClusterRef sc);
     void addTrackingParticle(const TrackingParticleRef tp);
 
-    SimClusterRefVector& simClusters() { return simClusters_; }
-    TrackingParticleRefVector& trackingParticles() { return trackingParticles_; }
+    void clearSimClusters() { simClusters_.clear(); }
+    void clearTrackingParticles() { trackingParticles_.clear(); }
     const SimClusterRefVector& simClusters() const { return simClusters_; }
     const TrackingParticleRefVector& trackingParticles() const { return trackingParticles_; }
     size_t nSimCluster() const { return simClusters_.size(); }
