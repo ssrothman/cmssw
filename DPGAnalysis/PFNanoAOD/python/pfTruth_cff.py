@@ -4,8 +4,10 @@ from DPGAnalysis.HGCalNanoAOD.simClusters_cff import simClusterTable
 from DPGAnalysis.TrackNanoAOD.trackingParticles_cff import trackingParticleTable
 
 pfTruthParticles = cms.EDProducer("PFTruthParticleProducer",
-    simClusters = cms.InputTag("mix:MergedCaloTruth"),
     trackingParticles= cms.InputTag("mix:MergedTrackTruth"),
+    caloParticles= cms.InputTag("mix:MergedCaloTruth"),
+    simVertices= cms.InputTag("g4SimHits"),
+    simTracks= cms.InputTag("g4SimHits"),
 )
 
 pfTruthTable = cms.EDProducer("SimplePFTruthParticleFlatTableProducer",
@@ -39,5 +41,5 @@ trackingPartToPFTruthTable = cms.EDProducer("TrackingParticleToPFTruthParticleIn
     docString = cms.string("PFTruth particle to which the TrackingPart is associated")
 )
 
-pfTruth = cms.Sequence(pfTruthParticles+pfTruthTable+simClusterToPFTruthTable+trackingPartToPFTruthTable)
+pfTruth = cms.Sequence(pfTruthParticles+pfTruthTable)#+simClusterToPFTruthTable+trackingPartToPFTruthTable)
 
