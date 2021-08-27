@@ -26,3 +26,5 @@
 
     <flags EDM_PLUGIN="1" />
 </library>
+
+<flags CXXFLAGS="-g"/>

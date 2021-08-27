@@ -121,8 +121,10 @@ const SimTrack* PFTruthParticleProducer::getRoot(
             break; //no vertex
         const SimVertex& vertex = simvertices.at(vidx);
         int stid = vertex.parentIndex();//this is Geant track ID, not vector index
+        if(stid < 0)
+            break;
         int stidx = trackIdToTrackIdxAsso.at(stid); //get vector index
-        if(stidx<0)
+        if(stidx < 0)
             break;
         const SimTrack & simtrack = simtracks.at(stidx);
         vidx = simtrack.vertIndex();
@@ -174,7 +176,8 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
               continue; //already matched
 
           TrackingParticleRef tpref(tpCollection, i);
-
+          if(tpref->g4Tracks().size()<1)
+              continue;
           //go through whole history
           auto stp = getRoot(& tpref->g4Tracks().at(0),
                   *stCollection,*svCollection, trackIdToTrackIdxAsso);
@@ -199,15 +202,17 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       idealPFTruth.push_back(pftp);
   }
 
+  std::cout << "ideal PF truth built, splitting" << std::endl;
+
 
   // --- now we have the ideal PF truth, far from realistic.
   // --- this is where the actual "meat" of the implementation starts
 
   double softkill_relthreshold = 0.001;//just to avoid ambiguities.
-  double hardsplit_deltaR = 0.3;
+  //not used currently double hardsplit_deltaR = 0.3;
 
 
-  std::unique_ptr<PFTruthParticleCollection> PFtruth;
+  auto PFtruth = std::make_unique<PFTruthParticleCollection>() ;
 
   //apply splitting particle by particle
   //this is where the physics happens
@@ -252,10 +257,9 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   }
 
 
+  std::cout << "putting PFTruthParticles" << std::endl;
 
-
-  iEvent.put(std::move(PFtruth), "PFTruthParticles");
-
+  iEvent.put(std::move(PFtruth));
 
 }
 
