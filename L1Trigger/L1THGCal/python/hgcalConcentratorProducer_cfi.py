@@ -212,6 +212,7 @@ autoEncoder_conc_proc = cms.PSet(ProcessorName  = cms.string('HGCalConcentratorP
                                  bitShiftNormalization = cms.bool(True),
                                  saveEncodedValues = cms.bool(False),
                                  preserveModuleSum = cms.bool(True),
+                                 useTransverseADC = cms.bool(True),
                                  threshold_silicon = cms.double(2.), # MipT
                                  threshold_scintillator = cms.double(2.), # MipT
                                  type_energy_division = supertc_conc_proc.type_energy_division,

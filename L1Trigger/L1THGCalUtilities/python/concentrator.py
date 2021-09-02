@@ -83,6 +83,7 @@ class CreateAutoencoder(object):
             zeroSuppresionThreshold = autoEncoder_conc_proc.zeroSuppresionThreshold,
             saveEncodedValues = autoEncoder_conc_proc.saveEncodedValues,
             preserveModuleSum = autoEncoder_conc_proc.preserveModuleSum,
+            useTransverseADC = autoEncoder_conc_proc.useTransverseADC,
             scintillatorMethod = 'thresholdSelect',
             ):
          self.processor = autoEncoder_conc_proc.clone(
@@ -98,6 +99,7 @@ class CreateAutoencoder(object):
                 zeroSuppresionThreshold = zeroSuppresionThreshold,
                 saveEncodedValues = saveEncodedValues,
                 preserveModuleSum = preserveModuleSum,
+                useTransverseADC = useTransverseADC,
                 Method = cms.vstring(['autoEncoder','autoEncoder', scintillatorMethod]),
                 )
 

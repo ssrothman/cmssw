@@ -17,6 +17,7 @@ HGCalConcentratorAutoEncoderImpl::HGCalConcentratorAutoEncoderImpl(const edm::Pa
       linkToGraphMap_(conf.getParameter<std::vector<unsigned int>>("linkToGraphMap")),
       zeroSuppresionThreshold_(conf.getParameter<double>("zeroSuppresionThreshold")),
       bitShiftNormalization_(conf.getParameter<bool>("bitShiftNormalization")),
+      useTransverseADC_(conf.getParameter<bool>("useTransverseADC")),
       saveEncodedValues_(conf.getParameter<bool>("saveEncodedValues")),
       preserveModuleSum_(conf.getParameter<bool>("preserveModuleSum")) {
   // find total size of the expected input shape
@@ -123,6 +124,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
                                               std::vector<l1t::HGCalTriggerCell>& trigCellVecOutput,
                                               std::vector<l1t::HGCalConcentratorData>& ae_encodedLayer_Output) {
   std::array<double, nTriggerCells_> mipPt;
+  std::array<uint, nTriggerCells_> adc;
   std::array<double, nTriggerCells_> uncompressedCharge;
   std::array<double, nTriggerCells_> compressedCharge;
   std::array<double, maxAEInputSize_> ae_inputArray;
@@ -130,6 +132,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
 
   //reset inputs to 0 to account for zero suppressed trigger cells
   mipPt.fill(0);
+  adc.fill(0);
   uncompressedCharge.fill(0);
   compressedCharge.fill(0);
   ae_inputArray.fill(0);
@@ -165,11 +168,14 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
           << "][" << cellv << "]";
     }
 
-    mipPt[inputIndex] = trigCell.mipPt();
+    adc[inputIndex] = trigCell.hwPt();
+    if (useTransverseADC_)
+      adc[inputIndex] /= cosh(trigCell.eta());
+
     uncompressedCharge[inputIndex] = trigCell.uncompressedCharge();
     compressedCharge[inputIndex] = trigCell.compressedCharge();
 
-    modSum += trigCell.mipPt();
+    modSum += adc[inputIndex];
   }
 
   double normalization = modSum;
@@ -186,7 +192,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
       int remapIndex = cellRemap_[i];
       if (remapIndex < 0)
         continue;
-      ae_inputArray[i] = mipPt[remapIndex] / normalization;
+      ae_inputArray[i] = adc[remapIndex] / normalization;
       //round to precision of input, if bitsPerInput_ is -1 keep full precision
       if (bitsPerInput_ > 0) {
         ae_inputArray[i] = std::round(ae_inputArray[i] * inputMaxIntSize) / inputMaxIntSize;
@@ -280,8 +286,10 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
 
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
-        double mipPt = ae_outputArray[i] * normalization * renormalizationFactor;
-        double adc = mipPt * cosh(point.eta()) * mipToADC_conv;
+        int adc = ae_outputArray[i] * normalization * renormalizationFactor;
+        if (useTransverseADC_)
+          adc = ae_outputArray[i] * normalization * renormalizationFactor * cosh(point.eta());
+        double mipPt = adc / mipToADC_conv / cosh(point.eta());
         double et = mipPt * mipPtToEt_conv;
 
         if (mipPt < zeroSuppresionThreshold_)
