@@ -170,7 +170,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
 
     adc[inputIndex] = trigCell.hwPt();
     if (useTransverseADC_)
-      adc[inputIndex] /= cosh(trigCell.eta());
+      adc[inputIndex] = int(trigCell.hwPt()/cosh(trigCell.eta()));
 
     uncompressedCharge[inputIndex] = trigCell.uncompressedCharge();
     compressedCharge[inputIndex] = trigCell.compressedCharge();
@@ -248,13 +248,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     int remapIndex = cellRemapNoDuplicates_[i];
     if (remapIndex < 0)
       continue;
-    outputSum += *d * normalization;
     ae_outputArray[remapIndex] = *d;
-  }
-
-  double renormalizationFactor = 1.;
-  if (preserveModuleSum_) {
-    renormalizationFactor = modSum / outputSum;
   }
 
   // Add data back into trigger cells
@@ -275,6 +269,17 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     float mipToADC_conv = trigCellVecInput[0].hwPt() / (trigCellVecInput[0].mipPt() * cosh(trigCellVecInput[0].eta()));
 
     for (int i = 0; i < nTriggerCells_; i++) {
+      HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, ae_outputCellU_[i], ae_outputCellV_[i]);
+      if (triggerTools_.getTriggerGeometry()->validTriggerCell(id) && (ae_outputArray[i] * normalization >= zeroSuppresionThreshold_)) {
+        outputSum += ae_outputArray[i] * normalization;
+      }
+    }
+    double renormalizationFactor = 1.;
+    if (preserveModuleSum_ && outputSum > 0) {
+      renormalizationFactor = modSum / outputSum;
+    }
+
+    for (int i = 0; i < nTriggerCells_; i++) {
       if (ae_outputArray[i] > 0) {
         cellU = ae_outputCellU_[i];
         cellV = ae_outputCellV_[i];
@@ -286,13 +291,13 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
 
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
-        int adc = ae_outputArray[i] * normalization * renormalizationFactor;
+        double adc = ae_outputArray[i] * normalization * renormalizationFactor;
         if (useTransverseADC_)
           adc = ae_outputArray[i] * normalization * renormalizationFactor * cosh(point.eta());
         double mipPt = adc / mipToADC_conv / cosh(point.eta());
         double et = mipPt * mipPtToEt_conv;
 
-        if (mipPt < zeroSuppresionThreshold_)
+        if (ae_outputArray[i] * normalization < zeroSuppresionThreshold_)
           continue;
 
         l1t::HGCalTriggerCell triggerCell(reco::LeafCandidate::LorentzVector(), adc, 0, 0, 0, id);
