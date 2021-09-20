@@ -143,6 +143,9 @@
   <class name="edm::Association<std::vector<reco::CaloCluster> >"/>
   <class name="edm::Wrapper<edm::Association<std::vector<reco::CaloCluster> > >"/>
 
+  <class name="edm::Association<std::vector<PFTruthParticle> >"/>
+  <class name="edm::Wrapper<edm::Association<std::vector<PFTruthParticle> > >"/>
+
   <class name="edm::AssociationMap<edm::OneToManyWithQuality<std::vector<TrackingParticle>,std::vector<SimCluster>,float,unsigned int> >">
     <field name="transientMap_" transient="true"/>
   </class>

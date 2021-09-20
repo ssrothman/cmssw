@@ -13,6 +13,7 @@ typedef SimpleFlatTableProducer<CaloParticle> SimpleCaloParticleFlatTableProduce
 
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 typedef SimpleFlatTableProducer<reco::CaloCluster> SimpleCaloClusterFlatTableProducer;
+
 #include "FWCore/Framework/interface/MakerMacros.h"
 DEFINE_FWK_MODULE(SimplePCaloHitFlatTableProducer);
 DEFINE_FWK_MODULE(SimpleCaloRecHitFlatTableProducer);

@@ -3,6 +3,8 @@
 #include "SimDataFormats/CaloAnalysis/interface/SimClusterFwd.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticleFwd.h"
+#include "SimDataFormats/PFAnalysis/interface/PFTruthParticle.h"
+#include "SimDataFormats/PFAnalysis/interface/PFTruthParticleFwd.h"
 #include "SimDataFormats/Track/interface/SimTrack.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
 #include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
@@ -25,9 +27,13 @@ typedef ObjectIndexFromAssociationTableProducer<SimClusterCollection, CaloPartic
     SimClusterToCaloParticleIndexTableProducer;
 typedef ObjectIndexFromAssociationTableProducer<SimClusterCollection, SimClusterCollection>
     SimClusterToSimClusterIndexTableProducer;
+typedef ObjectIndexFromAssociationTableProducer<edm::View<CaloRecHit>, PFTruthParticleCollection>
+    CaloRecHitToPFTruthParticleIndexTableProducer;
+
 DEFINE_FWK_MODULE(SimTrackToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(CaloHitToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(SimClusterToCaloParticleIndexTableProducer);
 DEFINE_FWK_MODULE(SimClusterToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(CaloRecHitToPFCandIndexTableProducer);
 DEFINE_FWK_MODULE(CaloRecHitToBestSimClusterIndexTableProducer);
+DEFINE_FWK_MODULE(CaloRecHitToPFTruthParticleIndexTableProducer);

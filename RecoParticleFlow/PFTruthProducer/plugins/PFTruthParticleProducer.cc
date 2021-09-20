@@ -16,13 +16,17 @@
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "SimDataFormats/TrackingAnalysis/interface/TrackingParticle.h"
+#include "SimDataFormats/TrackingAnalysis/interface/TrackingParticleFwd.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticleFwd.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimClusterFwd.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/PFAnalysis/interface/PFTruthParticle.h"
 #include "SimDataFormats/PFAnalysis/interface/PFTruthParticleFwd.h"
+#include "DataFormats/CaloRecHit/interface/CaloRecHit.h"
 
+#include "DataFormats/HGCRecHit/interface/HGCRecHit.h"
+#include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include <set>
@@ -86,19 +90,28 @@ private:
 
   edm::EDGetTokenT<TrackingParticleCollection> tpCollectionToken_;
   edm::EDGetTokenT<CaloParticleCollection> cpCollectionToken_;
+  edm::EDGetTokenT<SimClusterCollection> scCollectionToken_;
   edm::EDGetTokenT<std::vector<SimVertex> > svCollectionToken_;
   edm::EDGetTokenT<std::vector<SimTrack> > stCollectionToken_;
-
+  //edm::EDGetTokenT<edm::View<CaloRecHit>> caloRecHitToken_;
+  edm::EDGetTokenT<HGCRecHitCollection> caloRecHitToken_;
+  edm::EDGetTokenT<edm::Association<SimClusterCollection>> recHitToSCToken_;
 
 };
 
 PFTruthParticleProducer::PFTruthParticleProducer(const edm::ParameterSet &pset)
     : tpCollectionToken_(consumes<TrackingParticleCollection>(pset.getParameter<edm::InputTag>("trackingParticles"))),
       cpCollectionToken_(consumes<CaloParticleCollection>(pset.getParameter<edm::InputTag>("caloParticles"))),
+      scCollectionToken_(consumes<SimClusterCollection>(pset.getParameter<edm::InputTag>("simClusters"))),
       svCollectionToken_(consumes<std::vector<SimVertex> >(pset.getParameter<edm::InputTag>("simVertices"))),
-      stCollectionToken_(consumes<std::vector<SimTrack> >(pset.getParameter<edm::InputTag>("simTracks")))
+      stCollectionToken_(consumes<std::vector<SimTrack> >(pset.getParameter<edm::InputTag>("simTracks"))),
+      caloRecHitToken_(consumes<HGCRecHitCollection>(pset.getParameter<edm::InputTag>("caloRecHits"))),
+      recHitToSCToken_(consumes<edm::Association<SimClusterCollection> >(pset.getParameter<edm::InputTag>("rechitToSimClusAssoc")))
 {
   produces<PFTruthParticleCollection>();
+  produces<edm::Association<PFTruthParticleCollection>>("trackingPartToPFTruth");
+  produces<edm::Association<PFTruthParticleCollection>>("simClusToPFTruth");
+  produces<edm::Association<PFTruthParticleCollection>>("caloRecHitToPFTruth");
 }
 
 PFTruthParticleProducer::~PFTruthParticleProducer() {}
@@ -143,11 +156,20 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   edm::Handle<CaloParticleCollection> cpCollection;
   iEvent.getByToken(cpCollectionToken_, cpCollection);
 
+  edm::Handle<SimClusterCollection> scCollection;
+  iEvent.getByToken(scCollectionToken_, scCollection);
+
   edm::Handle<std::vector<SimVertex> > svCollection;
   iEvent.getByToken(svCollectionToken_, svCollection);
 
   edm::Handle<std::vector<SimTrack> > stCollection;
   iEvent.getByToken(stCollectionToken_, stCollection);
+
+  edm::Handle<HGCRecHitCollection> caloRecHitCollection;
+  iEvent.getByToken(caloRecHitToken_, caloRecHitCollection);
+
+  edm::Handle<edm::Association<SimClusterCollection>> recHitToSC;
+  iEvent.getByToken(recHitToSCToken_, recHitToSC);
 
   std::map<int,int>  trackIdToTrackIdxAsso;
   for(size_t i=0;i<stCollection->size();i++){
@@ -159,11 +181,9 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   std::vector<size_t> matchedtptocp;
   PFTruthParticleCollection idealPFTruth;
 
-  // Used to fill the associations in the ntuples
-  //auto tpAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
-  //auto scAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
-
-  //edm::Association<PFTruthParticleCollection>::Filler tpFiller(*tpAssoc);
+  std::vector<int> tpToPFpartIdx(tpCollection->size(), -1);
+  std::vector<int> scToPFpartIdx(scCollection->size(), -1);
+  std::vector<int> rhToPFpartIdx(caloRecHitCollection->size(), -1);
 
   for(const auto& cp: *cpCollection){
 
@@ -244,8 +264,8 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
 
   //apply splitting particle by particle
   //this is where the physics happens
+  int pfidx = 0;
   for(const auto & pftp: idealPFTruth){
-
 
       //consider the ones without tracking particles // this is not the same as the ones without charge,
       // because e.g. a very early converting photon would have charge 0, but two tracking particles associated
@@ -264,35 +284,72 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
               npftp.setCharge(0);
               npftp.setP4(sc->impactMomentum());//that's all we measure
               npftp.setPdgId(sc->pdgId()); //to be discussed
+              scToPFpartIdx[sc.key()] = PFtruth->size();
               PFtruth->push_back(npftp);
           }
           std::cout << "Split PF Particle to "<< PFtruth->size()-pre << " neutrals " <<std::endl;//DEBUG
-          continue;
       }
-      //remaining: the ones that have tracking particles associated
+      else {
+        //remaining: the ones that have tracking particles associated
 
 
-      //some more cases, like far away brem...
+        //some more cases, like far away brem...
 
 
-      //trim
-      auto trimmed_pfp = pftp;
-      SimClusterRefVector trimmersc;
-      for(auto & sc: trimmed_pfp.simClusters()){
-          if(sc->impactMomentum().E() > trimmed_pfp.p4().E() * softkill_relthreshold){
-              trimmersc.push_back(sc);
-          }
-      }
-      trimmed_pfp.setSimClusters(trimmersc);
-      //no split
-      PFtruth->push_back(trimmed_pfp);
+        //trim
+        auto trimmed_pfp = pftp;
+        SimClusterRefVector trimmersc;
+        for(auto & sc: trimmed_pfp.simClusters()){
+            if(sc->impactMomentum().E() > trimmed_pfp.p4().E() * softkill_relthreshold){
+                trimmersc.push_back(sc);
+                scToPFpartIdx[sc.key()] = PFtruth->size();
+            }
+        }
+        trimmed_pfp.setSimClusters(trimmersc);
+        //no split
+        PFtruth->push_back(trimmed_pfp);
+        for (auto& tp : trimmed_pfp.trackingParticles())
+            tpToPFpartIdx[tp.key()] = pfidx;
+
+    }
+    pfidx++;
+  }
+
+  for (size_t i = 0; i <  caloRecHitCollection->size(); i++) {
+      HGCRecHitRef rh(caloRecHitCollection, i);
+      auto scRef = (*recHitToSC)[rh];
+      int scIdx = scRef.isNonnull() ? scRef.key() : -1;
+      int pfIdx = scIdx >= 0 ? scToPFpartIdx[scIdx] : -1;
+      if (scIdx >= 0)
+      std::cout << "SC Index is " << scIdx << " pfIdx is " << pfIdx << std::endl;
+      rhToPFpartIdx.at(i) = pfIdx;
   }
 
 
   std::cout << "putting PFTruthParticles" << std::endl;//DEBUG
 
-  iEvent.put(std::move(PFtruth));
+  auto pfTruthHand = iEvent.put(std::move(PFtruth));
 
+  // Used to fill the associations in the ntuples
+  auto tpAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
+  auto scAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
+  auto rhAssoc = std::make_unique<edm::Association<PFTruthParticleCollection>>(pfTruthHand);
+
+  edm::Association<PFTruthParticleCollection>::Filler tpFiller(*tpAssoc);
+  tpFiller.insert(tpCollection, tpToPFpartIdx.begin(), tpToPFpartIdx.end());
+  tpFiller.fill();
+
+  edm::Association<PFTruthParticleCollection>::Filler scFiller(*scAssoc);
+  scFiller.insert(scCollection, scToPFpartIdx.begin(), scToPFpartIdx.end());
+  scFiller.fill();
+
+  edm::Association<PFTruthParticleCollection>::Filler rhFiller(*rhAssoc);
+  rhFiller.insert(caloRecHitCollection, rhToPFpartIdx.begin(), rhToPFpartIdx.end());
+  rhFiller.fill();
+
+  iEvent.put(std::move(tpAssoc), "trackingPartToPFTruth");
+  iEvent.put(std::move(scAssoc), "simClusToPFTruth");
+  iEvent.put(std::move(rhAssoc), "caloRecHitToPFTruth");
 }
 
 // define this as a plug-in
