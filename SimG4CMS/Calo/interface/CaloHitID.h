@@ -26,8 +26,9 @@ public:
   void reset();
 
   void setTrackID(int trackID) { theTrackID = trackID; }
-  void markAsFinecaloTrackID(bool flag = true) { isFinecaloTrackID_ = flag; }
-  bool isFinecaloTrackID() const { return isFinecaloTrackID_; }
+  bool hasFineTrackID() const { return theFineTrackID != -1; }
+  void setFineTrackID(int fineTrackID) { theFineTrackID = fineTrackID; }
+  int fineTrackID() const { return hasFineTrackID() ? theFineTrackID : theTrackID; }
 
   bool operator==(const CaloHitID&) const;
   bool operator<(const CaloHitID&) const;
@@ -41,7 +42,7 @@ private:
   uint16_t theDepth;
   float timeSliceUnit;
   bool ignoreTrackID;
-  bool isFinecaloTrackID_;
+  int theFineTrackID;
 };
 
 std::ostream& operator<<(std::ostream&, const CaloHitID&);
