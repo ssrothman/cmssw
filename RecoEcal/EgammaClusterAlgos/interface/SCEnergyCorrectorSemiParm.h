@@ -34,6 +34,12 @@
 #include "RecoEgamma/EgammaTools/interface/EgammaBDTOutputTransformer.h"
 #include "RecoEgamma/EgammaTools/interface/HGCalShowerShapeHelper.h"
 
+#define DRN
+
+#ifdef DRN
+#include "HeterogeneousCore/SonicTriton/interface/TritonEDProducer.h"
+#endif
+
 class SCEnergyCorrectorSemiParm {
 public:
   SCEnergyCorrectorSemiParm();
