@@ -100,7 +100,7 @@ void SCEnergyCorrectorSemiParm::setEventSetup(const edm::EventSetup& es) {
   regParamBarrel_.setForests(es);
   regParamEndcap_.setForests(es);
 
-  if (isPhaseII_)
+  if (isPhaseII_) {
     hgcalShowerShapes_.initPerSetup(es);
   }
 }
@@ -195,12 +195,6 @@ double SCEnergyCorrectorSemiParm::RegParam::mean(const std::vector<float>& data)
 double SCEnergyCorrectorSemiParm::RegParam::sigma(const std::vector<float>& data) const {
   return sigmaForest_ ? sigmaOutTrans_(sigmaForest_->GetResponse(data.data())) : -1;
 }
-
-#ifdef DRN
-TYPE SCEnergyCorrectorSemiParm::getRegDataDRN(const reco::SuperCluster& sc) const {
-    //put together input features
-}
-#endif
 
 std::vector<float> SCEnergyCorrectorSemiParm::getRegDataECALV1(const reco::SuperCluster& sc) const {
   std::vector<float> eval(30, 0.);

@@ -6,7 +6,6 @@
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
 #include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
 #include "DataFormats/Common/interface/ValueMap.h"
-
 #include "RecoEcal/EgammaClusterAlgos/interface/SCEnergyCorrectorSemiParm.h"
 
 #include <vector>
@@ -16,20 +15,12 @@
 //although its perfectly possible somebody could use it in some prod workflow
 //author S. Harper (RAL/CERN)
 
-#ifdef DRN
-class SCEnergyCorrectorProducer : public TritonEDProducer<> {
-#else
 class SCEnergyCorrectorProducer : public edm::stream::EDProducer<> {
-#endif
 public:
   explicit SCEnergyCorrectorProducer(const edm::ParameterSet& iConfig);
 
   void beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) override;
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override;
-
-#ifdef DRN
-  void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input *iInput) override;
-#endif
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -39,31 +30,15 @@ private:
   const bool writeFeatures_;
 };
 
-#ifdef DRN
-SCEnergyCorrectorProducer::SCEnergyCorrectorProducer(const edm::ParameterSet& iConfig)
-    : TritonEDProducer<>(iConfig, "SCEnergyCorrectorProducer"),
-      energyCorrector_(iConfig.getParameterSet("correctorCfg"), consumesCollector()),
-      inputSCToken_(consumes<reco::SuperClusterCollection>(iConfig.getParameter<edm::InputTag>("inputSCs"))),
-      writeFeatures_(iConfig.getParameter<bool>("writeFeatures")) {
-#else
 SCEnergyCorrectorProducer::SCEnergyCorrectorProducer(const edm::ParameterSet& iConfig)
     : energyCorrector_(iConfig.getParameterSet("correctorCfg"), consumesCollector()),
       inputSCToken_(consumes<reco::SuperClusterCollection>(iConfig.getParameter<edm::InputTag>("inputSCs"))),
       writeFeatures_(iConfig.getParameter<bool>("writeFeatures")) {
-#endif
   produces<reco::SuperClusterCollection>();
   if (writeFeatures_) {
     produces<edm::ValueMap<std::vector<float>>>("features");
   }
 }
-
-#ifdef DRN
-void SCEnergyCorrectorProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input *iInput){
-    client_->setBatchSize(1);
-
-}
-
-#endif
 
 void SCEnergyCorrectorProducer::beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) {
   energyCorrector_.setEventSetup(iSetup);
