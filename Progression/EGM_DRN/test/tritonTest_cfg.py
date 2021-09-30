@@ -79,7 +79,11 @@ process.load("HeterogeneousCore.SonicTriton.TritonService_cff")
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(options.maxEvents) )
 
-process.source = cms.Source("EmptySource")
+process.source = cms.Source("PoolSource",
+    fileNames = cms.untracked.vstring(
+'root://cms-xrd-global.cern.ch///store/mc/RunIISummer20UL18RECO/DoubleElectron_Pt-1To300-gun/AODSIM/FlatPU0to70EdalIdealGT_EdalIdealGT_106X_upgrade2018_realistic_v11_L1v1_EcalIdealIC-v2/270000/4CDD9457-E14C-D84A-9BD4-3140CB6AEEB6.root'#, \
+    )
+)
 
 process.TritonService.verbose = options.verbose
 process.TritonService.fallback.verbose = options.verbose
@@ -100,8 +104,6 @@ if len(options.address)>0:
     )
 
 # Let it run
-process.p = cms.Path()
-
 modules = {
     "Producer": cms.EDProducer,
     "Filter": cms.EDFilter,
@@ -110,6 +112,92 @@ modules = {
 
 keepMsgs = ['TritonClient','TritonService']
 
+process.DRNProducer = cms.EDProducer('DRNProducer',
+    Client = cms.PSet(
+        mode = cms.string(options.mode),
+        preferredServer = cms.untracked.string(""),
+        timeout = cms.untracked.uint32(options.timeout),
+        modelName = cms.string(model),
+        modelVersion = cms.string(""),
+        modelConfigPath = cms.FileInPath("Progression/EGM_DRN/data/models/{}/config.pbtxt".format(model)),
+        verbose = cms.untracked.bool(options.verbose),
+        allowedTries = cms.untracked.uint32(options.tries),
+        useSharedMemory = cms.untracked.bool(options.shm),
+        compression = cms.untracked.string(options.compression),
+    ),
+    nodeMin = cms.uint32(1),
+    nodeMax = cms.uint32(200),
+    brief = cms.bool(options.brief),
+)
+
+#process.p += process.DRNProducer
+keepMsgs.extend(['DRNProducer','DRNProducer:TritonClient'])
+
+from Configuration.AlCa.GlobalTag import GlobalTag
+from CondCore.DBCommon.CondDBSetup_cfi import *
+process.GlobalTag = cms.ESSource("PoolDBESSource",
+                               CondDBSetup,
+                               connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
+                               globaltag = cms.string('106X_upgrade2018_realistic_v11_Ecal4'),
+			       toGet = cms.VPSet(
+
+
+                cms.PSet(record = cms.string("GBRDWrapperRcd"),
+                        tag = cms.string("DoubleElectron_FlatPt-1To300_FlatPU0to70_ECAL5_106X_upgrade2018_realistic_v11_L1v1-v2"),
+                        label = cms.untracked.string("pfscecal_EBCorrection_offline_v2"),
+                        connect = cms.string("sqlite_file:DBFiles/correctedECALSampleDBFile_EB.db")
+                        ),
+
+                cms.PSet(record = cms.string("GBRDWrapperRcd"),
+                        tag = cms.string("DoubleElectron_FlatPt-1To300_FlatPU0to70_ECAL5_106X_upgrade2018_realistic_v11_L1v1-v2"),
+                        label = cms.untracked.string("pfscecal_EBUncertainty_offline_v2"),
+                        connect = cms.string("sqlite_file:DBFiles/correctedECALSampleDBFile_EB.db")
+                        ),
+
+
+                cms.PSet(record = cms.string("GBRDWrapperRcd"),
+                        tag = cms.string("DoubleElectron_FlatPt-1To300_FlatPU0to70_ECAL5_106X_upgrade2018_realistic_v11_L1v1-v2"),
+                        label = cms.untracked.string("pfscecal_EECorrection_offline_v2"),
+                        connect = cms.string("sqlite_file:DBFiles/correctedECALSampleDBFile_EE.db")
+                        ),
+
+
+                cms.PSet(record = cms.string("GBRDWrapperRcd"),
+                        tag = cms.string("DoubleElectron_FlatPt-1To300_FlatPU0to70_ECAL5_106X_upgrade2018_realistic_v11_L1v1-v2"),
+                        label = cms.untracked.string("pfscecal_EEUncertainty_offline_v2"),
+                        connect = cms.string("sqlite_file:DBFiles/correctedECALSampleDBFile_EE.db")
+                        )
+
+
+
+                        )
+
+)
+
+process.nTuplelize = cms.EDAnalyzer('Electron_RecHit_NTuplizer',
+        vertexCollection = cms.InputTag('offlinePrimaryVertices'),
+        rhoFastJet = cms.InputTag("fixedGridRhoFastjetAll"),
+        pileupInfo = cms.InputTag("addPileupInfo"),
+        electrons = cms.InputTag("gedGsfElectrons"),
+        genParticles = cms.InputTag("genParticles"),
+        #Cut Based Id
+        eleLooseIdMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Fall17-94X-V2-loose"),
+        eleMediumIdMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Fall17-94X-V2-medium"),
+        eleTightIdMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Fall17-94X-V2-tight")
+        )
+
+
+process.TFileService = cms.Service("TFileService",
+     fileName = cms.string("nTupleMC.root"),
+      closeFileFast = cms.untracked.bool(True)
+  )
+
+#process+=process.nTuplelize
+process.p = cms.Path(process.DRNProducer*process.nTuplelize)
+
+
+
+'''
 for im,module in enumerate(options.modules):
     model = options.models[im]
     Module = [obj for name,obj in modules.items() if name in module][0]
@@ -145,7 +233,7 @@ for im,module in enumerate(options.modules):
         )
         processModule2 = getattr(process, _module2)
         process.p += processModule2
-
+'''
 process.load('FWCore/MessageService/MessageLogger_cfi')
 process.MessageLogger.cerr.FwkReport.reportEvery = 500
 for msg in keepMsgs:

@@ -1,0 +1,18 @@
+cmsrel CMSSW_11_1_8
+cd CMSSW_11_1_8/src/
+git cms-init
+git cms-addpkg RecoEcal/EgammaClusterProducers
+git cms-addpkg RecoEcal/EgammaClusterAlgos
+mkdir Progression [Random name can be anything]
+cd Progression    [Random name can be anything] 
+mkedanlzr Ecal_NTuplizer [Random name can be anything]
+cd Ecal_NTuplizer
+cp Electron_RecHit_NTuplizer.cc BuildFile.xml plugins/
+cp Electron_RecHit_AOD_cfg.py crab_NTuplizer_cfg.py test/ 
+scram b -j4
+
+
+## Test Run
+cmsRun test/Electron_RecHit_AOD_cfg.py
+
+[Note max events set as 1000. Change to -1 before submitting the crab jobs]
