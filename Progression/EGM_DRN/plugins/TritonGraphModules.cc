@@ -3,6 +3,27 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/Framework/interface/Event.h"
+
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/EcalDetId/interface/EcalSubdetector.h"
+#include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+
+#include "RecoEcal/EgammaCoreTools/interface/EcalTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
+#include "RecoEgamma/EgammaTools/interface/EgammaHGCALIDParamDefaults.h"
+
+#include "Geometry/Records/interface/CaloTopologyRecord.h"
+#include "Geometry/CaloTopology/interface/CaloTopology.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 
 #include <sstream>
 #include <string>
@@ -93,33 +114,66 @@ public:
 
 private:
   //members
-  unsigned nodeMin_, nodeMax_;
-  bool brief_;
+    unsigned nodeMin_, nodeMax_;
+    bool brief_;
+
+
 };
 
 class DRNProducer : public TritonEDProducer<> {
 public:
-  explicit DRNProducer(edm::ParameterSet const& cfg)
-      : TritonEDProducer<>(cfg, "DRNProducer"), helper_(cfg) {}
-  void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override {
-    helper_.makeInput(iEvent, iInput, debugName_);
-  }
-  void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override {
-    helper_.makeOutput(iOutput, debugName_);
-  }
-  ~DRNProducer() override = default;
+    explicit DRNProducer(edm::ParameterSet const& cfg)
+        : TritonEDProducer<>(cfg, "DRNProducer"), helper_(cfg) {
+        produces<reco::SuperClusterCollection>(); 
+        this->setTokens(cfg);
+        batchSize = cfg.getParameter<unsigned>("batchSize");
+    }
+    void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override {
+        //client_->setBatchSize(batchSize);
+        helper_.makeInput(iEvent, iInput, debugName_);
+    }
+    void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override {
+        helper_.makeOutput(iOutput, debugName_);
 
-  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-    edm::ParameterSetDescription desc;
-    TritonClient::fillPSetDescription(desc);
-    TritonGraphHelper::fillPSetDescription(desc);
-    //to ensure distinct cfi names
-    descriptions.addWithDefaultLabel(desc);
-  }
+        auto inputSCs = iEvent.get(inputSCToken_);
+        auto corrSCs = std::make_unique<reco::SuperClusterCollection>();
+        for (const auto& inputSC : inputSCs){
+            corrSCs->push_back(inputSC);
+            corrSCs->back().setEnergy(1.0);
+            corrSCs->back().setCorrectedEnergy(2.0);
+            corrSCs->back().setCorrectedEnergyUncertainty(3.0);
+            edm::LogInfo (debugName_) << "supercluster! ";
+        }
+
+        iEvent.put(std::move(corrSCs));
+        
+    }
+    ~DRNProducer() override = default;
+
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+
+        edm::ParameterSetDescription desc;
+        TritonClient::fillPSetDescription(desc);
+        TritonGraphHelper::fillPSetDescription(desc);
+        desc.add<edm::InputTag>("inputSCs", edm::InputTag("particleFlowSuperClusterECAL"));
+        desc.add<unsigned>("batchSize", 1);
+        //to ensure distinct cfi names
+        descriptions.addWithDefaultLabel(desc);
+    }
+
+    void setTokens(const edm::ParameterSet& iConfig){
+        //inputSCToken_ = cc.consumes<reco::SuperClusterCollection>(iConfig.getParameter<edm::InputTag>("inputSCs"));
+        inputSCToken_ = consumes<reco::SuperClusterCollection>(iConfig.getParameter<edm::InputTag>("inputSCs"));
+    }
 
 private:
-  //member
-  TritonGraphHelper helper_;
+    //member
+    TritonGraphHelper helper_;
+
+    unsigned batchSize;
+
+    edm::EDGetTokenT<reco::SuperClusterCollection> inputSCToken_;
+    //const edm::EDGetToken<reco::SuperClusterCollection> inputSCToken_;
 };
 
 DEFINE_FWK_MODULE(DRNProducer);

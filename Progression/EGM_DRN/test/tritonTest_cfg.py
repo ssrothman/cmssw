@@ -38,6 +38,7 @@ options.register("ssl", False, VarParsing.multiplicity.singleton, VarParsing.var
 options.register("device","auto", VarParsing.multiplicity.singleton, VarParsing.varType.string, "specify device for fallback server (choices: {})".format(', '.join(allowed_devices)))
 options.register("docker", False, VarParsing.multiplicity.singleton, VarParsing.varType.bool, "use Docker for fallback server")
 options.register("tries", 0, VarParsing.multiplicity.singleton, VarParsing.varType.int, "number of retries for failed request")
+options.register("batchSize", 1, VarParsing.multiplicity.singleton, VarParsing.varType.int, "batchSize")
 options.parseArguments()
 
 if len(options.params)>0:
@@ -112,7 +113,7 @@ modules = {
 
 keepMsgs = ['TritonClient','TritonService']
 
-process.DRNProducer = cms.EDProducer('DRNProducer',
+process.DRNProducerEB = cms.EDProducer('DRNProducer',
     Client = cms.PSet(
         mode = cms.string(options.mode),
         preferredServer = cms.untracked.string(""),
@@ -128,7 +129,34 @@ process.DRNProducer = cms.EDProducer('DRNProducer',
     nodeMin = cms.uint32(1),
     nodeMax = cms.uint32(200),
     brief = cms.bool(options.brief),
+
+    batchSize = cms.uint32(options.batchSize),
+
+    inputSCs = cms.InputTag('particleFlowSuperClusterECAL','particleFlowSuperClusterECALBarrel'),
 )
+
+process.DRNProducerEE = cms.EDProducer('DRNProducer',
+    Client = cms.PSet(
+        mode = cms.string(options.mode),
+        preferredServer = cms.untracked.string(""),
+        timeout = cms.untracked.uint32(options.timeout),
+        modelName = cms.string(model),
+        modelVersion = cms.string(""),
+        modelConfigPath = cms.FileInPath("Progression/EGM_DRN/data/models/{}/config.pbtxt".format(model)),
+        verbose = cms.untracked.bool(options.verbose),
+        allowedTries = cms.untracked.uint32(options.tries),
+        useSharedMemory = cms.untracked.bool(options.shm),
+        compression = cms.untracked.string(options.compression),
+    ),
+    nodeMin = cms.uint32(1),
+    nodeMax = cms.uint32(200),
+    brief = cms.bool(options.brief),
+
+    batchSize = cms.uint32(options.batchSize),
+
+    inputSCs = cms.InputTag('particleFlowSuperClusterECAL','particleFlowSuperClusterECALEndcapWithPreshower'),
+)
+
 
 #process.p += process.DRNProducer
 keepMsgs.extend(['DRNProducer','DRNProducer:TritonClient'])
@@ -174,6 +202,16 @@ process.GlobalTag = cms.ESSource("PoolDBESSource",
 
 )
 
+from PhysicsTools.SelectorUtils.tools.vid_id_tools import *
+dataFormat = DataFormat.AOD
+switchOnVIDElectronIdProducer(process, dataFormat)
+
+my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElectronID_Fall17_94X_V2_cff']
+
+for idmod in my_id_modules:
+        setupAllVIDIdsInModule(process, idmod, setupVIDElectronSelection)
+
+
 process.nTuplelize = cms.EDAnalyzer('Electron_RecHit_NTuplizer',
         vertexCollection = cms.InputTag('offlinePrimaryVertices'),
         rhoFastJet = cms.InputTag("fixedGridRhoFastjetAll"),
@@ -193,7 +231,7 @@ process.TFileService = cms.Service("TFileService",
   )
 
 #process+=process.nTuplelize
-process.p = cms.Path(process.DRNProducer*process.nTuplelize)
+process.p = cms.Path(process.DRNProducerEB*process.DRNProducerEE*process.egmGsfElectronIDSequence*process.nTuplelize)
 
 
 

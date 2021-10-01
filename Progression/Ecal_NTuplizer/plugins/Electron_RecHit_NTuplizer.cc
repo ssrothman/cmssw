@@ -203,8 +203,8 @@ Electron_RecHit_NTuplizer::Electron_RecHit_NTuplizer(const edm::ParameterSet& iC
    recHitCollectionEBToken_(consumes<EcalRecHitCollection>(edm::InputTag("reducedEcalRecHitsEB"))),
    recHitCollectionEEToken_(consumes<EcalRecHitCollection>(edm::InputTag("reducedEcalRecHitsEE"))),
    recHitCollectionESToken_(consumes<EcalRecHitCollection>(edm::InputTag("reducedEcalRecHitsES"))),
-   _EBSuperClustersToken(consumes<reco::SuperClusterCollection>(edm::InputTag("scEBEnergyCorrectorProducer"))),
-   _EESuperClustersToken(consumes<reco::SuperClusterCollection>(edm::InputTag("scEEEnergyCorrectorProducer"))),
+   _EBSuperClustersToken(consumes<reco::SuperClusterCollection>(edm::InputTag("DRNProducerEB"))),
+   _EESuperClustersToken(consumes<reco::SuperClusterCollection>(edm::InputTag("DRNProducerEE"))),
    eleLooseIdMapToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("eleLooseIdMap"))),
    eleMediumIdMapToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("eleMediumIdMap"))),
    eleTightIdMapToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("eleTightIdMap")))
@@ -475,15 +475,23 @@ void Electron_RecHit_NTuplizer::TreeSetEventSummaryVar(const edm::Event& iEvent)
 
 float Electron_RecHit_NTuplizer::GetMustEnergy(const reco::GsfElectron& electron, bool isEB){
 
+    //for( reco::SuperClusterCollection::const_iterator iter = _EBSuperClustersHandle->begin();
+    //        iter != _EBSuperClustersHandle->end(); 
+    //        ++iter) {
+    //    return iter->energy();
+    //}
 
 	if(isEB){
+        std::cout << "rawE = " << electron.parentSuperCluster()->rawEnergy() << std::endl;
         	 for( reco::SuperClusterCollection::const_iterator iter = _EBSuperClustersHandle->begin();
                                 iter != _EBSuperClustersHandle->end();
                                 iter++) {
+        std::cout << "\trawIter = " << iter->rawEnergy() << " iter = " << iter->energy() << std::endl;
 			if( fabs(electron.parentSuperCluster()->rawEnergy() - iter->rawEnergy()) < 1E-6 )
 				return iter->energy();
 
         	}
+        return -9;
 	} else{
 
               	for( reco::SuperClusterCollection::const_iterator iter1 = _EESuperClustersHandle->begin();
@@ -492,9 +500,8 @@ float Electron_RecHit_NTuplizer::GetMustEnergy(const reco::GsfElectron& electron
 			if( fabs(electron.parentSuperCluster()->rawEnergy() - iter1->rawEnergy()) < 1E-6 )
                                 return iter1->energy();
         	}
+        return -99.;
 	}
-
-	return -999.;
 
 }
 
