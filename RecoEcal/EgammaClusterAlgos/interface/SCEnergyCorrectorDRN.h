@@ -1,6 +1,6 @@
 //--------------------------------------------------------------------------------------------------
 //
-// SCEnergyCorrectorSemiParm_DRN
+// SCEnergyCorrectorDRN
 //
 // Helper Class for applying regression-based energy corrections with DRN implimentation
 //
@@ -10,8 +10,8 @@
 //
 //--------------------------------------------------------------------------------------------------
 
-#ifndef Progression_EGM_DRN_SCEnergyCorrectorSemiParm_DRN_h
-#define Progression_EGM_DRN_SCEnergyCorrectorSemiParm_DRN_h
+#ifndef Progression_EGM_DRN_SCEnergyCorrectorDRN_h
+#define Progression_EGM_DRN_SCEnergyCorrectorDRN_h
 
 #include "HeterogeneousCore/SonicTriton/interface/TritonEDProducer.h"
 
@@ -44,12 +44,12 @@
 #include <vector>
 #include <random>
 
-class SCEnergyCorrectorSemiParm_DRN {
+class SCEnergyCorrectorDRN {
 public:
-    SCEnergyCorrectorSemiParm_DRN();
+    SCEnergyCorrectorDRN();
     //if you want override the default on where conditions are consumed, you need to use
     //the other constructor and then call setTokens approprately
-    SCEnergyCorrectorSemiParm_DRN(const edm::ParameterSet& iConfig, edm::ConsumesCollector cc);
+    SCEnergyCorrectorDRN(const edm::ParameterSet& iConfig, edm::ConsumesCollector cc);
 
     static void fillPSetDescription(edm::ParameterSetDescription& desc);
     static edm::ParameterSetDescription makePSetDescription();
@@ -62,12 +62,10 @@ public:
 
     //std::pair<double, double> getCorrections(const reco::SuperCluster& sc) const;
 
-    void make_input(const edm::Event& iEvent, TritonInputMap& iInput, const reco::SuperClusterCollection& inputSCs) const;
-    TritonOutput<float> get_output(const TritonOutputMap& iOutput);
+    void makeInput(const edm::Event& iEvent, TritonInputMap& iInput, const reco::SuperClusterCollection& inputSCs) const;
+    TritonOutput<float> getOutput(const TritonOutputMap& iOutput);
 
     //void modifyObject(reco::SuperCluster& sc) const;
-
-    std::vector<float> getRegData(const reco::SuperCluster& sc) const;
 
 private:
     const CaloTopology* caloTopo_;
@@ -86,7 +84,7 @@ private:
 };
 
 template <edm::Transition esTransition>
-void SCEnergyCorrectorSemiParm_DRN::setTokens(const edm::ParameterSet& iConfig, edm::ConsumesCollector cc) {
+void SCEnergyCorrectorDRN::setTokens(const edm::ParameterSet& iConfig, edm::ConsumesCollector cc) {
     tokenEBRecHits_ = cc.consumes<EcalRecHitCollection>(iConfig.getParameter<edm::InputTag>("ecalRecHitsEB"));
     tokenEERecHits_ = cc.consumes<EcalRecHitCollection>(iConfig.getParameter<edm::InputTag>("ecalRecHitsEE"));
     caloGeomToken_ = cc.esConsumes<CaloGeometry, CaloGeometryRecord, esTransition>();

@@ -1,4 +1,4 @@
-#include "RecoEcal/EgammaClusterAlgos/interface/SCEnergyCorrectorSemiParm_DRN.h"
+#include "RecoEcal/EgammaClusterAlgos/interface/SCEnergyCorrectorDRN.h"
 
 #include "FWCore/Utilities/interface/isFinite.h"
 #include "FWCore/Utilities/interface/Transition.h"
@@ -13,40 +13,40 @@
 
 #include <iostream>
 
-SCEnergyCorrectorSemiParm_DRN::SCEnergyCorrectorSemiParm_DRN()
+SCEnergyCorrectorDRN::SCEnergyCorrectorDRN()
     : caloTopo_(nullptr),
       caloGeom_(nullptr) {}
 
-SCEnergyCorrectorSemiParm_DRN::SCEnergyCorrectorSemiParm_DRN(const edm::ParameterSet& iConfig, edm::ConsumesCollector cc)
-    : SCEnergyCorrectorSemiParm_DRN() {
+SCEnergyCorrectorDRN::SCEnergyCorrectorDRN(const edm::ParameterSet& iConfig, edm::ConsumesCollector cc)
+    : SCEnergyCorrectorDRN() {
   setTokens(iConfig, cc);
 }
 
-void SCEnergyCorrectorSemiParm_DRN::fillPSetDescription(edm::ParameterSetDescription& desc) {
+void SCEnergyCorrectorDRN::fillPSetDescription(edm::ParameterSetDescription& desc) {
   desc.add<edm::InputTag>("ecalRecHitsEE", edm::InputTag("ecalRecHit", "EcalRecHitsEE"));
   desc.add<edm::InputTag>("ecalRecHitsEB", edm::InputTag("ecalRecHit", "EcalRecHitsEB"));
   desc.add<edm::InputTag>("rhoFastJet");
 }
 
-edm::ParameterSetDescription SCEnergyCorrectorSemiParm_DRN::makePSetDescription() {
+edm::ParameterSetDescription SCEnergyCorrectorDRN::makePSetDescription() {
   edm::ParameterSetDescription desc;
   fillPSetDescription(desc);
   return desc;
 }
 
-void SCEnergyCorrectorSemiParm_DRN::setEventSetup(const edm::EventSetup& es) {
+void SCEnergyCorrectorDRN::setEventSetup(const edm::EventSetup& es) {
   caloTopo_ = &es.getData(caloTopoToken_);
   caloGeom_ = &es.getData(caloGeomToken_);
 }
 
-void SCEnergyCorrectorSemiParm_DRN::setEvent(const edm::Event& event) {
+void SCEnergyCorrectorDRN::setEvent(const edm::Event& event) {
   event.getByToken(tokenEBRecHits_, recHitsEB_);
   event.getByToken(tokenEERecHits_, recHitsEE_);
   event.getByToken(rhoToken_, rhoHandle_);
 }
 
-void SCEnergyCorrectorSemiParm_DRN::make_input(const edm::Event& iEvent, TritonInputMap& iInput, const reco::SuperClusterCollection& inputSCs ) const {
-    //get event-based seed for RNG
+void SCEnergyCorrectorDRN::makeInput(const edm::Event& iEvent, TritonInputMap& iInput, const reco::SuperClusterCollection& inputSCs ) const {
+
     std::vector<unsigned> nHits = {};
     unsigned totalHits = 0;
     unsigned n;
@@ -96,13 +96,14 @@ void SCEnergyCorrectorSemiParm_DRN::make_input(const edm::Event& iEvent, TritonI
         vdata3.push_back(0.0);
         ++batchNum;
     }
+
     // convert to server format
     input1.toServer(data1);
     input2.toServer(data2);
     input3.toServer(data3);
 }
 
-TritonOutput<float> SCEnergyCorrectorSemiParm_DRN::get_output(const TritonOutputMap& iOutput) {
+TritonOutput<float> SCEnergyCorrectorDRN::getOutput(const TritonOutputMap& iOutput) {
     //check the results
     const auto& output1 = iOutput.begin()->second;
     // convert from server format

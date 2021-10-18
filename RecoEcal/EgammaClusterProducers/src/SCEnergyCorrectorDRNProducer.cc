@@ -12,7 +12,7 @@
 
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 
-#include "RecoEcal/EgammaClusterAlgos/interface/SCEnergyCorrectorSemiParm_DRN.h"
+#include "RecoEcal/EgammaClusterAlgos/interface/SCEnergyCorrectorDRN.h"
 
 #include <sstream>
 #include <string>
@@ -20,7 +20,7 @@
 #include <random>
 
 /*
- * SCEnergyCorrectorProducer_DRN
+ * SCEnergyCorrectorDRNProducer
  *
  * Simple producer to generate a set of corrected superclusters with the DRN regression
  * Based on RecoEcal/EgammaClusterProducers/SCEnergyCorrectorProducer by S. Harper (RAL/CERN)
@@ -42,9 +42,9 @@ static float correction(float x){
     return exp(-logcorrection(x));
 }
 
-class SCEnergyCorrectorProducer_DRN : public TritonEDProducer<> {
+class SCEnergyCorrectorDRNProducer : public TritonEDProducer<> {
 public:
-  explicit SCEnergyCorrectorProducer_DRN(const edm::ParameterSet& iConfig);
+  explicit SCEnergyCorrectorDRNProducer(const edm::ParameterSet& iConfig);
 
   void beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) override;
 
@@ -54,23 +54,23 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-  SCEnergyCorrectorSemiParm_DRN energyCorrector_;
+  SCEnergyCorrectorDRN energyCorrector_;
   edm::EDGetTokenT<reco::SuperClusterCollection> inputSCToken_;
 };
 
-SCEnergyCorrectorProducer_DRN::SCEnergyCorrectorProducer_DRN(const edm::ParameterSet& iConfig)
-    : TritonEDProducer<>(iConfig, "SCEnergyCorrectorProducer_DRN"),
+SCEnergyCorrectorDRNProducer::SCEnergyCorrectorDRNProducer(const edm::ParameterSet& iConfig)
+    : TritonEDProducer<>(iConfig, "SCEnergyCorrectorDRNProducer"),
       energyCorrector_(iConfig.getParameterSet("correctorCfg"), consumesCollector()),
       inputSCToken_(consumes<reco::SuperClusterCollection>(iConfig.getParameter<edm::InputTag>("inputSCs")))
 {
   produces<reco::SuperClusterCollection>();
 }
 
-void SCEnergyCorrectorProducer_DRN::beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) {
+void SCEnergyCorrectorDRNProducer::beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) {
   energyCorrector_.setEventSetup(iSetup);
 }
 
-void SCEnergyCorrectorProducer_DRN::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput){
+void SCEnergyCorrectorDRNProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput){
     auto inputSCs = iEvent.get(inputSCToken_);
 
     if(inputSCs.size()==0){
@@ -81,15 +81,15 @@ void SCEnergyCorrectorProducer_DRN::acquire(edm::Event const& iEvent, edm::Event
     }
 
     energyCorrector_.setEvent(iEvent);
-    energyCorrector_.make_input(iEvent, iInput, inputSCs);
+    energyCorrector_.makeInput(iEvent, iInput, inputSCs);
 }
 
-void SCEnergyCorrectorProducer_DRN::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput){
+void SCEnergyCorrectorDRNProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput){
     auto inputSCs = iEvent.get(inputSCToken_);
     if (inputSCs.size()==0)
         return;
 
-    const auto& serverout = energyCorrector_.get_output(iOutput);
+    const auto& serverout = energyCorrector_.getOutput(iOutput);
 
     if(inputSCs.size() ==0){
         return;
@@ -109,12 +109,12 @@ void SCEnergyCorrectorProducer_DRN::produce(edm::Event& iEvent, const edm::Event
     auto scHandle = iEvent.put(std::move(corrSCs));
 }
 
-void SCEnergyCorrectorProducer_DRN::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void SCEnergyCorrectorDRNProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
-  desc.add<edm::ParameterSetDescription>("correctorCfg", SCEnergyCorrectorSemiParm_DRN::makePSetDescription());
+  desc.add<edm::ParameterSetDescription>("correctorCfg", SCEnergyCorrectorDRN::makePSetDescription());
   TritonClient::fillPSetDescription(desc);
   desc.add<edm::InputTag>("inputSCs", edm::InputTag("particleFlowSuperClusterECAL"));
-  descriptions.add("scEnergyCorrectorProducer_DRN", desc);
+  descriptions.add("scEnergyCorrectorDRNProducer", desc);
 }
 
-DEFINE_FWK_MODULE(SCEnergyCorrectorProducer_DRN);
+DEFINE_FWK_MODULE(SCEnergyCorrectorDRNProducer);
