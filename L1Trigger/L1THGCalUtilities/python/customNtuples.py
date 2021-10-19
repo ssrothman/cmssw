@@ -44,6 +44,10 @@ class CreateNtuple(object):
             if ntuple=='triggercells':
                 pset.TriggerCells = cms.InputTag(inputs[0])
                 pset.Multiclusters = cms.InputTag(inputs[2])
+            elif ntuple=='triggersums':
+                pset.TriggerSums = cms.InputTag(inputs[0])
+            elif ntuple=='econdata':
+                pset.ConcentratorData = cms.InputTag(inputs[0])
             elif ntuple=='clusters':
                 pset.Clusters = cms.InputTag(inputs[1])
                 pset.Multiclusters = cms.InputTag(inputs[2])
