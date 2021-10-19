@@ -13,6 +13,8 @@
 
 #include <iostream>
 
+static const float RHO_MAX=15.0f;
+
 SCEnergyCorrectorDRN::SCEnergyCorrectorDRN()
     : caloTopo_(nullptr),
       caloGeom_(nullptr) {}
@@ -92,7 +94,7 @@ void SCEnergyCorrectorDRN::makeInput(const edm::Event& iEvent, TritonInputMap& i
             vdata1.push_back(En*frac/250.0);
             vdata2.push_back(batchNum);
         }
-        vdata3.push_back(*rhoHandle_);
+        vdata3.push_back(*rhoHandle_/ RHO_MAX );
         vdata3.push_back(0.0);
         ++batchNum;
     }
