@@ -91,10 +91,6 @@ void SCEnergyCorrectorDRNProducer::produce(edm::Event& iEvent, const edm::EventS
 
     const auto& serverout = energyCorrector_.getOutput(iOutput);
 
-    if(inputSCs.size() ==0){
-        return;
-    }
-
     auto corrSCs = std::make_unique<reco::SuperClusterCollection>();
     unsigned i=0;
     for (const auto& inputSC : inputSCs) {
