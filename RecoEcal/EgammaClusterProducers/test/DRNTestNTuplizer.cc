@@ -83,7 +83,7 @@
 #define initFloat     { initSingleFloat, initSingleFloat, initSingleFloat }
 #define initInt       { initSingleInt, initSingleInt, initSingleInt }
 #define initIntCharge { initSingleIntCharge, initSingleIntCharge, initSingleIntCharge }
-#define PDGID 22
+#define PDGID 11
 
 using reco::TrackCollection;
 
