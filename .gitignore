@@ -1,4 +1,6 @@
 __init__.py
+*.png
+testoutput
 *.root
 DBFiles/*
 *.pyc
