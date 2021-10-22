@@ -1079,7 +1079,7 @@ simmerger::simmerger(const edm::ParameterSet& iConfig) :
     tokenSimTracks(consumes<edm::SimTrackContainer>(edm::InputTag("g4SimHits"))),
     tokenSimVertices(consumes<edm::SimVertexContainer>(edm::InputTag("g4SimHits"))),
     simClustersToken_(consumes<SimClusterCollection>(edm::InputTag("mix:MergedCaloTruth"))),
-    simTrackToSimClusterToken_(consumes<edm::Association<SimClusterCollection>>(edm::InputTag("mix:simTrackToSimCluster")))
+    simTrackToSimClusterToken_(consumes<edm::Association<SimClusterCollection>>(edm::InputTag("simTrackToSimCluster")))
     {
     produces<SimClusterCollection>();
     produces<edm::Association<SimClusterCollection>>();
@@ -1272,7 +1272,6 @@ void simmerger::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     merging_algo(pos);
 
-    std::cout << "neg side " << std::endl; //DEBUG
     for (auto& node : *neg){
         node.flipz();
         node.calculate_shower_variables();
