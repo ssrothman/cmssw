@@ -16,14 +16,20 @@ namespace truth{
  * abstract helper classes that implement a 1:1 merging functionality for objects
  * caching not needed because for every evaluation it's either merged or not
  *
- * templated class T must implement methods:
+ * templated class T must implement the 'physics of it' in methods:
  *
  *    //calculates a (symmetric) merge score between two instances
  *    float mergeScore(const T& rhs)const;
  *
- *    //defines rules to create a new instance out of a set of previously merged instances
+ *    //defines rules to create a new instance out of a set of previously merged instances.
+ *    //this is called at the end, not during merging
  *    T merge(std::vector<const T*>)const;
  *
+ *    //NB: one could add a function that determines how to re-evaluate the merging parameters after a merge
+ *    //    but that would require to change the absorb function a bit (and is not needed right now),
+ *    //    and then clear the vector v if it's not needed anymore.
+ *    //    We don't need this atm, but whatever
+ *    void recalcVariables(std::vector<const T*>& v);
  *
  * workflow:
  *
@@ -49,6 +55,12 @@ public:
             return;//can't absorb itself
         objects_.insert(objects_->end(),rhs->objects_.begin(),rhs->objects_->end());
         rhs->objects_.clear();
+        if(objects_.size()){
+            T * firstobj = objects_.at(0);
+            firstobj->recalcVariables(objects_);
+            if(objects_.size()==0)
+                objects_.push_back(firstobj);//always keep this one
+        }
     }
 
     bool isEmpty()const{
@@ -67,6 +79,12 @@ private:
     std::vector<const T*> objects_;
 };
 
+
+/*
+ * each of these can contain a group of objects that can be merged
+ * if there are multiple it is safe to parallelise over them.
+ *
+ */
 template<class T>
 class ObjectMerger{
 public:
