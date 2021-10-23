@@ -9,63 +9,62 @@
 #define HGCSIMTRUTH_HGCSIMTRUTH_INTERFACE_TRUTHMERGERTOOLS_H_
 
 #include <vector>
-#include <iostream> //debug
+#include <stdexcept>
 
-namespace truth{
-
+namespace merger{
 /*
- * abstract helper classes that implement a 1:1 merging functionality for objects
- * caching not needed because for every evaluation it's either merged or not
+ * workflow in short:
  *
- *  class inheriting from MergeWrapper must implement the 'physics of it' in methods:
- *
- *    constructor based on pointer to actual object
- *    e.g. InheritingClass(const T * o)
- *
- *    //calculates a (symmetric) merge score between two instances
- *    float mergeScore(const InheritingClass* rhs)const;
- *
- *    //defines rules to create a new instance out of a set of previously merged instances.
- *    //this is called at the end, not during merging
- *    //should not use any "this" object properties
- *    T mergeAllInList(const std::vector<const InheritingClass* >& tomerge)const;
- *
- *    //OPT: one could add a function that determines how to re-evaluate the merging parameters after a merge
- *    //    but that would require to change the absorb function a bit (and is not needed right now),
- *    //    and then clear the vector v if it's not needed anymore.
- *    //    return true if the vector has been absorbed, false if not used
- *    bool recalcVariables(std::vector<const InheritingClass *>& v)
- *
- * workflow:
- *
- *   - create a wrapper class T inheriting from MergeWrapper around the object
- *     to merge that implements the above two functions
- *     (and whatever is needed for that)
- *   - add each wrapped object to a ObjectMerger<T>
+ *   - create a wrapper class W inheriting from MergeWrapper around the object
+ *     to merge, describing the merging logic (see below)
+ *   - add each wrapped object to a ObjectMerger<W,T>, where T is the final target class
  *   - call the mergeSymmetric function: returns vector of merged Ts
  *   - retrieve original objects from the Ts
  *
- *   - allows to to merge-by-group first and stuff like that
- *
- *
- *
- *   T: target class (e.g. SimCluster)
- *   U: class inheriting from MergeWrapper<T>
  */
 
 template<class T,class U>
 class MergeWrapper{
+    /*
+     * Base class to create merge wrappers.
+     * Inherit in the following way for a target class T
+     * to be merged, and a class Derived describing the merging
+     * logic:
+     *
+     * class Derived: public truth::MergeWrapper<T,Derived>{...}
+     *
+     */
 public:
-
-    //virtual bool operator==(const MergeWrapper<T,U>& rhs)const=0;
 
     virtual ~MergeWrapper(){}
 
+    /*
+     * inheriting class 'Derived' must to implement a constructor based
+     * on a pointer to the target object:
+     *   Derived(const T* obj);
+     */
+
+    /*
+     * inheriting class 'Derived' must to implement the logic that
+     * calculates a symmetric merge score between two instances
+     */
     virtual float mergeScore(const U* rhs)const=0;
 
-    virtual T mergeAllInList(const std::vector<const U *>&)const=0;
 
-    bool recalcVariables(std::vector<const U *>& v){return false;}
+    /*
+     * inheriting class 'Derived' must implement the logic that
+     * creates a new target object out of a list of instances
+     * of type Derived.
+     */
+    virtual T mergeAllInList(const std::vector<U *>&)const=0;
+
+    /*
+     * inheriting class may implement a recalculation of merging
+     * variables that is called each time an object is merged with another.
+     * It must return true if the variables are recalculated and
+     * must clear the vector v.
+     */
+    bool recalcVariables(std::vector<U *>& v){return false;}
 
 };
 
@@ -82,10 +81,7 @@ template<class U, class T>
 class MergeObject {
 public:
 
-    //objects should be pointers?
-    //they never get lost during merging, so
-
-    MergeObject(const U * obj){
+    MergeObject(U * obj){
         objects_.push_back(obj);
     }
 
@@ -99,15 +95,14 @@ public:
         objects_.insert(objects_.end(),rhs.objects_.begin(),rhs.objects_.end());
         rhs.objects_.clear();
         if(objects_.size()){
-            /* for later
-            U &  firstobj = objects_.at(0);
-
-            bool updated = firstobj.recalcVariables(objects_);
+            U *  firstobj = objects_.at(0);
+            bool updated = firstobj->recalcVariables(objects_);
             if(updated){
-                objects_.clear();
+                if(objects_.size())
+                    throw std::runtime_error("MergeObject<U,T>: recalcVariables called but vector not cleared. Please clear objects when implementing recalcVariables");
                 objects_.push_back(firstobj);//always keep this one
             }
-            */
+
         }
     }
 
@@ -124,7 +119,7 @@ public:
     }
 
 private:
-    std::vector<const U* > objects_;
+    std::vector<U* > objects_;
 };
 
 
@@ -145,7 +140,7 @@ float MergeObject<U,T>::maxMergeScore(const MergeObject& rhs)const{
  * each of these can contain a group of objects that can be merged
  * if there are multiple it is safe to parallelise over them.
  *
- * class T here is MergeWrapper<U>, so type safe with casts within MergeWrapper<U> dervied class
+ * class T here is target, so type safe with casts within MergeWrapper<U> dervied class
  *
  */
 template<class U, class T>
@@ -172,7 +167,8 @@ template<class U,class T>
 std::vector<T> ObjectMerger<U,T>::mergeSymmetric(const float& threshold)const{
 
     std::vector< MergeObject<U,T> > merged;
-    for(const auto& o:objects)
+    std::vector<U> objectscp = objects;
+    for(auto& o:objectscp)
         merged.push_back(MergeObject<U,T>(&o));
 
     while(true){
