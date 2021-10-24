@@ -81,8 +81,9 @@ template<class U, class T>
 class MergeObject {
 public:
 
-    MergeObject(U * obj){
+    MergeObject(U * obj, size_t idx){
         objects_.push_back(obj);
+        idxs_.push_back(idx);
     }
 
     bool operator==(const MergeObject<U,T>& rhs)const{
@@ -94,6 +95,8 @@ public:
             return;//can't absorb itself
         objects_.insert(objects_.end(),rhs.objects_.begin(),rhs.objects_.end());
         rhs.objects_.clear();
+        idxs_.insert(idxs_.end(),rhs.idxs_.begin(),rhs.idxs_.end());
+        rhs.idxs_.clear();
         if(objects_.size()){
             U *  firstobj = objects_.at(0);
             bool updated = firstobj->recalcVariables(objects_);
@@ -118,8 +121,11 @@ public:
         return objects_.at(0)->mergeAllInList(objects_);
     }
 
+    const std::vector<size_t>& idxs()const{return idxs_;}
+
 private:
     std::vector<U* > objects_;
+    std::vector<size_t> idxs_;
 };
 
 
@@ -149,27 +155,30 @@ public:
     //keep track of the original objects here and just pass pointers to the MergeObject one
 
     void add(const T * o){
-        objects.push_back(U(o));
+        objects_.push_back(U(o));
     }
 
     /*
      * returns merged target objects
      */
-    std::vector<T> mergeSymmetric(const float& threshold)const;
+    std::vector<T> mergeSymmetric(const float& threshold, std::vector<std::vector<size_t> >* idxs=0)const;
 
 private:
-    std::vector<U> objects;
+    std::vector<U> objects_;
     std::vector< MergeObject<U,T> > removeEmpty(const std::vector< MergeObject<U,T> >& mo)const;
 };
 
 
 template<class U,class T>
-std::vector<T> ObjectMerger<U,T>::mergeSymmetric(const float& threshold)const{
+std::vector<T> ObjectMerger<U,T>::mergeSymmetric(const float& threshold, std::vector<std::vector<size_t> >* idxs)const{
+
+    //if idxs not NULL than also fill it
 
     std::vector< MergeObject<U,T> > merged;
-    std::vector<U> objectscp = objects;
+    std::vector<U> objectscp = objects_;
+    size_t idx=0;
     for(auto& o:objectscp)
-        merged.push_back(MergeObject<U,T>(&o));
+        merged.push_back(MergeObject<U,T>(&o,idx++));
 
     while(true){
         for(size_t i=0;i<merged.size();i++){
@@ -187,8 +196,14 @@ std::vector<T> ObjectMerger<U,T>::mergeSymmetric(const float& threshold)const{
         merged=newmerged;
     }
     std::vector<T> out;
-    for(const auto& m: merged)
+    if(idxs)
+        idxs->clear();
+    for(const auto& m: merged){
         out.push_back(m.mergedObject());
+        if(idxs){
+            idxs->push_back(m.idxs());
+        }
+    }
     return out;
 }
 
