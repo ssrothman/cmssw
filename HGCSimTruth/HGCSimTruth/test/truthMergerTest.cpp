@@ -68,11 +68,11 @@ int main(){
     std::vector<std::vector<size_t> > idxs;
     std::vector<float> merged = merger.mergeSymmetric(threshold,&idxs);
 
-    std::cout << "merged to toal " << merged.size() << " objects with properties:" <<std::endl;
+    std::cout << "merged to total " << merged.size() << " objects with properties:" <<std::endl;
     for(const auto& m:merged){
         std::cout << m << std::endl;
     }
-    std::cout << "merged groups" << std::endl;
+    std::cout << "merged groups (corresponding to the order the objects were added to the merger)" << std::endl;
     for(const auto& i:idxs){
         for(const auto& ii:i)
             std::cout << ii << " " ;
