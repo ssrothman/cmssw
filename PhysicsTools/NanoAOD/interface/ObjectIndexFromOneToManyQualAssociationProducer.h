@@ -62,7 +62,7 @@ public:
     tabNum->addColumn<int>(branchName_ + "NumMatch", nMatches, doc_);
     auto tabMatches = std::make_unique<nanoaod::FlatTable>(keys.size(), objName_+"_"+branchName_, false, false);
     tabMatches->addColumn<int>("MatchIdx", keys, doc_);
-    tabMatches->addColumn<int>("MatchQual", qualities, doc_);
+    tabMatches->addColumn<float>("MatchQual", qualities, doc_);
 
     iEvent.put(std::move(tabMatches), "match");
     iEvent.put(std::move(tabNum), "count");
