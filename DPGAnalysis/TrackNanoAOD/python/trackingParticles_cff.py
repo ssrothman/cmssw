@@ -25,4 +25,13 @@ trackingParticleTable = cms.EDProducer("SimpleTrackingParticleFlatTableProducer"
     )
 )
 
+trackingParticleToSCTable = cms.EDProducer("TrackingParticleToTrackIndexTableProducer",
+    cut = trackingParticleTable.cut,
+    src = trackingParticleTable.src,
+    objName = trackingParticleTable.name,
+    branchName = cms.string("Track"),
+    objMap = cms.InputTag("trackingParticleRecoTrackAsssociation"),
+    docString = cms.string("Index of the matching reco::Tracks") 
+)
 
+trackingParticleTables = cms.Sequence(trackingParticleTable+trackingParticleToSCTable)
