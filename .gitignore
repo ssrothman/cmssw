@@ -1,12 +1,7 @@
 __init__.py
-*.png
-testoutput
-*.root
-DBFiles/*
 *.pyc
 .*.swp
 .#*
 #*#
 *~
 *.pb
-*.json
