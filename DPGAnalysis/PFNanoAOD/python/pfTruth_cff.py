@@ -3,6 +3,7 @@ from PhysicsTools.NanoAOD.common_cff import CandVars,Var
 from DPGAnalysis.HGCalNanoAOD.simClusters_cff import simClusterTable
 from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import hgcRecHitsTable
 from DPGAnalysis.TrackNanoAOD.trackingParticles_cff import trackingParticleTable
+from DPGAnalysis.TrackNanoAOD.tracks_cff import generalTrackTable
 
 pfTruthParticles = cms.EDProducer("PFTruthParticleProducer",
     trackingParticles= cms.InputTag("mix:MergedTrackTruth"),
@@ -11,7 +12,9 @@ pfTruthParticles = cms.EDProducer("PFTruthParticleProducer",
     simVertices= cms.InputTag("g4SimHits"),
     simTracks= cms.InputTag("g4SimHits"),
     caloRecHits = cms.InputTag("hgcRecHits"),
+    tracks = generalTrackTable.src,
     rechitToSimClusAssoc = cms.InputTag("hgcRecHitsToSimClusters:hgcRecHitsToBestSimClus"), 
+    trackingPartToTrackAssoc = cms.InputTag("trackingParticleRecoTrackAsssociation"), 
 )
 
 pfTruthTable = cms.EDProducer("SimplePFTruthParticleFlatTableProducer",
@@ -45,6 +48,15 @@ trackingPartToPFTruthTable = cms.EDProducer("TrackingParticleToPFTruthParticleIn
     docString = cms.string("PFTruth particle to which the TrackingPart is associated")
 )
 
+trackToPFTruthTable = cms.EDProducer("TrackToPFTruthParticleIndexTableProducer",
+    cut = generalTrackTable.cut,
+    src = generalTrackTable.src,
+    objName = generalTrackTable.name,
+    branchName = pfTruthTable.name,
+    objMap = cms.InputTag("pfTruthParticles:trackToPFTruth"),
+    docString = cms.string("PFTruth particle to which the reco::Track is associated (via the TrackingParticle match)")
+)
+
 recHitToPFTruthTable = cms.EDProducer("CaloRecHitToPFTruthParticleIndexTableProducer",
     cut = hgcRecHitsTable.cut,
     src = hgcRecHitsTable.src,
@@ -57,6 +69,7 @@ recHitToPFTruthTable = cms.EDProducer("CaloRecHitToPFTruthParticleIndexTableProd
 pfTruth = cms.Sequence(pfTruthParticles+pfTruthTable
         +simClusterToPFTruthTable
         +trackingPartToPFTruthTable
+        +trackToPFTruthTable
         +recHitToPFTruthTable 
         )
 
