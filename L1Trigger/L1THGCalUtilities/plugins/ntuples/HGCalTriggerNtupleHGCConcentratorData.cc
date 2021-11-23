@@ -103,8 +103,11 @@ void HGCalTriggerNtupleHGCConcentratorData::clear() {
   econ_n_ = 0;
   econ_id_.clear();
   econ_subdet_.clear();
+  econ_waferu_.clear();
+  econ_waferv_.clear();
   econ_side_.clear();
   econ_layer_.clear();
   econ_wafertype_.clear();
+  econ_index_.clear();
   econ_data_.clear();
 }
