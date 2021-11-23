@@ -141,6 +141,9 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
   double modSum = 0;
 
   int bitsPerOutput = outputBitsPerLink_.at(nLinks);
+  int nIntegerBits = 1;
+  int nDecimalBits = bitsPerOutput - nIntegerBits;
+  double outputSaturationValue = (1 << nIntegerBits) - 1./(1 << nDecimalBits);
 
   // largest expected input and output values, used for bit truncation
   // values of -1 for the number of bits used to keep full precision, in which case the MaxIntSize variables are not used
@@ -149,10 +152,10 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     inputMaxIntSize = 1 << bitsPerInput_;
   double outputMaxIntSize = 1;
   if (bitsPerOutput > 0)
-    outputMaxIntSize = 1 << bitsPerOutput;
+    outputMaxIntSize = 1 << nDecimalBits;
   double outputMaxIntSizeGlobal = 1;
   if (maxBitsPerOutput_ > 0)
-    outputMaxIntSizeGlobal = 1 << maxBitsPerOutput_;
+    outputMaxIntSizeGlobal = 1 << (maxBitsPerOutput_ - nIntegerBits);
 
   for (const auto& trigCell : trigCellVecInput) {
     if (triggerTools_.isScintillator(trigCell.detId()))
@@ -225,7 +228,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     ae_encodedLayer_[i] = *d;
     //truncate the encoded layer bits
     if (bitsPerOutput > 0 && maxBitsPerOutput_ > 0) {
-      ae_encodedLayer_[i] = std::round(ae_encodedLayer_[i] * outputMaxIntSize) / outputMaxIntSize;
+      ae_encodedLayer_[i] = std::min(std::round(ae_encodedLayer_[i] * outputMaxIntSize) / outputMaxIntSize, outputSaturationValue);
     }
   }
 
