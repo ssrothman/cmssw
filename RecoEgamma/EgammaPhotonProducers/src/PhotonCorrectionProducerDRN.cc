@@ -33,12 +33,16 @@ public:
 private:
     //private members
     DRNRegressionHelper helper_;
+
+    EDGetTokenT<reco::PhotonCollection> photonsToken_;
+    Handle<reco::PhotonCollection> photonsHandle_;
 };
 
 PhotonCorrectionProducerDRN::PhotonCorrectionProducerDRN(const ParameterSet& config)
-    : TritonEDProducer<>(config, "PhotonCorrectionProducerDRN") //, other members
+    : TritonEDProducer<>(config, "PhotonCorrectionProducerDRN"),
+      photonsToken_(consumes<reco::PhotonCollection>(config.getParameter<InputTag>("inputPhotons"))) //, other members
 {
-    prorudcer<TYPE>()
+    prorudces<TYPE>(); //TODO
 }
 
 void PhotonCorrectionProducerDRN::beginLuminosityBlock(const LuminosityBlock& lumi,
@@ -48,11 +52,18 @@ void PhotonCorrectionProducerDRN::beginLuminosityBlock(const LuminosityBlock& lu
 
 void PhotonCorrectionProducerDRN::acquire(const Event& event, const EventSetup& setup, Input& input){
     //setup input to server
+    event.getByToken(photonsToken_, photonsHandle_);
+
+    helper_.makeInput(photonsToken_, input) //TODO: not sure how tokens work
 }
 
 void PhotonCorrectionProducerDRN::produce(const Event& event, const EventSetup& setup, 
                                           const Output& output){
     //recieve server output
+    <TYPE> regOutput = <initialize empty>; //TODO
+    helper_.getOutput(&RegOutput, output);
+
+    event.put(std::move(regOutput));
 }
 
 void PhotonCorrectionProducerDRN::fillDescriptions(ConfigurationDesecriptions& descriptions){
