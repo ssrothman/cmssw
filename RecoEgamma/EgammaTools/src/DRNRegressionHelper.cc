@@ -1,4 +1,4 @@
-#include "RecoEgamma/EgammaTools/DRNRegressionHelper.h"
+#include "RecoEgamma/EgammaTools/interface/DRNRegressionHelper.h"
 
 /*
  * TODO
@@ -6,6 +6,8 @@
  * Maybe I can extract a SuperClusterCollection from the PhotonCollection? TBD
  * Or maybe I overlead this function and internally call something else?
  */
+
+/*
 void DRNRegressionHelper::makeInput(const reco::PhotonCollection& photons, Input& input){
     auto& xECAL = input.at("xECAL__0"); //ECAL (x,y,z,E)
     auto& fECAL = input.at("fECAL__1"); //ECAL flags
@@ -120,4 +122,4 @@ void DRNRegressionHelper::makeInput(const reco::PhotonCollection& photons, Input
     gx.toServer(gx_data);
     batch_ECAL.toServer(batch_ECAL_data);
     batch_ES.toServer(batch_ES_data);
-}
+}*/

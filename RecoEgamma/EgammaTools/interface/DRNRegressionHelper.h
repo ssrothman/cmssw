@@ -11,6 +11,7 @@
 class DRNRegressionHelper {
 public:
     //public members
+    //makeInput(const reco::PhotonCollection& photons, Input& input);
 private:
     //private members
 };
