@@ -53,6 +53,8 @@ namespace edm {
     double phiMin_;
     double phiMax_;
 
+    double minDr_;
+
     // debug flag
     bool debug_;
 
