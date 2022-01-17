@@ -77,4 +77,6 @@ trackToTrackingParticleTable = cms.EDProducer("TrackToTrackingParticleIndexTable
 
 
 trackTables = cms.Sequence(generalTrackTable+generalTrackHGCPositionTable+trackConversionsTable+trackDisplacedTable
-        +trackSimClusterMatch+trackSimClusterAssocTable+trackToTrackingParticleTable)
+        +trackToTrackingParticleTable)
+
+trackSCAssocTable = cms.Sequence(trackSimClusterMatch+trackSimClusterAssocTable)

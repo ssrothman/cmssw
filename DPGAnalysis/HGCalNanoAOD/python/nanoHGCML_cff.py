@@ -38,7 +38,9 @@ nanoHGCMLSequence = cms.Sequence(nanoMetadata+
 nanoHGCMLRecoSequence = cms.Sequence(hgcRecHitsSequence+
         hgcRecHitSimAssociationSequence+
         pfCandTable+pfTruth+
-        pfTICLCandTable+trackTables)
+        pfTICLCandTable+
+        trackTables+
+        trackSCAssocTable)
 
 def customizeReco(process):
     process.nanoHGCMLSequence.insert(-1, nanoHGCMLRecoSequence)
