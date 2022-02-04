@@ -32,6 +32,10 @@ egamma_modifications = cms.VPSet(
     cms.PSet( modifierName    = cms.string('EGExtraInfoModifierFromIntValueMaps'),
               electron_config = cms.PSet( ),
               photon_config   = cms.PSet( )
+              ),
+    cms.PSet( modifierName    = cms.string("EGRegressionModifierDRN"),
+              correctionsSource = cms.InputTag("DRN"),
+              photonsSource = cms.InputTag("selectedPatPhotons")
               )
 )
 

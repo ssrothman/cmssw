@@ -31,7 +31,19 @@ from RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi import bunchSpacingPro
 from HeavyFlavorAnalysis.Onia2MuMu.OniaPhotonConversionProducer_cfi import PhotonCandidates as oniaPhotonCandidates
 from RecoLocalCalo.HcalRecProducers.HcalHitSelection_cfi import *
 
+DRN = cms.EDProducer('PhotonDRNCorrectionProducer',
+    photonSource = slimmedPhotons.src,
+    Client = cms.PSet(
+        mode = cms.string("Async"),
+        modelName = cms.string("MustacheEB"),
+        modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/MustacheEB/config.pbtxt"),
+        allowedTries = cms.untracked.uint32(1),
+        timeout = cms.untracked.uint32(10),
+    ),
+)
+
 slimmingTask = cms.Task(
+    DRN,
     packedPFCandidatesTask,
     lostTracks,
     isolatedTracks,

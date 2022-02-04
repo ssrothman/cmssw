@@ -13,6 +13,7 @@
 
 #include "FWCore/Utilities/interface/Exception.h"
 
+#include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonCore.h"
@@ -30,10 +31,10 @@
 /*
  * PhotonDRNCorrectionProducer
  *
- * Simple producer to generate a set of corrected superclusters with the DRN regression
- * Based on RecoEcal/EgammaClusterProducers/SCEnergyCorrectorProducer by S. Harper (RAL/CERN)
+ * Simple producer to generate a ValueMap of corrected energies and resolutions for photons
+ * I might generalize this to have one producer for photons and electrons if this looks possible
  *
- * Author: Simon Rothman (UMN, MIT)
+ * Author: Simon Rothman (MIT)
  *
  */
 
@@ -63,8 +64,8 @@ public:
 private:
   const edm::InputTag photonSource_;
 
-  edm::EDGetTokenT<edm::View<reco::Photon>> photonToken_;
-  edm::Handle<edm::View<reco::Photon>> photonHandle_;
+  edm::EDGetTokenT<edm::View<pat::Photon>> photonToken_;
+  edm::Handle<edm::View<pat::Photon>> photonHandle_;
 
   std::vector<std::pair<float,float>> corrections_;
 
@@ -75,7 +76,9 @@ PhotonDRNCorrectionProducer::PhotonDRNCorrectionProducer(const edm::ParameterSet
       photonSource_{iConfig.getParameter<edm::InputTag>("photonSource")},
       photonToken_(consumes(photonSource_)) {
 
-          produces<edm::ValueMap<std::pair<float,float>>>("DRNCorrection");
+          produces<edm::ValueMap<std::pair<float,float>>>();
+
+          std::cout << "Constructed DRNCorrectionProducer" << std::endl;
 }
 
 void PhotonDRNCorrectionProducer::beginLuminosityBlock(const edm::LuminosityBlock& iLumi,
@@ -121,13 +124,13 @@ void PhotonDRNCorrectionProducer::produce(edm::Event& iEvent, const edm::EventSe
 
     photonHandle_ = iEvent.getHandle(photonToken_); 
     
-    if (photonHandle_->empty())
-        return;
+    //if (photonHandle_->empty())
+    //    return;
 
     //std::cout << "photon handle is not empty" << std::endl;
 
     //for (const auto& pho: *photonHandle_){
-    for (unsigned i=0; i<photonHandle_->size(); ++i){
+    for (unsigned i=0; i < photonHandle_->size(); ++i){
         corrections_.emplace_back(std::pair<float,float>(1.0f,2.0f)); //TEMPORARY OUTPUT
         //std::cout << "emplacing" << i << "... " << std::endl;
         //std::cout << "photon :D" << std::endl;
@@ -139,10 +142,9 @@ void PhotonDRNCorrectionProducer::produce(edm::Event& iEvent, const edm::EventSe
     auto out = std::make_unique<edm::ValueMap<std::pair<float,float>>>();
     edm::ValueMap<std::pair<float,float>>::Filler filler(*out);
     filler.insert(photonHandle_, corrections_.begin(), corrections_.end());
+    filler.fill();
 
-    //std::cout << "filled ValueMap" << std::endl;
-
-    iEvent.put(std::move(out), "DRNCorrection");
+    iEvent.put(std::move(out));
 
     //std::cout << "bottom of produce" << std::endl;
 }
