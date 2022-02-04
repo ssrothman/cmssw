@@ -86,9 +86,7 @@ EGRegressionModifierDRN::EGRegressionModifierDRN(const edm::ParameterSet& conf, 
       correctionsToken_(cc.consumes<edm::ValueMap<std::pair<float,float>>>(correctionsSource_)),
       photonsSource_{conf.getParameter<edm::InputTag>("photonsSource")},
       photonsToken_(cc.consumes<edm::View<pat::Photon>>(photonsSource_))
-{
-    std::cout << "constructed EGRegressionModifierDRN" << std::endl;
-}
+{ }
 
 EGRegressionModifierDRN::~EGRegressionModifierDRN() {}
 
@@ -115,7 +113,6 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
   //check if we have specified an photon regression correction and
   //return the object unmodified if so
   //corrections_ = event_.get(correctionsToken_);
-  std::cout << "modifying a photon" << std::endl; 
   //reco::recoPhotonPtr photonref(pho);
   
   LorentzVector phoP4 = pho.p4(reco::Photon::P4type::ecal_standard);
@@ -138,12 +135,9 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
     return;
   }
   
-  std::cout << "matched at index " << i << std::endl;
   edm::Ptr<pat::Photon> ptr = photons_.ptrAt(i);
 
   std::pair<float, float> correction = corrections_[ptr]; 
-  std::cout << "energy: " << correction.first << std::endl;
-  std::cout << "error: " << correction.second << std::endl;
 
   pho.setCorrectedEnergy(reco::Photon::P4type::regression2, correction.first, correction.second, true);
 }
