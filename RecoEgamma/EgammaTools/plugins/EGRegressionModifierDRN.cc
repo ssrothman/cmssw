@@ -61,7 +61,6 @@ public:
   void modifyObject(reco::GsfElectron&) const final;
   void modifyObject(reco::Photon&) const final;
 
-  // just calls reco versions
   void modifyObject(pat::Electron&) const final;
   void modifyObject(pat::Photon&) const final;
 

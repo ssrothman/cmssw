@@ -14,7 +14,9 @@
 #include "FWCore/Utilities/interface/Exception.h"
 
 #include "DataFormats/PatCandidates/interface/Photon.h"
+#include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
+#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonCore.h"
 
@@ -29,7 +31,7 @@
 #include <iostream>
 
 /*
- * PhotonDRNCorrectionProducer
+ * DRNCorrectionProducerT
  *
  * Simple producer to generate a ValueMap of corrected energies and resolutions for photons
  * I might generalize this to have one producer for photons and electrons if this looks possible
@@ -49,12 +51,12 @@ namespace {
   float correction(float x) { return exp(-logcorrection(x)); }
 }  // namespace
 
-class PhotonDRNCorrectionProducer : public TritonEDProducer<> {
+template<typename T>
+class DRNCorrectionProducerT : public TritonEDProducer<> {
 public:
-  explicit PhotonDRNCorrectionProducer(const edm::ParameterSet& iConfig);
+  explicit DRNCorrectionProducerT(const edm::ParameterSet& iConfig);
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-
 
   void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& input) override;
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) override;
@@ -62,52 +64,54 @@ public:
   void beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) override;
 
 private:
-  const edm::InputTag photonSource_;
+  const edm::InputTag particleSource_;
+  edm::EDGetTokenT<edm::View<T>> particleToken_;
+  edm::Handle<edm::View<T>> particles_;
 
-  edm::EDGetTokenT<edm::View<pat::Photon>> photonToken_;
-  edm::Handle<edm::View<pat::Photon>> photonHandle_;
+  const edm::InputTag rhoName_;
+  edm::EDGetTokenT<double> rhoToken_;
+  float rho_;
 
   std::vector<std::pair<float,float>> corrections_;
 
+  std::vector<float> HoEs_;
+
+  size_t nPart_;
+
 };
 
-PhotonDRNCorrectionProducer::PhotonDRNCorrectionProducer(const edm::ParameterSet& iConfig)
-    : TritonEDProducer<>(iConfig, "PhotonDRNCorrectionProducer"),
-      photonSource_{iConfig.getParameter<edm::InputTag>("photonSource")},
-      photonToken_(consumes(photonSource_)) {
+template<typename T>
+DRNCorrectionProducerT<T>::DRNCorrectionProducerT(const edm::ParameterSet& iConfig)
+    : TritonEDProducer<>(iConfig, "DRNCorrectionProducerT"),
+      particleSource_{iConfig.getParameter<edm::InputTag>("particleSource")},
+      particleToken_(consumes(particleSource_)),
+      rhoName_{iConfig.getParameter<edm::InputTag>("rhoName")},
+      rhoToken_(consumes(rhoName_)){
 
           produces<edm::ValueMap<std::pair<float,float>>>();
-
-          std::cout << "Constructed DRNCorrectionProducer" << std::endl;
 }
 
-void PhotonDRNCorrectionProducer::beginLuminosityBlock(const edm::LuminosityBlock& iLumi,
+template<typename T>
+void DRNCorrectionProducerT<T>::beginLuminosityBlock(const edm::LuminosityBlock& iLumi,
                                                         const edm::EventSetup& iSetup) {
 }
 
-void PhotonDRNCorrectionProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
+template<typename T>
+void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
 
-    //std::cout << "top of acquire" << std::endl;
 
-    photonHandle_ = iEvent.getHandle(photonToken_); 
+    particles_ = iEvent.getHandle(particleToken_); 
+    rho_ = iEvent.get(rhoToken_);
 
-    if(!photonHandle_.isValid()){
-        throw cms::Exception("PhotonDRNCorrectionProducer") 
-            << "Error! Cant get the photons from " 
-            << photonSource_.label() << std::endl;
-    }
+    nPart_ = particles_->size();
 
-    std::cout << "there are " << photonHandle_->size() << " photons in the DRN Corrector" << std::endl;
-
-    //throw cms::Exception("PhotonDRNCorrectionProducer") << "test" << std::endl;
-
-    //clear previous output
     corrections_.clear();
-    corrections_.reserve(photonHandle_->size());
+    corrections_.reserve(nPart_);
 
-    //std::cout << "setup corrections vector" << std::endl;
+    HoEs_.clear();
+    HoEs_.reserve(nPart_);
 
-    if (photonHandle_->empty()){
+    if (nPart_==0){
         client_->setBatchSize(0);
         return;
     } else {
@@ -115,45 +119,46 @@ void PhotonDRNCorrectionProducer::acquire(edm::Event const& iEvent, edm::EventSe
     }
 
     //setup server input...
-    //std::cout << "End of acquire" << std::endl;
-}
-
-void PhotonDRNCorrectionProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) {
-
-    //std::cout << "top of produce" << std::endl;
-
-    photonHandle_ = iEvent.getHandle(photonToken_); 
-    
-    //if (photonHandle_->empty())
-    //    return;
-
-    //std::cout << "photon handle is not empty" << std::endl;
-
-    //for (const auto& pho: *photonHandle_){
-    for (unsigned i=0; i < photonHandle_->size(); ++i){
-        corrections_.emplace_back(std::pair<float,float>(1.0f,2.0f)); //TEMPORARY OUTPUT
-        //std::cout << "emplacing" << i << "... " << std::endl;
-        //std::cout << "photon :D" << std::endl;
+    for(auto& pho : *particles_){
+      HoEs_.push_back(pho.hadronicOverEm());
     }
 
-    //std::cout << "filled corrections" << std::endl;
+}
+
+template<typename T>
+void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) {
+
+    particles_ = iEvent.getHandle(particleToken_); 
+
+    for (unsigned i=0; i < nPart_; ++i){
+        corrections_.emplace_back(std::pair<float,float>(1.0f,2.0f)); //TEMPORARY OUTPUT
+    }
 
     //fill
     auto out = std::make_unique<edm::ValueMap<std::pair<float,float>>>();
     edm::ValueMap<std::pair<float,float>>::Filler filler(*out);
-    filler.insert(photonHandle_, corrections_.begin(), corrections_.end());
+    filler.insert(particles_, corrections_.begin(), corrections_.end());
     filler.fill();
 
     iEvent.put(std::move(out));
-
-    //std::cout << "bottom of produce" << std::endl;
 }
 
-void PhotonDRNCorrectionProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+template<typename T>
+void DRNCorrectionProducerT<T>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   TritonClient::fillPSetDescription(desc);
-  desc.add<edm::InputTag>("photonSource");
-  descriptions.add("PhotonDRNCorrectionProducer", desc);
+  desc.add<edm::InputTag>("particleSource");
+  desc.add<edm::InputTag>("rhoName");
+  descriptions.addWithDefaultLabel(desc);
 }
 
+using PatPhotonDRNCorrectionProducer = DRNCorrectionProducerT<pat::Photon>;
+using PhotonDRNCorrectionProducer = DRNCorrectionProducerT<reco::Photon>;
+using GsfElectronDRNCorrectionProducer = DRNCorrectionProducerT<reco::GsfElectron>;
+using PatElectronDRNCorrectionProducer = DRNCorrectionProducerT<pat::Electron>;
+
+//DEFINE_FWK_MODULE(DRNCorrectionProducerT);
+DEFINE_FWK_MODULE(PatPhotonDRNCorrectionProducer);
 DEFINE_FWK_MODULE(PhotonDRNCorrectionProducer);
+DEFINE_FWK_MODULE(GsfElectronDRNCorrectionProducer);
+DEFINE_FWK_MODULE(PatElectronDRNCorrectionProducer);

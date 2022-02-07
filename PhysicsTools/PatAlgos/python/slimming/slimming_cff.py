@@ -31,8 +31,9 @@ from RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi import bunchSpacingPro
 from HeavyFlavorAnalysis.Onia2MuMu.OniaPhotonConversionProducer_cfi import PhotonCandidates as oniaPhotonCandidates
 from RecoLocalCalo.HcalRecProducers.HcalHitSelection_cfi import *
 
-DRN = cms.EDProducer('PhotonDRNCorrectionProducer',
-    photonSource = slimmedPhotons.src,
+DRN = cms.EDProducer('PatPhotonDRNCorrectionProducer',
+    particleSource = slimmedPhotons.src,
+    rhoName = cms.InputTag("fixedGridRhoFastjetAll"),
     Client = cms.PSet(
         mode = cms.string("Async"),
         modelName = cms.string("MustacheEB"),
