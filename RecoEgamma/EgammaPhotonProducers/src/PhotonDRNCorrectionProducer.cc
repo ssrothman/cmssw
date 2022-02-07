@@ -19,9 +19,31 @@
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonCore.h"
-
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/Common/interface/Handle.h"
+#include "DataFormats/EcalDetId/interface/EcalSubdetector.h"
+#include "DataFormats/EcalDetId/interface/EBDetId.h"
+#include "DataFormats/EcalDetId/interface/EEDetId.h"
+#include "DataFormats/EcalDetId/interface/ESDetId.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+
+#include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/CaloGeometry/interface/CaloCellGeometry.h"
+#include "Geometry/CaloGeometry/interface/TruncatedPyramid.h"
+#include "Geometry/EcalAlgo/interface/EcalPreshowerGeometry.h"
+#include "Geometry/CaloTopology/interface/EcalPreshowerTopology.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "Geometry/CaloEventSetup/interface/CaloTopologyRecord.h"
+#include "Geometry/CaloTopology/interface/CaloTopology.h"
+
+#include "CondFormats/EcalObjects/interface/EcalPedestals.h"
+#include "CondFormats/DataRecord/interface/EcalPedestalsRcd.h"
+
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
+#include "RecoEcal/EgammaCoreTools/interface/PositionCalc.h"
 
 #include <sstream>
 #include <string>
@@ -49,9 +71,19 @@ namespace {
   }
 
   float correction(float x) { return exp(-logcorrection(x)); }
+
+  const float RHO_MAX = 15.0f;
+  const float X_MAX = 150.0f;
+  const float X_RANGE = 300.0f;
+  const float Y_MAX = 150.0f;
+  const float Y_RANGE = 300.0f;
+  const float Z_MAX = 330.0f;
+  const float Z_RANGE = 660.0f;
+  const float E_RANGE = 250.0f;
+
 }  // namespace
 
-template<typename T>
+template <typename T>
 class DRNCorrectionProducerT : public TritonEDProducer<> {
 public:
   explicit DRNCorrectionProducerT(const edm::ParameterSet& iConfig);
@@ -72,78 +104,269 @@ private:
   edm::EDGetTokenT<double> rhoToken_;
   float rho_;
 
-  std::vector<std::pair<float,float>> corrections_;
+  std::vector<std::pair<float, float>> corrections_;
+
+  edm::InputTag EBRecHitsName_, EERecHitsName_, ESRecHitsName_;
+  edm::EDGetTokenT<EcalRecHitCollection> EBRecHitsToken_, EERecHitsToken_, ESRecHitsToken_;
+  edm::Handle<EcalRecHitCollection> EERecHits_, EBRecHits_, ESRecHits_;
 
   std::vector<float> HoEs_;
 
   size_t nPart_;
 
+  noZS::EcalClusterLazyTools* clustertools_;
+
+  edm::ESHandle<EcalPedestals> ped_;
+  edm::ESHandle<CaloGemetry> pG_;
 };
 
-template<typename T>
+template <typename T>
 DRNCorrectionProducerT<T>::DRNCorrectionProducerT(const edm::ParameterSet& iConfig)
     : TritonEDProducer<>(iConfig, "DRNCorrectionProducerT"),
       particleSource_{iConfig.getParameter<edm::InputTag>("particleSource")},
       particleToken_(consumes(particleSource_)),
       rhoName_{iConfig.getParameter<edm::InputTag>("rhoName")},
-      rhoToken_(consumes(rhoName_)){
+      rhoToken_(consumes(rhoName_)),
+      EBRecHitsName_{iConfig.getParameter<edm::InputTag>("reducedEcalRecHitsEB")},
+      EERecHitsName_{iConfig.getParameter<edm::InputTag>("reducedEcalRecHitsEE")},
+      ESRecHitsName_{iConfig.getParameter<edm::InputTag>("reducedEcalRecHitsES")},
+      EBRecHitsToken_(consumes<EcalRecHitCollection>(EBRecHitsName_)),
+      EERecHitsToken_(consumes<EcalRecHitCollection>(EERecHitsName_)),
+      ESRecHitsToken_(consumes<EcalRecHitCollection>(ESRecHitsName_)),
 
-          produces<edm::ValueMap<std::pair<float,float>>>();
+{
+  produces<edm::ValueMap<std::pair<float, float>>>();
 }
 
-template<typename T>
-void DRNCorrectionProducerT<T>::beginLuminosityBlock(const edm::LuminosityBlock& iLumi,
-                                                        const edm::EventSetup& iSetup) {
+template <typename T>
+void DRNCorrectionProducerT<T>::beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) {
 }
 
-template<typename T>
+template <typename T>
 void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
+  //get things from the event...
+  particles_ = iEvent.getHandle(particleToken_);
+  rho_ = iEvent.get(rhoToken_);
+  EBRecHits_ = iEvent.get(EBRecHitsToken_);
+  EERecHits_ = iEvent.get(EERecHitsToken_);
+  ESRecHits_ = iEvent.get(ESRecHitsToken_);
 
+  iSetup.get<EcalPedestalsRcd>().get(ped_);
+  iSetup.get<CaloGemetryRecord> / get().get(pG_);
+  const CaloGeometry* geo = pG.product();
+  const CaloSubDetectorGeometry* ecalEBGeom = static_cast<const CaloSubdetectorGeometry*>(
+      geo->getSubdetectorGeometry(DetId::Ecal, EcalBarrel));
+  const CaloSubDetectorGeometry* ecalEEGeom = static_cast<const CaloSubdetectorGeometry*>(
+      geo->getSubdetectorGeometry(DetId::Ecal, EcalEndcap));
+  const CaloSubDetectorGeometry* ecalESGeom = static_cast<const CaloSubdetectorGeometry*>(
+      geo->getSubdetectorGeometry(DetId::Ecal, EcalPreshower));
 
-    particles_ = iEvent.getHandle(particleToken_); 
-    rho_ = iEvent.get(rhoToken_);
+  clustertools = new noZS::EcalClusterLazyTools(iEvent, iSetup, EBRecHits_, EERecHits_);
 
-    nPart_ = particles_->size();
+  const EcalRecHitCollection* recHitsEB = clustertools->getEcalEBRecHitCollection();
+  const EcalRecHitCollection* recHitsEE = clustertools->getEcalEERecHitCollection();
 
-    corrections_.clear();
-    corrections_.reserve(nPart_);
+  nPart_ = particles_->size();
 
-    HoEs_.clear();
-    HoEs_.reserve(nPart_);
+  corrections_.clear();
+  corrections_.reserve(nPart_);
 
-    if (nPart_==0){
-        client_->setBatchSize(0);
-        return;
-    } else {
-        client_->setBatchSize(0); //TEMPORARY: don't run anything in Triton yet
+  HoEs_.clear();
+  HoEs_.reserve(nPart_);
+
+  if (nPart_ == 0) {
+    client_->setBatchSize(0);
+    return;
+  } else {
+    client_->setBatchSize(0);  //TEMPORARY: don't run anything in Triton yet
+  }
+
+  unsigned totalHitsECAL = 0, totalHitsES = 0;
+  bool isEB = 0, esEE = 0;
+  //kinda awkward here
+  //have to loop through everything an extra time to figure out how many hits there are
+  for (auto& part : *particles_) {
+    const SuperClusterRef& sc = part->superCluster();
+    isEB = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalBarrel);
+    isEE = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalEndcap);
+
+    if (!isEB && !isEE)  //if neither EB or EE. Not sure if this even happens
+      continue;
+
+    totalHitsECAL += sc->hitsAndFractions.size();  //Think hitsAndFractions containus only ECAL hits
+
+    for (auto iES = sc->preshowerClusersBegin(); iES != sc.preshowerClustersEnd(); ++iES) {
+      totalHitsES += (*iES)->hitsAndFractions().size();
+    }
+  }
+
+  //allocate model imputs
+  auto& inputxECAL = iInput.at("xECAL__0");
+  inputxECAL.setShape(0, totalHitsECAL);
+  auto dataxECAL = inputxECAL.allocate<float>();
+  auto& vdataxECAL = (*dataxECAL)[0];
+
+  auto& inputfECAL = iInput.at("fECAL__1");
+  inputfECAL.setShape(0, totalHitsECAL);
+  auto datafECAL = inputfECAL.allocate<unsigned>();
+  auto& vdatafECAL = (*datafECAL)[0];
+
+  auto& inputGain = iInput.at("gain__2");
+  inputGain.setShape(0, totalHitsECAL);
+  auto dataGain = inputGain.allocate<unsigned>();
+  auto& vdataGain = (*dataGain)[0];
+
+  auto& inputxES = iInput.at("xES__3");
+  inputxES.setShape(0, totalHitsES);
+  auto dataxES = inputxES.allocate<float>();
+  auto& vdataxES = (*dataxES)[0];
+
+  auto& inputfES = iInput.at("fES__4");
+  inputfES.setShape(0, totalHitsES);
+  auto datafES = inputfES.allocate<unsigned>();
+  auto& vdatafES = (*datafES)[0];
+
+  auto& inputGx = iInput.at("graph_x__5");
+  inputGx.setShape(0, nPart);
+  auto dataGx = inputGx.allocate<float>();
+  auto& vdataGx = (*dataGx)[0];
+
+  auto& inputBatchECAL = iInput.at("xECAL_batch__6");
+  inputBatchECAL.setShape(0, totalHistECAL);
+  auto dataBatchECAL = inputBatchECAL.allocate<unsigned>();
+  auto& vdataBatchECAL = (*dataBatchECAL)[0];
+
+  auto& inputBatchES = iInput.at("xES_batch__6");
+  inputBatchES.setShape(0, totalHistES);
+  auto dataBatchES = inputBatchES.allocate<unsigned>();
+  auto& vdataBatchES = (*dataBatchES)[0];
+
+  //fill model inputs
+  //TODO: scaling
+  unsigned partNum = 0;
+  //iterate over particles...
+  for (auto& part : *particles_) {
+    const SuperClusterRef& sc = part->superCluster();
+    isEB = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalBarrel);
+    isEE = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalEndcap);
+
+    if (!isEB && !isEE)  //if neither EB or EE. Not sure if this even happens
+      continue;
+
+    std::vector<std::pair<DetId, float>> hitsAndFractions = sc->hitsAndFractions();
+    shared_ptr<const CaloCellGeometry> geom;
+    EcalRecHitCollection::const_iterator hit;
+
+    //iterate over ECAL hits...
+    for (const auto& detitr : hitsAndFractions) {
+      DetId id = detitr.first.rawId();
+      if (isEB) {
+        ecalEBGeom->getGeometry(did);
+        hit = recHitsEB->find(detitr.first);
+      } else if (isEE) {
+        geom = ecalEEGeom->getGeometry(did);
+        hit = recHitsEE->find(detitr.first);
+      }
+
+      //fill xECAL
+      auto pos = geom->getPosition();
+      vdataxECAL.push_back(pos.x());
+      vdataxECAL.push_back(pos.y());
+      vdataxECAL.push_back(pos.z());
+      vdataxECAL.push_back(hit->energy() * detitr.second);     //energy time fraction
+      vdataxECAL.push_back(ped_->find(detitr.first)->rms(1));  //noise pedestal
+
+      //fill fECAL
+      unsigned flagVal = 0;
+      if (hit->checkFlag(EcalRecHit::kGood))
+        flagVal += 1;
+      if (hit->checkFlag(EcalRecHit::kOutOfTime))
+        flagVal += 2;
+      if (hit->checkFlag(EcalRecHit::kPoorCalib))
+        flagVal += 4;
+
+      vdatafECAL.push_back(flagVal);
+
+      //fill gain
+      if (hit->checkFlag(EcalRecHit::HasSwitchToGain6))
+        vdataGain.push_back(1);
+      else if (hit->checkFlag(EcalRecHit::HasSwitchToGain1))
+        vdataGain.push_back(0);
+      else
+        vdataGain.push_back(2);
+
+      //fill batchECAL
+      vdataBatchECAL.push_back(partNum);
     }
 
-    //setup server input...
-    for(auto& pho : *particles_){
-      HoEs_.push_back(pho.hadronicOverEm());
+    //iterate over ES hits...
+    for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
+      for (const auto ESitr : iES->hitsAndFractions()) {
+        ESDetId ESid = ESDetId(ESitr->id());
+        hit = recHitsES->find(esItr.first);
+        geom = ecalESGeom->getGeometry(ESid);
+        auto& pos = geom->getPosition();
+
+        //fill xES
+        vdataxES.push_back(pos.x());
+        vdataxES.push_back(pos.y());
+        vdataxES.push_back(pos.z());
+        vdataxES.push_back(hit->energy());
+
+        //fill fES
+        flagVal = 0;
+        if (hit->checkFlag(EcalRecHit::kESGood))
+          flagVal += 1;
+
+        vdatafES.push_back(flagVal);
+
+        //fill batchES
+        vdataBatchES.push_back(partNum);
+      }
     }
 
+    //fill gx
+    vdataGx.push_back(rho_);
+    vdataGx.push_back(part.hadronicOverEm());
+
+    //increment particle number
+    ++partNum;
+  }
+
+  //convert to server format
+  inputxECAL.toServer(dataxECAL);
+  inputfECAL.toServer(datafECAL);
+  inputGain.toServer(dataGain);
+  inputxES.toServer(dataxES);
+  inputfES.toServer(datafES);
+  inputGx.toServer(dataGx);
+  inputBatchECAL.toServer(dataBatchECAL);
+  inputBatchES.toServer(dataBatchES);
 }
 
-template<typename T>
+template <typename T>
 void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) {
+  particles_ = iEvent.getHandle(particleToken_);
 
-    particles_ = iEvent.getHandle(particleToken_); 
+  const auto& serverOut = iOutput.begin().second.fromServer<float>();
 
-    for (unsigned i=0; i < nPart_; ++i){
-        corrections_.emplace_back(std::pair<float,float>(1.0f,2.0f)); //TEMPORARY OUTPUT
-    }
+  float mu, sigma;
+  for (unsigned i = 0; i < nPart_; ++i) {
+    mu = serverOut[0][0 + 6 * i];
+    sigma = serverOut[0][1 + 6 * i];
+    corrections_.emplace_back(std::pair<float, float>(mu, sigma));
+  }
 
-    //fill
-    auto out = std::make_unique<edm::ValueMap<std::pair<float,float>>>();
-    edm::ValueMap<std::pair<float,float>>::Filler filler(*out);
-    filler.insert(particles_, corrections_.begin(), corrections_.end());
-    filler.fill();
+  //fill
+  auto out = std::make_unique<edm::ValueMap<std::pair<float, float>>>();
+  edm::ValueMap<std::pair<float, float>>::Filler filler(*out);
+  filler.insert(particles_, corrections_.begin(), corrections_.end());
+  filler.fill();
 
-    iEvent.put(std::move(out));
+  iEvent.put(std::move(out));
 }
 
-template<typename T>
+template <typename T>
 void DRNCorrectionProducerT<T>::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   TritonClient::fillPSetDescription(desc);
