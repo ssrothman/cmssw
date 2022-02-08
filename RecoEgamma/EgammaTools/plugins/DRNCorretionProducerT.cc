@@ -207,42 +207,42 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
   //allocate model imputs
   auto& inputxECAL = iInput.at("xECAL__0");
-  inputxECAL.setShape(0, totalHitsECAL);
+  inputxECAL.setShape(0, totalHitsECAL+1);
   auto dataxECAL = inputxECAL.allocate<float>();
   auto& vdataxECAL = (*dataxECAL)[0];
 
   auto& inputfECAL = iInput.at("fECAL__1");
-  inputfECAL.setShape(0, totalHitsECAL);
+  inputfECAL.setShape(0, totalHitsECAL+1);
   auto datafECAL = inputfECAL.allocate<int64_t>();
   auto& vdatafECAL = (*datafECAL)[0];
 
   auto& inputGain = iInput.at("gain__2");
-  inputGain.setShape(0, totalHitsECAL);
+  inputGain.setShape(0, totalHitsECAL+1);
   auto dataGain = inputGain.allocate<int64_t>();
   auto& vdataGain = (*dataGain)[0];
 
   auto& inputxES = iInput.at("xES__3");
-  inputxES.setShape(0, totalHitsES);
+  inputxES.setShape(0, totalHitsES+1);
   auto dataxES = inputxES.allocate<float>();
   auto& vdataxES = (*dataxES)[0];
 
   auto& inputfES = iInput.at("fES__4");
-  inputfES.setShape(0, totalHitsES);
+  inputfES.setShape(0, totalHitsES+1);
   auto datafES = inputfES.allocate<int64_t>();
   auto& vdatafES = (*datafES)[0];
 
   auto& inputGx = iInput.at("graph_x__5");
-  inputGx.setShape(0, nPart_);
+  inputGx.setShape(0, nPart_+1);
   auto dataGx = inputGx.allocate<float>();
   auto& vdataGx = (*dataGx)[0];
 
   auto& inputBatchECAL = iInput.at("xECAL_batch__6");
-  inputBatchECAL.setShape(0, totalHitsECAL);
+  inputBatchECAL.setShape(0, totalHitsECAL+1);
   auto dataBatchECAL = inputBatchECAL.allocate<int64_t>();
   auto& vdataBatchECAL = (*dataBatchECAL)[0];
 
   auto& inputBatchES = iInput.at("xES_batch__6");
-  inputBatchES.setShape(0, totalHitsES);
+  inputBatchES.setShape(0, totalHitsES+1);
   auto dataBatchES = inputBatchES.allocate<int64_t>();
   auto& vdataBatchES = (*dataBatchES)[0];
 
@@ -336,6 +336,29 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     //increment particle number
     ++partNum;
   }// end iterate over ES hits
+
+  vdataxECAL.push_back(0);
+  vdataxECAL.push_back(0);
+  vdataxECAL.push_back(0);
+  vdataxECAL.push_back(0);
+  vdataxECAL.push_back(0);
+
+  vdatafECAL.push_back(0);
+
+  vdataGain.push_back(0);
+
+  vdataxES.push_back(0);
+  vdataxES.push_back(0);
+  vdataxES.push_back(0);
+  vdataxES.push_back(0);
+
+  vdatafES.push_back(0);
+
+  vdataGx.push_back(0);
+  vdataGx.push_back(0);
+
+  vdataBatchECAL.push_back(nPart_);
+  vdataBatchES.push_back(nPart_);
 
   //convert to server format
   inputxECAL.toServer(dataxECAL);
