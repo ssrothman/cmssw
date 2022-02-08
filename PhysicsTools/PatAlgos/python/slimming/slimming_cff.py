@@ -26,22 +26,11 @@ from PhysicsTools.PatAlgos.slimming.slimmedMETs_cfi      import *
 from PhysicsTools.PatAlgos.slimming.slimmedV0s_cff      import *
 from PhysicsTools.PatAlgos.slimming.metFilterPaths_cff   import *
 from PhysicsTools.PatAlgos.slimming.MicroEventContent_cff import *
+from PhysicsTools.PatAlgos.slimming.photonDRNCorrector_cfi import DRN
 from RecoEgamma.EgammaPhotonProducers.reducedEgamma_cfi  import *
 from RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi import bunchSpacingProducer
 from HeavyFlavorAnalysis.Onia2MuMu.OniaPhotonConversionProducer_cfi import PhotonCandidates as oniaPhotonCandidates
 from RecoLocalCalo.HcalRecProducers.HcalHitSelection_cfi import *
-
-DRN = cms.EDProducer('PatPhotonDRNCorrectionProducer',
-    particleSource = slimmedPhotons.src,
-    rhoName = cms.InputTag("fixedGridRhoFastjetAll"),
-    Client = cms.PSet(
-        mode = cms.string("Async"),
-        modelName = cms.string("MustacheEB"),
-        modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/MustacheEB/config.pbtxt"),
-        allowedTries = cms.untracked.uint32(1),
-        timeout = cms.untracked.uint32(10),
-    ),
-)
 
 slimmingTask = cms.Task(
     DRN,
