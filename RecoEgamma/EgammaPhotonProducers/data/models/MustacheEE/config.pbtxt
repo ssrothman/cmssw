@@ -1,0 +1,27 @@
+name: "MustacheEE"
+platform: "pytorch_libtorch"
+max_batch_size: 0
+input [
+{
+    name: "x__0"
+    data_type: TYPE_FP32
+    dims: [-1, 4]
+},
+{
+    name: "batch__1"
+    data_type: TYPE_INT64
+    dims: [-1]
+},
+{ 
+    name: "graphx__2"
+    data_type: TYPE_FP32
+    dims: [-1]
+}
+]
+output [
+{
+    name: "dscb__0"
+    data_type: TYPE_FP32
+    dims: [-1, 6]
+}]
+
