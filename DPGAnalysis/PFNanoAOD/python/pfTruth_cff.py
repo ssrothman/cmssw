@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import CandVars,Var
-from DPGAnalysis.HGCalNanoAOD.simClusters_cff import mergedSimClusterTable
-from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import hgcRecHitsTable
+from DPGAnalysis.CaloNanoAOD.simClusters_cff import mergedSimClusterTable
+from DPGAnalysis.CaloNanoAOD.hgcRecHits_cff import hgcRecHitsTable
 from DPGAnalysis.TrackNanoAOD.trackingParticles_cff import trackingParticleTable
 from DPGAnalysis.TrackNanoAOD.tracks_cff import generalTrackTable
 

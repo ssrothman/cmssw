@@ -1,6 +1,5 @@
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import CandVars,Var
-from DPGAnalysis.HGCalNanoAOD.simClusters_cff import mergedSimClusterTable
 
 caloParticleTable = cms.EDProducer("SimpleCaloParticleFlatTableProducer",
     src = cms.InputTag("mix:MergedCaloTruth"),
