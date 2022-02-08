@@ -20,7 +20,6 @@
 <use name="RecoTracker/CkfPattern"/>
 <use name="RecoTracker/TrackProducer"/>
 <use name="DataFormats/HcalRecHit"/>
-<use name="HeterogeneousCore/SonicTriton"/>
 <use name="RecoCaloTools/Selectors" source_only="1"/>
 <use name="clhep"/>
 <use name="PhysicsTools/TensorFlow" />
