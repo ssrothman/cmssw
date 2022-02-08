@@ -1,0 +1,50 @@
+name: "ObjEB"
+platform: "pytorch_libtorch"
+max_batch_size: 0
+input [
+{
+  name: "xECAL__0"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fECAL__1"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gain__2"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES__3"
+  data_type: TYPE_FP32
+  dims: [-1, 4]
+},
+{
+  name: "fES__4"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "graph_x__5"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "xECAL_batch__6"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES_batch__7"
+  data_type: TYPE_INT64
+  dims: [-1]
+}]
+output [
+{
+  name: "dscb__0"
+  data_type: TYPE_FP32
+  dims: [-1, 6]
+}]
