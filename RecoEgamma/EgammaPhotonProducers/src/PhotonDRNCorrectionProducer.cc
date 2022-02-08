@@ -27,6 +27,8 @@
 #include "DataFormats/EcalDetId/interface/ESDetId.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
+#include "DataFormats/EgammaReco/interface/SuperClusterFwd.h"
+#include "DataFormats/EgammaReco/interface/SuperCluster.h"
 
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
@@ -35,7 +37,7 @@
 #include "Geometry/EcalAlgo/interface/EcalPreshowerGeometry.h"
 #include "Geometry/CaloTopology/interface/EcalPreshowerTopology.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
-#include "Geometry/CaloEventSetup/interface/CaloTopologyRecord.h"
+//#include "Geometry/CaloEventSetup/interface/CaloTopologyRecord.h"
 #include "Geometry/CaloTopology/interface/CaloTopology.h"
 
 #include "CondFormats/EcalObjects/interface/EcalPedestals.h"
@@ -117,7 +119,7 @@ private:
   noZS::EcalClusterLazyTools* clustertools_;
 
   edm::ESHandle<EcalPedestals> ped_;
-  edm::ESHandle<CaloGemetry> pG_;
+  edm::ESHandle<CaloGeometry> pG_;
 };
 
 template <typename T>
@@ -132,7 +134,7 @@ DRNCorrectionProducerT<T>::DRNCorrectionProducerT(const edm::ParameterSet& iConf
       ESRecHitsName_{iConfig.getParameter<edm::InputTag>("reducedEcalRecHitsES")},
       EBRecHitsToken_(consumes<EcalRecHitCollection>(EBRecHitsName_)),
       EERecHitsToken_(consumes<EcalRecHitCollection>(EERecHitsName_)),
-      ESRecHitsToken_(consumes<EcalRecHitCollection>(ESRecHitsName_)),
+      ESRecHitsToken_(consumes<EcalRecHitCollection>(ESRecHitsName_))
 
 {
   produces<edm::ValueMap<std::pair<float, float>>>();
@@ -147,24 +149,27 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   //get things from the event...
   particles_ = iEvent.getHandle(particleToken_);
   rho_ = iEvent.get(rhoToken_);
-  EBRecHits_ = iEvent.get(EBRecHitsToken_);
-  EERecHits_ = iEvent.get(EERecHitsToken_);
-  ESRecHits_ = iEvent.get(ESRecHitsToken_);
+  EBRecHits_ = iEvent.getHandle(EBRecHitsToken_);
+  EERecHits_ = iEvent.getHandle(EERecHitsToken_);
+  ESRecHits_ = iEvent.getHandle(ESRecHitsToken_);
 
   iSetup.get<EcalPedestalsRcd>().get(ped_);
-  iSetup.get<CaloGemetryRecord> / get().get(pG_);
-  const CaloGeometry* geo = pG.product();
-  const CaloSubDetectorGeometry* ecalEBGeom = static_cast<const CaloSubdetectorGeometry*>(
+  iSetup.get<CaloGeometryRecord>().get(pG_);
+  const CaloGeometry* geo = pG_.product();
+  const CaloSubdetectorGeometry* ecalEBGeom = static_cast<const CaloSubdetectorGeometry*>(
       geo->getSubdetectorGeometry(DetId::Ecal, EcalBarrel));
-  const CaloSubDetectorGeometry* ecalEEGeom = static_cast<const CaloSubdetectorGeometry*>(
+  const CaloSubdetectorGeometry* ecalEEGeom = static_cast<const CaloSubdetectorGeometry*>(
       geo->getSubdetectorGeometry(DetId::Ecal, EcalEndcap));
-  const CaloSubDetectorGeometry* ecalESGeom = static_cast<const CaloSubdetectorGeometry*>(
+  const CaloSubdetectorGeometry* ecalESGeom = static_cast<const CaloSubdetectorGeometry*>(
       geo->getSubdetectorGeometry(DetId::Ecal, EcalPreshower));
 
-  clustertools = new noZS::EcalClusterLazyTools(iEvent, iSetup, EBRecHits_, EERecHits_);
+  //clustertools_ = new noZS::EcalClusterLazyTools(iEvent, iSetup, EBRecHits_, EERecHits_);
 
-  const EcalRecHitCollection* recHitsEB = clustertools->getEcalEBRecHitCollection();
-  const EcalRecHitCollection* recHitsEE = clustertools->getEcalEERecHitCollection();
+  //const EcalRecHitCollection* recHitsEB = clustertools->getEcalEBRecHitCollection();
+  //const EcalRecHitCollection* recHitsEE = clustertools->getEcalEERecHitCollection();
+  const EcalRecHitCollection* recHitsEB = EBRecHits_.product();
+  const EcalRecHitCollection* recHitsEE = EERecHits_.product();
+  const EcalRecHitCollection* recHitsES = ESRecHits_.product();
 
   nPart_ = particles_->size();
 
@@ -182,20 +187,20 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   }
 
   unsigned totalHitsECAL = 0, totalHitsES = 0;
-  bool isEB = 0, esEE = 0;
+  bool isEB = 0, isEE = 0;
   //kinda awkward here
   //have to loop through everything an extra time to figure out how many hits there are
   for (auto& part : *particles_) {
-    const SuperClusterRef& sc = part->superCluster();
+    const reco::SuperClusterRef& sc = part.superCluster();
     isEB = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalBarrel);
     isEE = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalEndcap);
 
     if (!isEB && !isEE)  //if neither EB or EE. Not sure if this even happens
       continue;
 
-    totalHitsECAL += sc->hitsAndFractions.size();  //Think hitsAndFractions containus only ECAL hits
+    totalHitsECAL += sc->hitsAndFractions().size();  //hitsAndFractions contains only ECAL hits (?)
 
-    for (auto iES = sc->preshowerClusersBegin(); iES != sc.preshowerClustersEnd(); ++iES) {
+    for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
       totalHitsES += (*iES)->hitsAndFractions().size();
     }
   }
@@ -208,12 +213,12 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
   auto& inputfECAL = iInput.at("fECAL__1");
   inputfECAL.setShape(0, totalHitsECAL);
-  auto datafECAL = inputfECAL.allocate<unsigned>();
+  auto datafECAL = inputfECAL.allocate<int64_t>();
   auto& vdatafECAL = (*datafECAL)[0];
 
   auto& inputGain = iInput.at("gain__2");
   inputGain.setShape(0, totalHitsECAL);
-  auto dataGain = inputGain.allocate<unsigned>();
+  auto dataGain = inputGain.allocate<int64_t>();
   auto& vdataGain = (*dataGain)[0];
 
   auto& inputxES = iInput.at("xES__3");
@@ -223,30 +228,31 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
   auto& inputfES = iInput.at("fES__4");
   inputfES.setShape(0, totalHitsES);
-  auto datafES = inputfES.allocate<unsigned>();
+  auto datafES = inputfES.allocate<int64_t>();
   auto& vdatafES = (*datafES)[0];
 
   auto& inputGx = iInput.at("graph_x__5");
-  inputGx.setShape(0, nPart);
+  inputGx.setShape(0, nPart_);
   auto dataGx = inputGx.allocate<float>();
   auto& vdataGx = (*dataGx)[0];
 
   auto& inputBatchECAL = iInput.at("xECAL_batch__6");
-  inputBatchECAL.setShape(0, totalHistECAL);
-  auto dataBatchECAL = inputBatchECAL.allocate<unsigned>();
+  inputBatchECAL.setShape(0, totalHitsECAL);
+  auto dataBatchECAL = inputBatchECAL.allocate<int64_t>();
   auto& vdataBatchECAL = (*dataBatchECAL)[0];
 
   auto& inputBatchES = iInput.at("xES_batch__6");
-  inputBatchES.setShape(0, totalHistES);
-  auto dataBatchES = inputBatchES.allocate<unsigned>();
+  inputBatchES.setShape(0, totalHitsES);
+  auto dataBatchES = inputBatchES.allocate<int64_t>();
   auto& vdataBatchES = (*dataBatchES)[0];
 
   //fill model inputs
   //TODO: scaling
-  unsigned partNum = 0;
+  int64_t partNum = 0;
+  std::shared_ptr<const CaloCellGeometry> geom;
   //iterate over particles...
   for (auto& part : *particles_) {
-    const SuperClusterRef& sc = part->superCluster();
+    const reco::SuperClusterRef& sc = part.superCluster();
     isEB = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalBarrel);
     isEE = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalEndcap);
 
@@ -254,17 +260,16 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
       continue;
 
     std::vector<std::pair<DetId, float>> hitsAndFractions = sc->hitsAndFractions();
-    shared_ptr<const CaloCellGeometry> geom;
     EcalRecHitCollection::const_iterator hit;
 
     //iterate over ECAL hits...
     for (const auto& detitr : hitsAndFractions) {
       DetId id = detitr.first.rawId();
       if (isEB) {
-        ecalEBGeom->getGeometry(did);
+        geom = ecalEBGeom->getGeometry(id);
         hit = recHitsEB->find(detitr.first);
-      } else if (isEE) {
-        geom = ecalEEGeom->getGeometry(did);
+      } else {
+        geom = ecalEEGeom->getGeometry(id);
         hit = recHitsEE->find(detitr.first);
       }
 
@@ -277,7 +282,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
       vdataxECAL.push_back(ped_->find(detitr.first)->rms(1));  //noise pedestal
 
       //fill fECAL
-      unsigned flagVal = 0;
+      int64_t flagVal = 0;
       if (hit->checkFlag(EcalRecHit::kGood))
         flagVal += 1;
       if (hit->checkFlag(EcalRecHit::kOutOfTime))
@@ -288,23 +293,22 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
       vdatafECAL.push_back(flagVal);
 
       //fill gain
-      if (hit->checkFlag(EcalRecHit::HasSwitchToGain6))
+      if (hit->checkFlag(EcalRecHit::kHasSwitchToGain6))
         vdataGain.push_back(1);
-      else if (hit->checkFlag(EcalRecHit::HasSwitchToGain1))
+      else if (hit->checkFlag(EcalRecHit::kHasSwitchToGain1))
         vdataGain.push_back(0);
       else
         vdataGain.push_back(2);
 
       //fill batchECAL
       vdataBatchECAL.push_back(partNum);
-    }
+    } //end iterate over ECAL hits
 
-    //iterate over ES hits...
+    //iterate over ES clusters...
     for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
-      for (const auto ESitr : iES->hitsAndFractions()) {
-        ESDetId ESid = ESDetId(ESitr->id());
-        hit = recHitsES->find(esItr.first);
-        geom = ecalESGeom->getGeometry(ESid);
+      for (const auto ESitr : (*iES)->hitsAndFractions()) { //iterate over hits
+        hit = recHitsES->find(ESitr.first);
+        geom = ecalESGeom->getGeometry(ESitr.first);
         auto& pos = geom->getPosition();
 
         //fill xES
@@ -314,7 +318,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
         vdataxES.push_back(hit->energy());
 
         //fill fES
-        flagVal = 0;
+        int64_t flagVal = 0;
         if (hit->checkFlag(EcalRecHit::kESGood))
           flagVal += 1;
 
@@ -322,8 +326,8 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
         //fill batchES
         vdataBatchES.push_back(partNum);
-      }
-    }
+      } //end iterate over hits
+    } //end iterate over ES clusters
 
     //fill gx
     vdataGx.push_back(rho_);
@@ -331,7 +335,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
     //increment particle number
     ++partNum;
-  }
+  }// end iterate over ES hits
 
   //convert to server format
   inputxECAL.toServer(dataxECAL);
@@ -348,7 +352,7 @@ template <typename T>
 void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) {
   particles_ = iEvent.getHandle(particleToken_);
 
-  const auto& serverOut = iOutput.begin().second.fromServer<float>();
+  const auto& serverOut = iOutput.begin()->second.fromServer<float>();
 
   float mu, sigma;
   for (unsigned i = 0; i < nPart_; ++i) {
