@@ -43,8 +43,6 @@
 #include "CondFormats/EcalObjects/interface/EcalPedestals.h"
 #include "CondFormats/DataRecord/interface/EcalPedestalsRcd.h"
 
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h"
 #include "RecoEcal/EgammaCoreTools/interface/PositionCalc.h"
 
 #include <sstream>
@@ -57,10 +55,11 @@
 /*
  * DRNCorrectionProducerT
  *
- * Simple producer to generate a ValueMap of corrected energies and resolutions for photons
- * I might generalize this to have one producer for photons and electrons if this looks possible
+ * Producer template generate a ValueMap of corrected energies and resolutions
+ * ValueMap contains std::pair<float, float> of corrected energy resolution 
  *
  * Author: Simon Rothman (MIT)
+ * Written 2022
  *
  */
 
@@ -72,18 +71,40 @@ namespace {
     return ln2 * 2 * (sigmoid(x) - 0.5);
   }
 
+  //correction factor is transformed by sigmoid and "logratioflip target"
   float correction(float x) { return exp(-logcorrection(x)); }
 
-  const float RHO_MAX = 15.0f;
-  const float X_MAX = 150.0f;
-  const float X_RANGE = 300.0f;
-  const float Y_MAX = 150.0f;
-  const float Y_RANGE = 300.0f;
-  const float Z_MAX = 330.0f;
-  const float Z_RANGE = 660.0f;
-  const float E_RANGE = 250.0f;
+  //resolution prediction with "ratio target"
+  float resolution(float x, float factor){ 
+    return x/factor;
+  }
 
-}  // namespace
+  inline float rescale(float x, float min, float range){
+    return (x-min)/range;
+  }
+
+  const float RHO_MIN = 0.0f;
+  const float RHO_RANGE = 13.0f;
+
+  const float HOE_MIN = 0.0f;
+  const float HOE_RANGE = 0.05f;
+
+  const float XY_MIN = -150.0f;
+  const float XY_RANGE = 300.0f;
+
+  const float Z_MIN = -330.0f;
+  const float Z_RANGE = 660.0f;
+  
+  const float NOISE_MIN = 0.9f;
+  const float NOISE_RANGE = 3.0f;
+
+  const float ECAL_MIN = 0.0f;
+  const float ECAL_RANGE = 250.0f;
+
+  const float ES_MIN = 0.0f;
+  const float ES_RANGE = 0.1f;
+
+}  //anon namespace for private utility constants and functions
 
 template <typename T>
 class DRNCorrectionProducerT : public TritonEDProducer<> {
@@ -114,9 +135,7 @@ private:
 
   std::vector<float> HoEs_;
 
-  size_t nPart_;
-
-  noZS::EcalClusterLazyTools* clustertools_;
+  size_t nPart_, nValidPart_;
 
   edm::ESHandle<EcalPedestals> ped_;
   edm::ESHandle<CaloGeometry> pG_;
@@ -163,15 +182,12 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   const CaloSubdetectorGeometry* ecalESGeom =
       static_cast<const CaloSubdetectorGeometry*>(geo->getSubdetectorGeometry(DetId::Ecal, EcalPreshower));
 
-  //clustertools_ = new noZS::EcalClusterLazyTools(iEvent, iSetup, EBRecHits_, EERecHits_);
-
-  //const EcalRecHitCollection* recHitsEB = clustertools->getEcalEBRecHitCollection();
-  //const EcalRecHitCollection* recHitsEE = clustertools->getEcalEERecHitCollection();
   const EcalRecHitCollection* recHitsEB = EBRecHits_.product();
   const EcalRecHitCollection* recHitsEE = EERecHits_.product();
   const EcalRecHitCollection* recHitsES = ESRecHits_.product();
 
   nPart_ = particles_->size();
+  nValidPart_ = nPart_;
 
   corrections_.clear();
   corrections_.reserve(nPart_);
@@ -190,6 +206,9 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   bool isEB = 0, isEE = 0;
   //kinda awkward here
   //have to loop through everything an extra time to figure out how many hits there are
+  //Not every particle has RecHits; no idea why
+  //We will apply correction factors of 1 to those with no RecHits
+  unsigned nHitsECAL; 
   for (auto& part : *particles_) {
     const reco::SuperClusterRef& sc = part.superCluster();
     isEB = ((*sc->seed()).hitsAndFractions().at(0).first.subdetId() == EcalBarrel);
@@ -198,7 +217,13 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     if (!isEB && !isEE)  //if neither EB or EE. Not sure if this even happens
       continue;
 
-    totalHitsECAL += sc->hitsAndFractions().size();  //hitsAndFractions contains only ECAL hits (?)
+    nHitsECAL = sc->hitsAndFractions().size();
+    if (!nHitsECAL){ //no hits in the ECAL
+      --nValidPart_;
+      continue;
+    }
+
+    totalHitsECAL += nHitsECAL;
 
     for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
       totalHitsES += (*iES)->hitsAndFractions().size();
@@ -232,7 +257,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   auto& vdatafES = (*datafES)[0];
 
   auto& inputGx = iInput.at("graph_x__5");
-  inputGx.setShape(0, nPart_);
+  inputGx.setShape(0, nValidPart_);
   auto dataGx = inputGx.allocate<float>();
   auto& vdataGx = (*dataGx)[0];
 
@@ -265,6 +290,9 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     std::vector<std::pair<DetId, float>> hitsAndFractions = sc->hitsAndFractions();
     EcalRecHitCollection::const_iterator hit;
 
+    if (hitsAndFractions.empty())
+      continue;
+
     //iterate over ECAL hits...
     for (const auto& detitr : hitsAndFractions) {
       ++nECAL;
@@ -279,11 +307,11 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
       //fill xECAL
       auto pos = geom->getPosition();
-      vdataxECAL.push_back(pos.x());
-      vdataxECAL.push_back(pos.y());
-      vdataxECAL.push_back(pos.z());
-      vdataxECAL.push_back(hit->energy() * detitr.second);     //energy time fraction
-      vdataxECAL.push_back(ped_->find(detitr.first)->rms(1));  //noise pedestal
+      vdataxECAL.push_back(rescale(pos.x(), XY_MIN, XY_RANGE));
+      vdataxECAL.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
+      vdataxECAL.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
+      vdataxECAL.push_back(rescale(hit->energy() * detitr.second, ECAL_MIN, ECAL_RANGE));     //energy time fraction
+      vdataxECAL.push_back(rescale(ped_->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  //noise pedestal
 
       //fill fECAL
       int64_t flagVal = 0;
@@ -317,10 +345,10 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
         auto& pos = geom->getPosition();
 
         //fill xES
-        vdataxES.push_back(pos.x());
-        vdataxES.push_back(pos.y());
-        vdataxES.push_back(pos.z());
-        vdataxES.push_back(hit->energy());
+        vdataxES.push_back(rescale(pos.x(), XY_MIN, XY_RANGE));
+        vdataxES.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
+        vdataxES.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
+        vdataxES.push_back(rescale(hit->energy(), ES_MIN, ES_RANGE));
 
         //fill fES
         int64_t flagVal = 0;
@@ -335,8 +363,8 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     }    //end iterate over ES clusters
 
     //fill gx
-    vdataGx.push_back(rho_);
-    vdataGx.push_back(part.hadronicOverEm());
+    vdataGx.push_back(rescale(rho_, RHO_MIN, RHO_RANGE));
+    vdataGx.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
 
     //increment particle number
     ++partNum;
@@ -355,18 +383,29 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
 template <typename T>
 void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) {
-  if(nPart_==0)
-    return;
 
   particles_ = iEvent.getHandle(particleToken_);
 
-  const auto& serverOut = iOutput.begin()->second.fromServer<float>();
+  //if there are no particles, the fromServer() call will fail
+  //but we can just put() an empty valueMap
+  if(nPart_){
+    const auto& serverOut = iOutput.begin()->second.fromServer<float>();
 
-  float mu, sigma;
-  for (unsigned i = 0; i < nPart_; ++i) {
-    mu = serverOut[0][0 + 6 * i];
-    sigma = serverOut[0][1 + 6 * i];
-    corrections_.emplace_back(std::pair<float, float>(mu, sigma));
+    unsigned i = 0;
+    for (unsigned iPart = 0; iPart < nPart_; ++iPart) {
+      const reco::SuperClusterRef& sc = particles_->at(iPart).superCluster();
+      if(sc->hitsAndFractions().size()) { //there were hits in the ECAL
+        float mu, sigma, Epred, sigmaPred;
+        mu = correction(serverOut[0][0 + 6 * i]); //obtain correction factor from server output
+        sigma = resolution(serverOut[0][1 + 6 * i], mu); //obtain resolution from server output
+        Epred = mu * (*particles_).at(i).superCluster()->rawEnergy();
+        sigmaPred = sigma * Epred;
+        corrections_.emplace_back(std::pair<float, float>(Epred, sigmaPred)); 
+        ++i;
+      } else{//no RecHits -> no corrections
+        corrections_.emplace_back(std::pair<float, float>(-1, -1));
+      }
+    }
   }
 
   //fill

@@ -77,8 +77,6 @@ private:
   edm::View<pat::Photon> photons_;
 };
 
-DEFINE_EDM_PLUGIN(ModifyObjectValueFactory, EGRegressionModifierDRN, "EGRegressionModifierDRN");
-
 EGRegressionModifierDRN::EGRegressionModifierDRN(const edm::ParameterSet& conf, edm::ConsumesCollector& cc)
     : ModifyObjectValueBase(conf),
       correctionsSource_{conf.getParameter<edm::InputTag>("correctionsSource")},
@@ -107,11 +105,10 @@ void EGRegressionModifierDRN::modifyObject(pat::Electron& ele) const {
 typedef math::XYZTLorentzVectorD LorentzVector;
 
 void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
-  //check if we have specified an photon regression correction and
-  //return the object unmodified if so
-  //corrections_ = event_.get(correctionsToken_);
-  //reco::recoPhotonPtr photonref(pho);
-
+  //To get a ptr to index the ValueMap, we  
+  //loop through all photons and find the right one
+  //
+  //There must be a better way...
   LorentzVector phoP4 = pho.p4(reco::Photon::P4type::ecal_standard);
 
   bool matched = false;
@@ -126,8 +123,9 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
   }
 
   if (!matched) {
-    throw cms::Exception("EGRegressionModifierDRN") << "Matching failed in EGRegressionModifierDRN" << std::endl
-                                                    << "This should not have been possible" << std::endl;
+    throw cms::Exception("EGRegressionModifierDRN") 
+      << "Matching failed in EGRegressionModifierDRN" << std::endl
+      << "This should not have been possible" << std::endl;
     return;
   }
 
@@ -135,7 +133,13 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
 
   std::pair<float, float> correction = corrections_[ptr];
 
+  if(correction.first < 0){//regression failed/missing for some reason
+    return; //don't apply any correction
+  }
+
   pho.setCorrectedEnergy(reco::Photon::P4type::regression2, correction.first, correction.second, true);
 }
 
 void EGRegressionModifierDRN::modifyObject(reco::Photon& pho) const {};
+
+DEFINE_EDM_PLUGIN(ModifyObjectValueFactory, EGRegressionModifierDRN, "EGRegressionModifierDRN");
