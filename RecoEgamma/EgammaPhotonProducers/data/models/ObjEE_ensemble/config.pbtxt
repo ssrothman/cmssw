@@ -1,0 +1,138 @@
+name: "ObjEE_ensemble"
+platform: "ensemble"
+max_batch_size: 0
+input [
+{
+  name: "xECAL__0"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fECAL__1"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gain__2"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES__3"
+  data_type: TYPE_FP32
+  dims: [-1, 4]
+},
+{
+  name: "fES__4"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "graph_x__5"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "xECAL_batch__6"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES_batch__7"
+  data_type: TYPE_INT64
+  dims: [-1]
+}]
+output [
+{
+  name: "CentralValue__0"
+  data_type: TYPE_FP32
+  dims: [-1, 6]
+},
+{
+  name: "Resolution__1"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+}]
+ensemble_scheduling{
+  step [
+  {
+    model_name: "ObjEE"
+    model_version: -1
+    input_map {
+      key: "xECAL__0"
+      value: "xECAL__0"
+    }
+    input_map {
+      key: "fECAL__1"
+      value: "fECAL__1"
+    }
+    input_map {
+      key: "gain__2"
+      value: "gain__2"
+    }
+    input_map {
+      key: "xES__3"
+      value: "xES__3"
+    }
+    input_map {
+      key: "fES__4"
+      value: "fES__4"
+    }
+    input_map {
+      key: "graph_x__5"
+      value: "graph_x__5"
+    }
+    input_map {
+      key: "xECAL_batch__6"
+      value: "xECAL_batch__6"
+    }
+    input_map {
+      key: "xES_batch__7"
+      value: "xES_batch__7"
+    }
+    output_map {
+      key: "dscb__0"
+      value: "CentralValue__0"
+    }
+  },
+  {
+    model_name: "ObjEE_res"
+    model_version: -1
+    input_map {
+      key: "xECAL__0"
+      value: "xECAL__0"
+    }
+    input_map {
+      key: "fECAL__1"
+      value: "fECAL__1"
+    }
+    input_map {
+      key: "gain__2"
+      value: "gain__2"
+    }
+    input_map {
+      key: "xES__3"
+      value: "xES__3"
+    }
+    input_map {
+      key: "fES__4"
+      value: "fES__4"
+    }
+    input_map {
+      key: "graph_x__5"
+      value: "graph_x__5"
+    }
+    input_map {
+      key: "xECAL_batch__6"
+      value: "xECAL_batch__6"
+    }
+    input_map {
+      key: "xES_batch__7"
+      value: "xES_batch__7"
+    }
+    output_map {
+      key: "dscb__0"
+      value: "Resolution__1"
+    }
+  }
+]}

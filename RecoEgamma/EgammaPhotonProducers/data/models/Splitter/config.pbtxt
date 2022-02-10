@@ -1,0 +1,131 @@
+name: "Splitter"
+platform: "pytorch_libtorch"
+max_batch_size: 0
+input [
+{
+  name: "xECAL__0"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fECAL__1"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gain__2"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES__3"
+  data_type: TYPE_FP32
+  dims: [-1, 4]
+},
+{
+  name: "fES__4"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "graph_x__5"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "xECAL_batch__6"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES_batch__7"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "sb__8"
+  data_type: TYPE_INT64
+  dims: [-1]
+}]
+output [
+{
+  name: "xECALEB__0"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fECALEB__1"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gainEB__2"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xESEB__3"
+  data_type: TYPE_FP32
+  dims: [-1, 4]
+},
+{
+  name: "fESEB__4"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "graph_xEB__5"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "xECAL_batchEB__6"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES_batchEB__7"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xECALEE__8"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fECALEE__9"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gainEE__10"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xESEE__11"
+  data_type: TYPE_FP32
+  dims: [-1, 4]
+},
+{
+  name: "fESEE__12"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "graph_xEE__13"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "xECAL_batchEE__14"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES_batchEE__15"
+  data_type: TYPE_INT64
+  dims: [-1]
+}
+]

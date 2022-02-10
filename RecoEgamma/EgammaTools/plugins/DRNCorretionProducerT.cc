@@ -74,11 +74,6 @@ namespace {
   //correction factor is transformed by sigmoid and "logratioflip target"
   float correction(float x) { return exp(-logcorrection(x)); }
 
-  //resolution prediction with "ratio target"
-  float resolution(float x, float factor){ 
-    return x/factor;
-  }
-
   inline float rescale(float x, float min, float range){
     return (x-min)/range;
   }
@@ -389,20 +384,23 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
   //if there are no particles, the fromServer() call will fail
   //but we can just put() an empty valueMap
   if(nPart_){
-    const auto& serverOut = iOutput.begin()->second.fromServer<float>();
+    const auto& cvout = iOutput.at("CentralValue__0").fromServer<float>();
+    const auto& resout = iOutput.at("Resolution__1").fromServer<float>();
 
     unsigned i = 0;
     for (unsigned iPart = 0; iPart < nPart_; ++iPart) {
       const reco::SuperClusterRef& sc = particles_->at(iPart).superCluster();
       if(sc->hitsAndFractions().size()) { //there were hits in the ECAL
-        float mu, sigma, Epred, sigmaPred;
-        mu = correction(serverOut[0][0 + 6 * i]); //obtain correction factor from server output
-        sigma = resolution(serverOut[0][1 + 6 * i], mu); //obtain resolution from server output
-        Epred = mu * (*particles_).at(i).superCluster()->rawEnergy();
-        sigmaPred = sigma * Epred;
+        float mu, sigma, Epred, sigmaPred, rawE;
+        mu = correction(cvout[0][0 + 6 * i]); //obtain correction factor from server output
+        sigma = abs(resout[0][0 + 5 * i]); //obtain resolution from server output
+        rawE = particles_->at(i).superCluster()->rawEnergy();
+        Epred = mu * rawE;
+        sigmaPred = sigma * rawE;
         corrections_.emplace_back(std::pair<float, float>(Epred, sigmaPred)); 
         ++i;
       } else{//no RecHits -> no corrections
+        std::cout << "skipped photon " << iPart << std::endl;
         corrections_.emplace_back(std::pair<float, float>(-1, -1));
       }
     }

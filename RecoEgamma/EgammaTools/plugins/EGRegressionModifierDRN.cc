@@ -137,6 +137,9 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
     return; //don't apply any correction
   }
 
+  std::cout << "Corrected energy is " << correction.first 
+            << " +- " << correction.second << " GeV" << std::endl;
+
   pho.setCorrectedEnergy(reco::Photon::P4type::regression2, correction.first, correction.second, true);
 }
 
