@@ -266,6 +266,11 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   auto dataBatchES = inputBatchES.allocate<int64_t>();
   auto& vdataBatchES = (*dataBatchES)[0];
 
+  auto& inputSb = iInput.at("sb__8");
+  inputSb.setShape(0, nValidPart_);
+  auto dataSb = inputSb.allocate<int64_t>();
+  auto& vdataSb = (*dataSb)[0];
+
   //fill model inputs
   //TODO: scaling
   int64_t partNum = 0;
@@ -361,6 +366,12 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     vdataGx.push_back(rescale(rho_, RHO_MIN, RHO_RANGE));
     vdataGx.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
 
+    //fill sb
+    if(isEB)
+      vdataSb.push_back(0);
+    else
+      vdataSb.push_back(1);
+
     //increment particle number
     ++partNum;
   }  // end iterate over particles 
@@ -374,6 +385,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   inputBatchES.toServer(dataBatchES);
   inputGx.toServer(dataGx);
   inputBatchECAL.toServer(dataBatchECAL);
+  inputSb.toServer(dataSb);
 }
 
 template <typename T>
