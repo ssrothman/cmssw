@@ -1,0 +1,229 @@
+name: "Obj_ensemble2"
+platform: "ensemble"
+max_batch_size: 0
+input [
+{
+  name: "xEB"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fEB"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gainEB"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gxEB"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "batchEB"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xEE"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "fEE"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gainEE"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "gxEE"
+  data_type: TYPE_FP32
+  dims: [-1, 2]
+},
+{
+  name: "batchEE"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "xES"
+  data_type: TYPE_FP32
+  dims: [-1, 4]
+},
+{
+  name: "fES"
+  data_type: TYPE_INT64
+  dims: [-1]
+},
+{
+  name: "batchES"
+  data_type: TYPE_INT64
+  dims: [-1]
+}]
+output [
+{
+  name: "muEB"
+  data_type: TYPE_FP32
+  dims: [-1, 6]
+},
+{
+  name: "sigmaEB"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+},
+{
+  name: "muEE"
+  data_type: TYPE_FP32
+  dims: [-1, 6]
+},
+{
+  name: "sigmaEE"
+  data_type: TYPE_FP32
+  dims: [-1, 5]
+}]
+ensemble_scheduling{
+  step [
+  {
+    model_name: "ObjEB2"
+    model_version: -1
+    input_map {
+      key: "xECAL__0"
+      value: "xEB"
+    }
+    input_map {
+      key: "fECAL__1"
+      value: "fEB"
+    }
+    input_map {
+      key: "gain__2"
+      value: "gainEB"
+    }
+    input_map {
+      key: "graph_x__3"
+      value: "gxEB"
+    }
+    input_map {
+      key: "xECAL_batch__4"
+      value: "batchEB"
+    }
+    output_map {
+      key: "dscb__0"
+      value: "muEB"
+    }
+  },
+  {
+    model_name: "ObjEB_res2"
+    model_version: -1
+    input_map {
+      key: "xECAL__0"
+      value: "xEB"
+    }
+    input_map {
+      key: "fECAL__1"
+      value: "fEB"
+    }
+    input_map {
+      key: "gain__2"
+      value: "gainEB"
+    }
+    input_map {
+      key: "graph_x__3"
+      value: "gxEB"
+    }
+    input_map {
+      key: "xECAL_batch__4"
+      value: "batchEB"
+    }
+    output_map {
+      key: "dscb__0"
+      value: "sigmaEB"
+    }
+  },
+  {
+    model_name: "ObjEE"
+    model_version: -1
+    input_map {
+      key: "xECAL__0"
+      value: "xEE"
+    }
+    input_map {
+      key: "fECAL__1"
+      value: "fEE"
+    }
+    input_map {
+      key: "gain__2"
+      value: "gainEE"
+    }
+    input_map {
+      key: "xES__3"
+      value: "xES"
+    }
+    input_map {
+      key: "fES__4"
+      value: "fES"
+    }
+    input_map {
+      key: "graph_x__5"
+      value: "gxEE"
+    }
+    input_map {
+      key: "xECAL_batch__6"
+      value: "batchEE"
+    }
+    input_map {
+      key: "xES_batch__7"
+      value: "batchES"
+    }
+    output_map {
+      key: "dscb__0"
+      value: "muEE"
+    }
+  },
+  {
+    model_name: "ObjEE_res"
+    model_version: -1
+    input_map {
+      key: "xECAL__0"
+      value: "xEE"
+    }
+    input_map {
+      key: "fECAL__1"
+      value: "fEE"
+    }
+    input_map {
+      key: "gain__2"
+      value: "gainEE"
+    }
+    input_map {
+      key: "xES__3"
+      value: "xES"
+    }
+    input_map {
+      key: "fES__4"
+      value: "fES"
+    }
+    input_map {
+      key: "graph_x__5"
+      value: "gxEE"
+    }
+    input_map {
+      key: "xECAL_batch__6"
+      value: "batchEE"
+    }
+    input_map {
+      key: "xES_batch__7"
+      value: "batchES"
+    }
+    output_map {
+      key: "dscb__0"
+      value: "sigmaEE"
+    }
+  }
+]}

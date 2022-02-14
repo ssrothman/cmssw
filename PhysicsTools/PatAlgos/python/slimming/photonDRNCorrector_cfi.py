@@ -9,7 +9,7 @@ DRN = cms.EDProducer("PatPhotonDRNCorrectionProducer",
 
     Client = cms.PSet(
       mode = cms.string("Async"),
-      modelName = cms.string("Obj_ensemble"),
+      modelName = cms.string("Obj_ensemble2"),
       modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/Obj_ensemble/config.pbtxt"),
       allowedTries = cms.untracked.uint32(1),
       timeout = cms.untracked.uint32(10),

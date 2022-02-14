@@ -138,7 +138,9 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
   }
 
   std::cout << "Corrected energy is " << correction.first 
-            << " +- " << correction.second << " GeV" << std::endl;
+            << " +- " << correction.second << " GeV" 
+            << "(eta = " << pho.superCluster()->eta() << ")"
+            << std::endl;
 
   pho.setCorrectedEnergy(reco::Photon::P4type::regression2, correction.first, correction.second, true);
 }
