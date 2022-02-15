@@ -25,7 +25,7 @@ pfNanoSequence = cms.Sequence(nanoMetadata
     +simClusterTables
     +trackingParticleTables
     +caloParticleTables
-    +pfCandTable
+    +pfCandTables
     #+pfTruth
     +trackTables
 )
