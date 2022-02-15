@@ -78,6 +78,8 @@ namespace {
     return (x-min)/range;
   }
 
+  float resolution(float x) { return log(1 + exp(x)); }
+
   const float RHO_MIN = 0.0f;
   const float RHO_RANGE = 13.0f;
 
@@ -449,19 +451,6 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   /*
    * Convert input tensors to server data format
    */
-  std::cout << "xEB: " << inputxEB.sizeShape() << std::endl;
-  std::cout << "fEB: " << inputfEB.sizeShape() << std::endl;
-  std::cout << "gainEB: " << inputGainEB.sizeShape() << std::endl;
-  std::cout << "gxEB: " << inputGxEB.sizeShape() << std::endl;
-  std::cout << "batchEB: " << inputBatchEB.sizeShape() << std::endl;
-  std::cout << "xEE: " << inputxEE.sizeShape() << std::endl;
-  std::cout << "fEE: " << inputfEE.sizeShape() << std::endl;
-  std::cout << "gainEE: " << inputGainEE.sizeShape() << std::endl;
-  std::cout << "gxEE: " << inputGxEE.sizeShape() << std::endl;
-  std::cout << "batchEE: " << inputBatchEE.sizeShape() << std::endl;
-  std::cout << "xES: " << inputxES.sizeShape() << std::endl;
-  std::cout << "fES: " << inputfES.sizeShape() << std::endl;
-  std::cout << "batchES: " << inputBatchES.sizeShape() << std::endl;
   inputxEB.toServer(dataxEB);
   inputfEB.toServer(datafEB);
   inputGainEB.toServer(dataGainEB);
@@ -495,10 +484,6 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
     const auto& muEE = iOutput.at("muEE").fromServer<float>();
     const auto& sigmaEE = iOutput.at("sigmaEE").fromServer<float>();
 
-    for(unsigned q=0; q<5; ++q){
-      std :: cout << q << ": " << sigmaEB[0][q] << std::endl;
-    }
-
     unsigned iEB = 0, iEE = 0;
     float mu, sigma, Epred, sigmaPred, rawE;
     for (unsigned iPart = 0; iPart < nPart_; ++iPart) {
@@ -506,16 +491,13 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
       if(!skip(part)) { 
         if(isEB(part)){
           mu = correction(muEB[0][0 + 6 * iEB]); 
-          sigma = abs(sigmaEB[0][0 + 5 * iEB]); 
+          sigma = resolution(sigmaEB[0][0 + 5 * iEB]); 
           ++iEB;
         } else{
           mu = correction(muEE[0][0 + 6 * iEE]); 
-          sigma = abs(sigmaEE[0][0 + 5 * iEE]); 
+          sigma = resolution(sigmaEE[0][0 + 5 * iEE]); 
           ++iEE;
         }
-
-        std::cout<< "mu " << mu << std::endl;
-        std::cout<< "sigma " << sigma << std::endl;
 
         rawE = particles_->at(iPart).superCluster()->rawEnergy();
         Epred = mu * rawE;
