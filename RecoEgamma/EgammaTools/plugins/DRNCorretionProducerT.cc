@@ -37,7 +37,6 @@
 #include "Geometry/EcalAlgo/interface/EcalPreshowerGeometry.h"
 #include "Geometry/CaloTopology/interface/EcalPreshowerTopology.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
-//#include "Geometry/CaloEventSetup/interface/CaloTopologyRecord.h"
 #include "Geometry/CaloTopology/interface/CaloTopology.h"
 
 #include "CondFormats/EcalObjects/interface/EcalPedestals.h"
