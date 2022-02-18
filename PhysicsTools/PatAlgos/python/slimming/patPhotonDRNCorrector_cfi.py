@@ -9,8 +9,8 @@ patPhotonsDRN = cms.EDProducer("PatPhotonDRNCorrectionProducer",
 
     Client = cms.PSet(
       mode = cms.string("Async"),
-      modelName = cms.string("photonsEnsemble"),
-      modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/photonsEnsemble/config.pbtxt"),
+      modelName = cms.string("photonObjectEnsemble"),
+      modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/photonObjectEnsemble/config.pbtxt"),
       allowedTries = cms.untracked.uint32(1),
       timeout = cms.untracked.uint32(10),
       useSharedMemory = cms.untracked.bool(False),
