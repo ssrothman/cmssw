@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
-DRN = cms.EDProducer("PatPhotonDRNCorrectionProducer",
-    particleSource = cms.InputTag("selectedPatPhotons"),
+patElectronsDRN = cms.EDProducer("PatElectronDRNCorrectionProducer",
+    particleSource = cms.InputTag("selectedPatElectrons"),
     rhoName = cms.InputTag("fixedGridRhoFastjetAll"),
     reducedEcalRecHitsEB = cms.InputTag("reducedEcalRecHitsEB"),
     reducedEcalRecHitsEE = cms.InputTag("reducedEcalRecHitsEE"),
@@ -9,8 +9,8 @@ DRN = cms.EDProducer("PatPhotonDRNCorrectionProducer",
 
     Client = cms.PSet(
       mode = cms.string("Async"),
-      modelName = cms.string("Obj_ensemble2"),
-      modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/Obj_ensemble/config.pbtxt"),
+      modelName = cms.string("electronsEnsemble"),
+      modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/electronsEnsemble/config.pbtxt"),
       allowedTries = cms.untracked.uint32(1),
       timeout = cms.untracked.uint32(10),
       useSharedMemory = cms.untracked.bool(False),

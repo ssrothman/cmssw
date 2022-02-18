@@ -26,14 +26,17 @@ from PhysicsTools.PatAlgos.slimming.slimmedMETs_cfi      import *
 from PhysicsTools.PatAlgos.slimming.slimmedV0s_cff      import *
 from PhysicsTools.PatAlgos.slimming.metFilterPaths_cff   import *
 from PhysicsTools.PatAlgos.slimming.MicroEventContent_cff import *
-from PhysicsTools.PatAlgos.slimming.photonDRNCorrector_cfi import DRN
 from RecoEgamma.EgammaPhotonProducers.reducedEgamma_cfi  import *
 from RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi import bunchSpacingProducer
 from HeavyFlavorAnalysis.Onia2MuMu.OniaPhotonConversionProducer_cfi import PhotonCandidates as oniaPhotonCandidates
 from RecoLocalCalo.HcalRecProducers.HcalHitSelection_cfi import *
 
+from PhysicsTools.PatAlgos.slimming.patPhotonDRNCorrector_cfi import *
+from PhysicsTools.PatAlgos.slimming.patElectronDRNCorrector_cfi import *
+
 slimmingTask = cms.Task(
-    DRN,
+    patPhotonsDRN,
+    patElectronsDRN,
     packedPFCandidatesTask,
     lostTracks,
     isolatedTracks,
