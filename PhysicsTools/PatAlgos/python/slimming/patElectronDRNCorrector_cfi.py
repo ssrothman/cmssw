@@ -9,8 +9,8 @@ patElectronsDRN = cms.EDProducer("PatElectronDRNCorrectionProducer",
 
     Client = cms.PSet(
       mode = cms.string("Async"),
-      modelName = cms.string("electronsEnsemble"),
-      modelConfigPath = cms.FileInPath("RecoEgamma/EgammaPhotonProducers/data/models/electronsEnsemble/config.pbtxt"),
+      modelName = cms.string("electronObjectEnsemble"),
+      modelConfigPath = cms.FileInPath("RecoEgamma/EgammaElectronProducers/data/models/electronObjectEnsemble/config.pbtxt"),
       allowedTries = cms.untracked.uint32(1),
       timeout = cms.untracked.uint32(10),
       useSharedMemory = cms.untracked.bool(False),

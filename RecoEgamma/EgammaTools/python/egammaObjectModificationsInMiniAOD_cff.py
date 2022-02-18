@@ -34,9 +34,15 @@ egamma_modifications = cms.VPSet(
               photon_config   = cms.PSet( )
               ),
     cms.PSet( modifierName    = cms.string("EGRegressionModifierDRN"),
-              correctionsSource = cms.InputTag("DRN"),
-              photonsSource = cms.InputTag("selectedPatPhotons")
-              )
+            patPhotons = cms.PSet(
+              source = cms.InputTag('selectedPatPhotons'),
+              correctionsSource = cms.InputTag('patPhotonsDRN')
+            ),
+            patElectrons = cms.PSet(
+              source = cms.InputTag('selectedPatElectrons'),
+              correctionsSource = cms.InputTag('patElectronsDRN')
+            )
+            )
 )
 
 #setup the mva value maps to embed
