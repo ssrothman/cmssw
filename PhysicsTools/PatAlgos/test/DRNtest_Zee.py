@@ -27,34 +27,36 @@ process.load('DQMOffline.Configuration.DQMOfflineMC_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(100),
+    input = cms.untracked.int32(10),
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/0E6A5074-CE54-1C43-800F-6C4098689AD7.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/114188AD-C8BB-6842-B6B0-9B1042FD50AF.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/17BF73EE-8540-2E42-947E-9D5BEAE43845.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/1CE3CCAA-1669-064C-9E21-4158015D9352.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/2F141512-8811-2A4F-A0E5-BCCF42362BFF.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/392B7A19-1CF0-3141-B378-94D0A8D404E8.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/403F943F-062E-9441-82C5-E07CEC67A124.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/4CBBC908-50D3-804D-B126-C7AD19B1A3B1.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/57BB7A15-4B78-BA47-994F-B5901F0640F3.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/596B83A5-BDFE-0949-9F3C-2FA37812C8E2.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/7514C486-0907-124D-A993-A13A73662A9C.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/78863F64-B399-2F4B-A3EC-EE2E3E1E9D69.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/7C2D71F5-2304-B04A-920C-87102641EBB3.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/80C21552-D786-3844-BB43-4AD278276FAB.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/87242A4D-9A5A-3D45-A4DF-DF03CAC4F929.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/89695229-EDD9-4447-A607-5B2584310A28.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/8BAE8CEB-DF6B-4246-8F6D-ACB9417AD8B7.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/C72609A4-232D-F144-9B19-928EB086E69E.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/D13CFD8B-77DE-7344-8C13-E3D165877719.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/D521DEDC-8F7A-9D46-9B54-BBE8127C1F51.root',
-        '/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/FE03E4BF-8C4D-A345-8077-2F246E02B3F1.root'
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/0E6A5074-CE54-1C43-800F-6C4098689AD7.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/114188AD-C8BB-6842-B6B0-9B1042FD50AF.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/17BF73EE-8540-2E42-947E-9D5BEAE43845.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/1CE3CCAA-1669-064C-9E21-4158015D9352.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/2F141512-8811-2A4F-A0E5-BCCF42362BFF.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/392B7A19-1CF0-3141-B378-94D0A8D404E8.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/403F943F-062E-9441-82C5-E07CEC67A124.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/4CBBC908-50D3-804D-B126-C7AD19B1A3B1.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/57BB7A15-4B78-BA47-994F-B5901F0640F3.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/596B83A5-BDFE-0949-9F3C-2FA37812C8E2.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/7514C486-0907-124D-A993-A13A73662A9C.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/78863F64-B399-2F4B-A3EC-EE2E3E1E9D69.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/7C2D71F5-2304-B04A-920C-87102641EBB3.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/80C21552-D786-3844-BB43-4AD278276FAB.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/87242A4D-9A5A-3D45-A4DF-DF03CAC4F929.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/89695229-EDD9-4447-A607-5B2584310A28.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/8BAE8CEB-DF6B-4246-8F6D-ACB9417AD8B7.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/C72609A4-232D-F144-9B19-928EB086E69E.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/D13CFD8B-77DE-7344-8C13-E3D165877719.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/D521DEDC-8F7A-9D46-9B54-BBE8127C1F51.root',
+        #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/FE03E4BF-8C4D-A345-8077-2F246E02B3F1.root'
+        #"file:test.root"
+        '/store/mc/RunIISummer20UL18RECO/TT_FCNC-aT2ZJ_Tleptonic_ZToll_kappa_zut_TuneCP5-madgraphMLM-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2430000/60C8F172-3EF9-0947-83C2-DAC597871B02.root'
     ),
     secondaryFileNames = cms.untracked.vstring()
 )
@@ -220,10 +222,8 @@ process.dqmofflineOnPAT_step = cms.EndPath(process.PostDQMOfflineMiniAOD)
 process.MINIAODSIMoutput_step = cms.EndPath(process.MINIAODSIMoutput)
 process.DQMoutput_step = cms.EndPath(process.DQMoutput)
 
-process.DRN_step = cms.Path(process.DRN)
-
 # Schedule definition
-process.schedule = cms.Schedule(process.Flag_HBHENoiseFilter,process.Flag_HBHENoiseIsoFilter,process.Flag_CSCTightHaloFilter,process.Flag_CSCTightHaloTrkMuUnvetoFilter,process.Flag_CSCTightHalo2015Filter,process.Flag_globalTightHalo2016Filter,process.Flag_globalSuperTightHalo2016Filter,process.Flag_HcalStripHaloFilter,process.Flag_hcalLaserEventFilter,process.Flag_EcalDeadCellTriggerPrimitiveFilter,process.Flag_EcalDeadCellBoundaryEnergyFilter,process.Flag_ecalBadCalibFilter,process.Flag_goodVertices,process.Flag_eeBadScFilter,process.Flag_ecalLaserCorrFilter,process.Flag_trkPOGFilters,process.Flag_chargedHadronTrackResolutionFilter,process.Flag_muonBadTrackFilter,process.Flag_BadChargedCandidateFilter,process.Flag_BadPFMuonFilter,process.Flag_BadPFMuonDzFilter,process.Flag_hfNoisyHitsFilter,process.Flag_BadChargedCandidateSummer16Filter,process.Flag_BadPFMuonSummer16Filter,process.Flag_trkPOG_manystripclus53X,process.Flag_trkPOG_toomanystripclus53X,process.Flag_trkPOG_logErrorTooManyClusters,process.Flag_METFilters,process.prevalidation_step,process.validation_step,process.dqmoffline_step,process.dqmofflineOnPAT_step,process.MINIAODSIMoutput_step,process.DQMoutput_step, process.DRN_step)
+process.schedule = cms.Schedule(process.Flag_HBHENoiseFilter,process.Flag_HBHENoiseIsoFilter,process.Flag_CSCTightHaloFilter,process.Flag_CSCTightHaloTrkMuUnvetoFilter,process.Flag_CSCTightHalo2015Filter,process.Flag_globalTightHalo2016Filter,process.Flag_globalSuperTightHalo2016Filter,process.Flag_HcalStripHaloFilter,process.Flag_hcalLaserEventFilter,process.Flag_EcalDeadCellTriggerPrimitiveFilter,process.Flag_EcalDeadCellBoundaryEnergyFilter,process.Flag_ecalBadCalibFilter,process.Flag_goodVertices,process.Flag_eeBadScFilter,process.Flag_ecalLaserCorrFilter,process.Flag_trkPOGFilters,process.Flag_chargedHadronTrackResolutionFilter,process.Flag_muonBadTrackFilter,process.Flag_BadChargedCandidateFilter,process.Flag_BadPFMuonFilter,process.Flag_BadPFMuonDzFilter,process.Flag_hfNoisyHitsFilter,process.Flag_BadChargedCandidateSummer16Filter,process.Flag_BadPFMuonSummer16Filter,process.Flag_trkPOG_manystripclus53X,process.Flag_trkPOG_toomanystripclus53X,process.Flag_trkPOG_logErrorTooManyClusters,process.Flag_METFilters,process.prevalidation_step,process.validation_step,process.dqmoffline_step,process.dqmofflineOnPAT_step,process.MINIAODSIMoutput_step,process.DQMoutput_step)
 process.schedule.associate(process.patTask)
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
@@ -247,3 +247,4 @@ process = customiseEarlyDelete(process)
 from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
 
 # End adding early deletion
+
