@@ -38,10 +38,10 @@ egamma_modifications = cms.VPSet(
               source = cms.InputTag('selectedPatPhotons'),
               correctionsSource = cms.InputTag('patPhotonsDRN')
             ),
-            patElectrons = cms.PSet(
-              source = cms.InputTag('selectedPatElectrons'),
-              correctionsSource = cms.InputTag('patElectronsDRN')
-            )
+            #patElectrons = cms.PSet(
+            #  source = cms.InputTag('selectedPatElectrons'),
+            #  correctionsSource = cms.InputTag('patElectronsDRN')
+            #)
             )
 )
 

@@ -112,8 +112,6 @@ public:
   void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& input) override;
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup, Output const& iOutput) override;
 
-  void beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) override;
-
 private:
   const edm::InputTag particleSource_;
   edm::EDGetTokenT<edm::View<T>> particleToken_;
@@ -121,20 +119,14 @@ private:
 
   const edm::InputTag rhoName_;
   edm::EDGetTokenT<double> rhoToken_;
-  float rho_;
 
-  std::vector<std::pair<float, float>> corrections_;
 
   edm::InputTag EBRecHitsName_, EERecHitsName_, ESRecHitsName_;
   edm::EDGetTokenT<EcalRecHitCollection> EBRecHitsToken_, EERecHitsToken_, ESRecHitsToken_;
-  edm::Handle<EcalRecHitCollection> EERecHits_, EBRecHits_, ESRecHits_;
 
   std::vector<float> HoEs_;
 
   size_t nPart_, nPartEE_, nPartEB_;
-
-  edm::ESHandle<EcalPedestals> ped_;
-  edm::ESHandle<CaloGeometry> pG_;
 
   bool isEB(const T& part);
   bool isEE(const T& part);
@@ -157,10 +149,6 @@ DRNCorrectionProducerT<T>::DRNCorrectionProducerT(const edm::ParameterSet& iConf
 
 {
   produces<edm::ValueMap<std::pair<float, float>>>();
-}
-
-template <typename T>
-void DRNCorrectionProducerT<T>::beginLuminosityBlock(const edm::LuminosityBlock& iLumi, const edm::EventSetup& iSetup) {
 }
 
 template <typename T>
@@ -187,14 +175,17 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
    * Get products from event and event setup
    */
   particles_ = iEvent.getHandle(particleToken_);
-  rho_ = iEvent.get(rhoToken_);
-  EBRecHits_ = iEvent.getHandle(EBRecHitsToken_);
-  EERecHits_ = iEvent.getHandle(EERecHitsToken_);
-  ESRecHits_ = iEvent.getHandle(ESRecHitsToken_);
+  float rho = iEvent.get(rhoToken_);
+  edm::Handle<EcalRecHitCollection> EBRecHits = iEvent.getHandle(EBRecHitsToken_);
+  edm::Handle<EcalRecHitCollection> EERecHits = iEvent.getHandle(EERecHitsToken_);
+  edm::Handle<EcalRecHitCollection> ESRecHits = iEvent.getHandle(ESRecHitsToken_);
 
-  iSetup.get<EcalPedestalsRcd>().get(ped_);
-  iSetup.get<CaloGeometryRecord>().get(pG_);
-  const CaloGeometry* geo = pG_.product();
+  edm::ESHandle<EcalPedestals> ped;
+  edm::ESHandle<CaloGeometry> pG;
+
+  iSetup.get<EcalPedestalsRcd>().get(ped);
+  iSetup.get<CaloGeometryRecord>().get(pG);
+  const CaloGeometry* geo = pG.product();
   const CaloSubdetectorGeometry* ecalEBGeom =
       static_cast<const CaloSubdetectorGeometry*>(geo->getSubdetectorGeometry(DetId::Ecal, EcalBarrel));
   const CaloSubdetectorGeometry* ecalEEGeom =
@@ -202,9 +193,9 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   const CaloSubdetectorGeometry* ecalESGeom =
       static_cast<const CaloSubdetectorGeometry*>(geo->getSubdetectorGeometry(DetId::Ecal, EcalPreshower));
 
-  const EcalRecHitCollection* recHitsEB = EBRecHits_.product();
-  const EcalRecHitCollection* recHitsEE = EERecHits_.product();
-  const EcalRecHitCollection* recHitsES = ESRecHits_.product();
+  const EcalRecHitCollection* recHitsEB = EBRecHits.product();
+  const EcalRecHitCollection* recHitsEE = EERecHits.product();
+  const EcalRecHitCollection* recHitsES = ESRecHits.product();
 
   nPart_ = particles_->size();
 
@@ -361,13 +352,13 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
         vdataxEB.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
         vdataxEB.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
         vdataxEB.push_back(rescale(hit->energy() * detitr.second, ECAL_MIN, ECAL_RANGE));     
-        vdataxEB.push_back(rescale(ped_->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
+        vdataxEB.push_back(rescale(ped->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
       } else {
         vdataxEE.push_back(rescale(pos.x(), XY_MIN, XY_RANGE));
         vdataxEE.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
         vdataxEE.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
         vdataxEE.push_back(rescale(hit->energy() * detitr.second, ECAL_MIN, ECAL_RANGE));     
-        vdataxEE.push_back(rescale(ped_->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
+        vdataxEE.push_back(rescale(ped->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
       }
 
       //fill fECAL
@@ -407,7 +398,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
     //iterate over ES clusters...
     for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
-      for (const auto ESitr : (*iES)->hitsAndFractions()) {  //iterate over ES hits
+      for (const auto& ESitr : (*iES)->hitsAndFractions()) {  //iterate over ES hits
         hit = recHitsES->find(ESitr.first);
         geom = ecalESGeom->getGeometry(ESitr.first);
         auto& pos = geom->getPosition();
@@ -432,10 +423,10 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
     //fill gx
     if(EB){
-      vdataGxEB.push_back(rescale(rho_, RHO_MIN, RHO_RANGE));
+      vdataGxEB.push_back(rescale(rho, RHO_MIN, RHO_RANGE));
       vdataGxEB.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
     } else{
-      vdataGxEE.push_back(rescale(rho_, RHO_MIN, RHO_RANGE));
+      vdataGxEE.push_back(rescale(rho, RHO_MIN, RHO_RANGE));
       vdataGxEE.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
     }
 
@@ -472,8 +463,8 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
 
   particles_ = iEvent.getHandle(particleToken_);
 
-  corrections_.clear();
-  corrections_.reserve(nPart_);
+  std::vector<std::pair<float, float>> corrections;
+  corrections.reserve(nPart_);
 
   //if there are no particles, the fromServer() call will fail
   //but we can just put() an empty valueMap
@@ -501,9 +492,9 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
         rawE = particles_->at(iPart).superCluster()->rawEnergy();
         Epred = mu * rawE;
         sigmaPred = sigma * rawE;
-        corrections_.emplace_back(std::pair<float, float>(Epred, sigmaPred)); 
+        corrections.emplace_back(Epred, sigmaPred);
       } else{
-        corrections_.emplace_back(std::pair<float, float>(-1, -1));
+        corrections.emplace_back(-1, -1);
       }
     }
   }
@@ -511,7 +502,7 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
   //fill
   auto out = std::make_unique<edm::ValueMap<std::pair<float, float>>>();
   edm::ValueMap<std::pair<float, float>>::Filler filler(*out);
-  filler.insert(particles_, corrections_.begin(), corrections_.end());
+  filler.insert(particles_, corrections.begin(), corrections.end());
   filler.fill();
 
   iEvent.put(std::move(out));

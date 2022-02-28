@@ -14,5 +14,6 @@ patPhotonsDRN = cms.EDProducer("PatPhotonDRNCorrectionProducer",
       allowedTries = cms.untracked.uint32(1),
       timeout = cms.untracked.uint32(10),
       useSharedMemory = cms.untracked.bool(False),
+      verbose = cms.untracked.bool(True)
     )
 )

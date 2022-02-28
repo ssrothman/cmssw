@@ -144,7 +144,7 @@ void EGRegressionModifierDRN::modifyObject(reco::GsfElectron& ele) const {
   if(!gsfElectrons_)
     return;
 
-  std::pair<float, float> correction = gsfElectrons_->getCorrection(ele);
+  const std::pair<float, float>& correction = gsfElectrons_->getCorrection(ele);
 
   if(correction.first < 0)
     return;
@@ -152,7 +152,7 @@ void EGRegressionModifierDRN::modifyObject(reco::GsfElectron& ele) const {
   ele.setCorrectedEcalEnergy(correction.first, true);
   ele.setCorrectedEcalEnergyError(correction.second);
 
-  std::pair<float, float> trackerCombo(1.0, 1.0); //compute E/p combination
+  const std::pair<float, float> trackerCombo(1.0, 1.0); //compute E/p combination
   const math::XYZTLorentzVector newP4 = ele.p4() * trackerCombo.first / ele.p4().t();
   ele.correctMomentum(newP4, ele.trackMomentumError(), trackerCombo.second);
 }
@@ -161,7 +161,7 @@ void EGRegressionModifierDRN::modifyObject(pat::Electron& ele) const {
   if(!patElectrons_)
     return;
 
-  std::pair<float, float> correction = patElectrons_->getCorrection(ele);
+  const std::pair<float, float>& correction = patElectrons_->getCorrection(ele);
 
   if(correction.first < 0)
     return;
@@ -169,7 +169,7 @@ void EGRegressionModifierDRN::modifyObject(pat::Electron& ele) const {
   ele.setCorrectedEcalEnergy(correction.first, true);
   ele.setCorrectedEcalEnergyError(correction.second);
 
-  std::pair<float, float> trackerCombo(1.0, 1.0); //compute E/p combination
+  const std::pair<float, float> trackerCombo(1.0, 1.0); //compute E/p combination
   const math::XYZTLorentzVector newP4 = ele.p4() * trackerCombo.first / ele.p4().t();
   ele.correctMomentum(newP4, ele.trackMomentumError(), trackerCombo.second);
 }
@@ -177,7 +177,7 @@ void EGRegressionModifierDRN::modifyObject(pat::Electron& ele) const {
 void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
   if(!patPhotons_)
     return;
-  std::pair<float, float> correction = patPhotons_->getCorrection(pho);
+  const std::pair<float, float>& correction = patPhotons_->getCorrection(pho);
 
   if(correction.first < 0)//regression failed/missing for some reason
     return; //don't apply any correction
@@ -189,7 +189,7 @@ void EGRegressionModifierDRN::modifyObject(reco::Photon& pho) const {
   if(!gedPhotons_)
     return;
 
-  std::pair<float, float> correction = gedPhotons_->getCorrection(pho);
+  const std::pair<float, float>& correction = gedPhotons_->getCorrection(pho);
 
   if(correction.first < 0)
     return;
@@ -200,14 +200,12 @@ void EGRegressionModifierDRN::modifyObject(reco::Photon& pho) const {
 template <typename T>
 const std::pair<float, float> EGRegressionModifierDRN::partVars<T>::getCorrection(T& part) const{
   math::XYZTLorentzVectorD partP4 = part.p4();
-  //math::XYZTLorentzVectorD partP4 = part.p4(T::P4type::ecal_standard);
 
   bool matched = false;
   unsigned i;
   for (i = 0; i < particles.size(); ++i) {
-    T partIter = particles.at(i);
-    //math::XYZTLorentzVectorD p4Iter = partIter.p4(T::P4type::ecal_standard);
-    math::XYZTLorentzVectorD p4Iter = partIter.p4();
+    const T& partIter = particles.at(i);
+    const auto& p4Iter = partIter.p4();
     if (p4Iter == partP4) {
       matched = true;
       break;
@@ -225,10 +223,10 @@ const std::pair<float, float> EGRegressionModifierDRN::partVars<T>::getCorrectio
 
   std::pair<float, float> correction = corrections[ptr];
 
-  std::cout << "Corrected energy is " << correction.first 
-            << " +- " << correction.second << " GeV" 
-            << "(eta = " << part.superCluster()->eta() << ")"
-            << std::endl;
+  //std::cout << "Corrected energy is " << correction.first 
+  //          << " +- " << correction.second << " GeV" 
+  //          << "(eta = " << part.superCluster()->eta() << ")"
+  //          << std::endl;
 
   return correction;
 }

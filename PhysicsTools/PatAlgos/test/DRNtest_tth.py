@@ -55,7 +55,7 @@ process.source = cms.Source("PoolSource",
         #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/D13CFD8B-77DE-7344-8C13-E3D165877719.root',
         #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/D521DEDC-8F7A-9D46-9B54-BBE8127C1F51.root',
         #'/store/mc/RunIISummer20UL18RECO/GluGluHToGG_M100_TuneCP5_13TeV-amcatnloFXFX-pythia8/AODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/2540000/FE03E4BF-8C4D-A345-8077-2F246E02B3F1.root'
-        "file:test.root"
+        '/store/mc/RunIISummer20UL18MiniAOD/TTJets_TuneCP5_13TeV-amcatnloFXFX-pythia8/MINIAODSIM/106X_upgrade2018_realistic_v11_L1v1-v1/40000/F4D4D1A5-5AA9-7C48-A72B-1ACEA1D64AA1.root'
     ),
     secondaryFileNames = cms.untracked.vstring()
 )

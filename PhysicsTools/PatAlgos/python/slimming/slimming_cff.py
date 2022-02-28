@@ -36,7 +36,7 @@ from PhysicsTools.PatAlgos.slimming.patElectronDRNCorrector_cfi import *
 
 slimmingTask = cms.Task(
     patPhotonsDRN,
-    patElectronsDRN,
+    #patElectronsDRN,
     packedPFCandidatesTask,
     lostTracks,
     isolatedTracks,
