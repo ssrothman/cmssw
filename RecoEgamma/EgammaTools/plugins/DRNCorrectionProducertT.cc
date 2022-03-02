@@ -55,7 +55,7 @@
  * DRNCorrectionProducerT
  *
  * Producer template generate a ValueMap of corrected energies and resolutions
- * ValueMap contains std::pair<float, float> of corrected energy resolution 
+ * ValueMap contains std::pair<float, float> of corrected energy, resolution 
  *
  * Author: Simon Rothman (MIT)
  * Written 2022
@@ -77,6 +77,7 @@ namespace {
     return (x-min)/range;
   }
 
+  //resolution is transformed by softplus function
   float resolution(float x) { return log(1 + exp(x)); }
 
   const float RHO_MIN = 0.0f;
@@ -120,7 +121,6 @@ private:
   const edm::InputTag rhoName_;
   edm::EDGetTokenT<double> rhoToken_;
 
-
   edm::InputTag EBRecHitsName_, EERecHitsName_, ESRecHitsName_;
   edm::EDGetTokenT<EcalRecHitCollection> EBRecHitsToken_, EERecHitsToken_, ESRecHitsToken_;
 
@@ -144,7 +144,6 @@ DRNCorrectionProducerT<T>::DRNCorrectionProducerT(const edm::ParameterSet& iConf
       EBRecHitsToken_(consumes<EcalRecHitCollection>(EBRecHitsName_)),
       EERecHitsToken_(consumes<EcalRecHitCollection>(EERecHitsName_)),
       ESRecHitsToken_(consumes<EcalRecHitCollection>(ESRecHitsName_))
-
 {
   produces<edm::ValueMap<std::pair<float, float>>>();
 }
@@ -163,6 +162,8 @@ template <typename T>
 bool DRNCorrectionProducerT<T>::skip(const T& part){
   /*
    * Separated out from acquire() and produce() to ensure that skipping check is identical in both
+   * N.B. in MiniAOD there are sometimes particles with no RecHits
+   * We can not apply our regression to these, so we skip them
    */
   return (!isEB(part) && !isEE(part)) || part.superCluster()->hitsAndFractions().empty();
 }
@@ -206,11 +207,6 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
   /*
    * Determine how many particles, how many RecHits there are in each subdetector
-   * This seems a little awkward, as we have to loop through particles twice:
-   *  once here to count them, and then again to fill the input tensors
-   * 
-   * N.B. in MiniAOD there are sometimes particles with no RecHits
-   * We can not apply our regression to these, so we skip them
    */
   unsigned nHitsECAL = 0, nHitsES = 0;
   nValidPart_ = 0;
@@ -230,12 +226,12 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   }
 
   /*
-   * Allocate DRN inputs ({SB} is one of EB, EE, ES):
+   * Allocate DRN inputs ({SB} is one of ECAL, ES):
    * x{SB}: (x, y, z, energy, [noise]) continuous-valued inputs per RecHit
    * f{SB}: (flagVal) integer denoting RecHit flag values
-   * gain{SB}: (gain) integer in (0, 1, 2) denoting gain value
-   * gx{SB}: (rho, H/E) additional high-level features.
-   * batch{SB}: graph models require explicitely passing the particle index for each RecHit
+   * gainECAL: (gain) integer in (0, 1, 2) denoting gain value
+   * gx: (rho, H/E) additional high-level features.
+   * batch{SB}: graph models require explicitely passing the particle index for each vertex
    */
   auto& inputxECAL = iInput.at("xECAL");
   inputxECAL.setShape(0, nHitsECAL);
