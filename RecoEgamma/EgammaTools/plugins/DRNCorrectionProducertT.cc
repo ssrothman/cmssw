@@ -225,6 +225,8 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
        nHitsES += (*iES)->hitsAndFractions().size();
     }
+
+    ++nValidPart_;
   }
 
   /*

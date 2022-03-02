@@ -182,6 +182,10 @@ void EGRegressionModifierDRN::modifyObject(pat::Photon& pho) const {
   if(correction.first < 0)//regression failed/missing for some reason
     return; //don't apply any correction
 
+  if(pho.getCorrectedEnergy(pat::Photon::P4type::regression2) != pho.getCorrectedEnergy(pat::Photon::P4type::regression1)){
+      std::cout << "REGRESSIONS 1 AND 2 DO NOT MATCH" << std::endl;
+  }
+
   pho.setCorrectedEnergy(pat::Photon::P4type::regression2, correction.first, correction.second, true);
 }
 
