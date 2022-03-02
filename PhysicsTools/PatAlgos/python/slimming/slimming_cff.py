@@ -31,12 +31,7 @@ from RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi import bunchSpacingPro
 from HeavyFlavorAnalysis.Onia2MuMu.OniaPhotonConversionProducer_cfi import PhotonCandidates as oniaPhotonCandidates
 from RecoLocalCalo.HcalRecProducers.HcalHitSelection_cfi import *
 
-from PhysicsTools.PatAlgos.slimming.patPhotonDRNCorrector_cfi import *
-from PhysicsTools.PatAlgos.slimming.patElectronDRNCorrector_cfi import *
-
 slimmingTask = cms.Task(
-    patPhotonsDRN,
-    #patElectronsDRN,
     packedPFCandidatesTask,
     lostTracks,
     isolatedTracks,

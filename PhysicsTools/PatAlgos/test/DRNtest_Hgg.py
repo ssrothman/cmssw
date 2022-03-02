@@ -27,7 +27,7 @@ process.load('DQMOffline.Configuration.DQMOfflineMC_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10000),
+    input = cms.untracked.int32(1000),
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
 )
 
@@ -241,6 +241,10 @@ process = miniAOD_customizeAllMC(process)
 from Validation.Performance.TimeMemoryInfo import customise as customise_profile
 
 process = customise_profile(process)
+
+from PhysicsTools.PatAlgos.slimming.enableDRN import enableDRN
+
+process = enableDRN(process)
 
 process.TritonService.verbose = cms.untracked.bool(True)
 process.TritonService.fallback.verbose = cms.untracked.bool(True)

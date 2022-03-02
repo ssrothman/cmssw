@@ -124,9 +124,7 @@ private:
   edm::InputTag EBRecHitsName_, EERecHitsName_, ESRecHitsName_;
   edm::EDGetTokenT<EcalRecHitCollection> EBRecHitsToken_, EERecHitsToken_, ESRecHitsToken_;
 
-  std::vector<float> HoEs_;
-
-  size_t nPart_, nPartEE_, nPartEB_;
+  size_t nPart_, nValidPart_;
 
   bool isEB(const T& part);
   bool isEE(const T& part);
@@ -199,9 +197,6 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
   nPart_ = particles_->size();
 
-  HoEs_.clear();
-  HoEs_.reserve(nPart_);
-
   if (nPart_ == 0) {
     client_->setBatchSize(0);
     return;
@@ -217,26 +212,15 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
    * N.B. in MiniAOD there are sometimes particles with no RecHits
    * We can not apply our regression to these, so we skip them
    */
-  unsigned nHitsEB = 0, nHitsEE = 0, nHitsES = 0;
-  nPartEB_ = 0;
-  nPartEE_ = 0;
-  bool EB = 0;
+  unsigned nHitsECAL = 0, nHitsES = 0;
+  nValidPart_ = 0;
   for (auto& part : *particles_) {
     const reco::SuperClusterRef& sc = part.superCluster();
-    EB = isEB(part);
 
     if(skip(part))
       continue;
 
-    unsigned nHitsECAL = sc->hitsAndFractions().size();
-
-    if(EB){
-      nHitsEB += nHitsECAL;
-      ++nPartEB_;
-    } else {
-      nHitsEE += nHitsECAL;
-      ++nPartEE_;
-    }
+    nHitsECAL += sc->hitsAndFractions().size();
 
     for (auto iES = sc->preshowerClustersBegin(); iES != sc->preshowerClustersEnd(); ++iES) {
        nHitsES += (*iES)->hitsAndFractions().size();
@@ -251,55 +235,30 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
    * gx{SB}: (rho, H/E) additional high-level features.
    * batch{SB}: graph models require explicitely passing the particle index for each RecHit
    */
-  auto& inputxEB = iInput.at("xEB");
-  inputxEB.setShape(0, nHitsEB);
-  auto dataxEB = inputxEB.allocate<float>();
-  auto& vdataxEB = (*dataxEB)[0];
+  auto& inputxECAL = iInput.at("xECAL");
+  inputxECAL.setShape(0, nHitsECAL);
+  auto dataxECAL = inputxECAL.allocate<float>();
+  auto& vdataxECAL = (*dataxECAL)[0];
 
-  auto& inputfEB = iInput.at("fEB");
-  inputfEB.setShape(0, nHitsEB);
-  auto datafEB = inputfEB.allocate<int64_t>();
-  auto& vdatafEB = (*datafEB)[0];
+  auto& inputfECAL = iInput.at("fECAL");
+  inputfECAL.setShape(0, nHitsECAL);
+  auto datafECAL = inputfECAL.allocate<int64_t>();
+  auto& vdatafECAL = (*datafECAL)[0];
 
-  auto& inputGainEB = iInput.at("gainEB");
-  inputGainEB.setShape(0, nHitsEB);
-  auto dataGainEB = inputGainEB.allocate<int64_t>();
-  auto& vdataGainEB = (*dataGainEB)[0];
+  auto& inputGainECAL = iInput.at("gainECAL");
+  inputGainECAL.setShape(0, nHitsECAL);
+  auto dataGainECAL = inputGainECAL.allocate<int64_t>();
+  auto& vdataGainECAL = (*dataGainECAL)[0];
 
-  auto& inputGxEB = iInput.at("gxEB");
-  inputGxEB.setShape(0, nPartEB_);
-  auto dataGxEB = inputGxEB.allocate<float>();
-  auto& vdataGxEB = (*dataGxEB)[0];
+  auto& inputGx = iInput.at("gx");
+  inputGx.setShape(0, nValidPart_);
+  auto dataGx = inputGx.allocate<float>();
+  auto& vdataGx = (*dataGx)[0];
 
-  auto& inputBatchEB = iInput.at("batchEB");
-  inputBatchEB.setShape(0, nHitsEB);
-  auto dataBatchEB = inputBatchEB.allocate<int64_t>();
-  auto& vdataBatchEB = (*dataBatchEB)[0];
-
-  auto& inputxEE = iInput.at("xEE");
-  inputxEE.setShape(0, nHitsEE);
-  auto dataxEE = inputxEE.allocate<float>();
-  auto& vdataxEE = (*dataxEE)[0];
-
-  auto& inputfEE = iInput.at("fEE");
-  inputfEE.setShape(0, nHitsEE);
-  auto datafEE = inputfEE.allocate<int64_t>();
-  auto& vdatafEE = (*datafEE)[0];
-
-  auto& inputGainEE = iInput.at("gainEE");
-  inputGainEE.setShape(0, nHitsEE);
-  auto dataGainEE = inputGainEE.allocate<int64_t>();
-  auto& vdataGainEE = (*dataGainEE)[0];
-
-  auto& inputGxEE = iInput.at("gxEE");
-  inputGxEE.setShape(0, nPartEE_);
-  auto dataGxEE = inputGxEE.allocate<float>();
-  auto& vdataGxEE = (*dataGxEE)[0];
-
-  auto& inputBatchEE = iInput.at("batchEE");
-  inputBatchEE.setShape(0, nHitsEE);
-  auto dataBatchEE = inputBatchEE.allocate<int64_t>();
-  auto& vdataBatchEE = (*dataBatchEE)[0];
+  auto& inputBatchECAL = iInput.at("batchECAL");
+  inputBatchECAL.setShape(0, nHitsECAL);
+  auto dataBatchECAL = inputBatchECAL.allocate<int64_t>();
+  auto& vdataBatchECAL = (*dataBatchECAL)[0];
 
   auto& inputxES = iInput.at("xES");
   inputxES.setShape(0, nHitsES);
@@ -319,13 +278,12 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   /*
    * Fill input tensors by iterating over particles...
    */
-  int64_t partNumEB = 0, partNumEE = 0;
+  int64_t partNum = 0;
   std::shared_ptr<const CaloCellGeometry> geom;
   for (auto& part : *particles_) {
     const reco::SuperClusterRef& sc = part.superCluster();
-    EB = isEB(part);
 
-    if (skip(part))  //if neither EB or EE. Not sure if this even happens
+    if (skip(part))
       continue;
 
     std::vector<std::pair<DetId, float>> hitsAndFractions = sc->hitsAndFractions();
@@ -337,7 +295,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
     //iterate over ECAL hits...
     for (const auto& detitr : hitsAndFractions) {
       DetId id = detitr.first.rawId();
-      if (EB) {
+      if (isEB(part)) {
         geom = ecalEBGeom->getGeometry(id);
         hit = recHitsEB->find(detitr.first);
       } else {
@@ -347,19 +305,11 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
 
       //fill xECAL
       auto pos = geom->getPosition();
-      if (EB){
-        vdataxEB.push_back(rescale(pos.x(), XY_MIN, XY_RANGE));
-        vdataxEB.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
-        vdataxEB.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
-        vdataxEB.push_back(rescale(hit->energy() * detitr.second, ECAL_MIN, ECAL_RANGE));     
-        vdataxEB.push_back(rescale(ped->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
-      } else {
-        vdataxEE.push_back(rescale(pos.x(), XY_MIN, XY_RANGE));
-        vdataxEE.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
-        vdataxEE.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
-        vdataxEE.push_back(rescale(hit->energy() * detitr.second, ECAL_MIN, ECAL_RANGE));     
-        vdataxEE.push_back(rescale(ped->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
-      }
+      vdataxECAL.push_back(rescale(pos.x(), XY_MIN, XY_RANGE));
+      vdataxECAL.push_back(rescale(pos.y(), XY_MIN, XY_RANGE));
+      vdataxECAL.push_back(rescale(pos.z(), Z_MIN, Z_RANGE));
+      vdataxECAL.push_back(rescale(hit->energy() * detitr.second, ECAL_MIN, ECAL_RANGE));     
+      vdataxECAL.push_back(rescale(ped->find(detitr.first)->rms(1), NOISE_MIN, NOISE_RANGE));  
 
       //fill fECAL
       int64_t flagVal = 0;
@@ -370,10 +320,7 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
       if (hit->checkFlag(EcalRecHit::kPoorCalib))
         flagVal += 4;
 
-      if(EB)
-        vdatafEB.push_back(flagVal);
-      else
-        vdatafEE.push_back(flagVal);
+      vdatafECAL.push_back(flagVal);
 
       //fill gain
       int64_t gainVal = 0;
@@ -384,16 +331,10 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
       else
         gainVal = 2;
 
-      if (EB)
-        vdataGainEB.push_back(gainVal);
-      else
-        vdataGainEE.push_back(gainVal);
+      vdataGainECAL.push_back(gainVal);
 
       //fill batch number
-      if(EB)
-        vdataBatchEB.push_back(partNumEB);
-      else
-        vdataBatchEE.push_back(partNumEE);
+      vdataBatchECAL.push_back(partNum);
     }  //end iterate over ECAL hits
 
     //iterate over ES clusters...
@@ -417,41 +358,28 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
         vdatafES.push_back(flagVal);
 
         //fill batchES
-        vdataBatchES.push_back(partNumEE); //ES hits only exist for EE particles
+        vdataBatchES.push_back(partNum); //ES hits only exist for EE particles
       }  //end iterate over ES hits
     } //end iterate over ES clusters
 
     //fill gx
-    if(EB){
-      vdataGxEB.push_back(rescale(rho, RHO_MIN, RHO_RANGE));
-      vdataGxEB.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
-    } else{
-      vdataGxEE.push_back(rescale(rho, RHO_MIN, RHO_RANGE));
-      vdataGxEE.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
-    }
+    vdataGx.push_back(rescale(rho, RHO_MIN, RHO_RANGE));
+    vdataGx.push_back(rescale(part.hadronicOverEm(), HOE_MIN, HOE_RANGE));
 
 
     //increment particle number
-    if(EB)
-      ++partNumEB;
-    else
-      ++partNumEE;
+    ++partNum;
   }  // end iterate over particles 
 
   /*
    * Convert input tensors to server data format
    */
-  inputxEB.toServer(dataxEB);
-  inputfEB.toServer(datafEB);
-  inputGainEB.toServer(dataGainEB);
-  inputGxEB.toServer(dataGxEB);
-  inputBatchEB.toServer(dataBatchEB);
+  inputxECAL.toServer(dataxECAL);
+  inputfECAL.toServer(datafECAL);
+  inputGainECAL.toServer(dataGainECAL);
+  inputBatchECAL.toServer(dataBatchECAL);
 
-  inputxEE.toServer(dataxEE);
-  inputfEE.toServer(datafEE);
-  inputGainEE.toServer(dataGainEE);
-  inputGxEE.toServer(dataGxEE);
-  inputBatchEE.toServer(dataBatchEE);
+  inputGx.toServer(dataGx);
 
   inputxES.toServer(dataxES);
   inputfES.toServer(datafES);
@@ -469,32 +397,24 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
   //if there are no particles, the fromServer() call will fail
   //but we can just put() an empty valueMap
   if(nPart_){
-    const auto& muEB = iOutput.at("muEB").fromServer<float>();
-    const auto& sigmaEB = iOutput.at("sigmaEB").fromServer<float>();
-    const auto& muEE = iOutput.at("muEE").fromServer<float>();
-    const auto& sigmaEE = iOutput.at("sigmaEE").fromServer<float>();
+    const auto& muOut = iOutput.at("mu").fromServer<float>();
+    const auto& sigmaOut = iOutput.at("sigma").fromServer<float>();
 
-    unsigned iEB = 0, iEE = 0;
+    unsigned i=0;
     float mu, sigma, Epred, sigmaPred, rawE;
     for (unsigned iPart = 0; iPart < nPart_; ++iPart) {
       const auto& part = particles_->at(iPart);
       if(!skip(part)) { 
-        if(isEB(part)){
-          mu = correction(muEB[0][0 + 6 * iEB]); 
-          sigma = resolution(sigmaEB[0][0 + 5 * iEB]); 
-          ++iEB;
-        } else{
-          mu = correction(muEE[0][0 + 6 * iEE]); 
-          sigma = resolution(sigmaEE[0][0 + 5 * iEE]); 
-          ++iEE;
-        }
+        mu = correction(muOut[0][0 + 6 * i]); 
+        sigma = resolution(sigmaOut[0][0 + 5 * i]); 
+        ++i;
 
         rawE = particles_->at(iPart).superCluster()->rawEnergy();
         Epred = mu * rawE;
         sigmaPred = sigma * rawE;
         corrections.emplace_back(Epred, sigmaPred);
       } else{
-        corrections.emplace_back(-1, -1);
+        corrections.emplace_back(-1.0f, -1.0f);
       }
     }
   }
