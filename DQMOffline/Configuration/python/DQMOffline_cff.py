@@ -14,10 +14,11 @@ from DQM.SiPixelCommon.SiPixelOfflineDQM_source_cff import *
 from DQM.DTMonitorModule.dtDQMOfflineSources_cff import *
 from DQM.RPCMonitorClient.RPCTier0Source_cff import *
 from DQM.CSCMonitorModule.csc_dqm_sourceclient_offline_cff import *
-from DQMOffline.Muon.gem_dqm_offline_source_cff import *
+from DQM.GEM.gem_dqm_offline_source_cff import *
 from DQM.CastorMonitor.castor_dqm_sourceclient_offline_cff import *
 from DQM.CTPPS.ctppsDQM_cff import *
 from DQM.SiTrackerPhase2.Phase2TrackerDQMFirstStep_cff import *
+from DQM.SiPixelPhase1Heterogeneous.SiPixelPhase1HeterogenousDQM_FirstStep_cff import *
 
 DQMNone = cms.Sequence()
 
@@ -44,6 +45,9 @@ DQMOfflineEcalOnly = cms.Sequence(
 DQMOfflineEcal = cms.Sequence(
     ecal_dqm_source_offline +
     es_dqm_source_offline )
+
+from Configuration.Eras.Modifier_phase2_ecal_devel_cff import phase2_ecal_devel
+phase2_ecal_devel.toReplaceWith(DQMOfflineEcalOnly, DQMOfflineEcalOnly.copyAndExclude([es_dqm_source_offline]))
 
 #offline version of the online DQM: used in validation/certification
 DQMOfflineHcal = cms.Sequence( hcalOfflineSourceSequence )
@@ -164,13 +168,21 @@ from DQM.SiOuterTracker.OuterTrackerSourceConfig_cff import *
 from Validation.RecoTau.DQMSequences_cfi import *
 
 DQMOfflinePixelTracking = cms.Sequence( pixelTracksMonitoring *
-                                        pixelPVMonitor )
+                                        pixelPVMonitor *
+                                        monitorpixelSoASource )
+
+
+from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
+_DQMOfflinePixelTrackingNoSoA = DQMOfflinePixelTracking.copy()
+_DQMOfflinePixelTrackingNoSoA = cms.Sequence(pixelTracksMonitoring * pixelPVMonitor)
+
+phase2_tracker.toReplaceWith(DQMOfflinePixelTracking, _DQMOfflinePixelTrackingNoSoA)
 
 DQMOuterTracker = cms.Sequence( DQMOfflineDCS *
                                 OuterTrackerSource *
                                 DQMMessageLogger *
                                 DQMOfflinePhysics *
-                                DQMOfflineVertex 
+                                DQMOfflineVertex
                                 )
 
 DQMOfflineTrackerPhase2 = cms.Sequence( trackerphase2DQMSource )
@@ -184,7 +196,7 @@ DQMOfflineTrackerPixel = cms.Sequence( siPixelOfflineDQM_source )
 
 DQMOfflineCommon = cms.Sequence( DQMOfflineDCS *
                                  DQMMessageLogger *
-				 DQMOfflineTrackerStrip * 
+				 DQMOfflineTrackerStrip *
 				 DQMOfflineTrackerPixel *
                                  DQMOfflineTracking *
                                  DQMOfflineTrigger *
@@ -245,10 +257,11 @@ pp_on_AA.toReplaceWith(DQMOfflineTAU, _DQMOfflineTAU)
 from Validation.RecoParticleFlow.miniAODDQM_cff import * # On MiniAOD vs RECO
 from Validation.RecoParticleFlow.DQMForPF_MiniAOD_cff import * # MiniAOD PF variables
 from DQM.TrackingMonitor.tracksDQMMiniAOD_cff import *
+from DQMOffline.RecoB.bTagMiniDQM_cff import *
 from DQMOffline.Muon.miniAOD_cff import *
 from DQM.Physics.DQMTopMiniAOD_cff import *
 
-DQMOfflineMiniAOD = cms.Sequence(jetMETDQMOfflineRedoProductsMiniAOD*muonMonitors_miniAOD*MuonMiniAOD*DQMOfflinePF)
+DQMOfflineMiniAOD = cms.Sequence(jetMETDQMOfflineRedoProductsMiniAOD*bTagMiniDQMSource*muonMonitors_miniAOD*MuonMiniAOD*DQMOfflinePF)
 
 #Post sequences are automatically placed in the EndPath by ConfigBuilder if PAT is run.
 #miniAOD DQM sequences need to access the filter results.

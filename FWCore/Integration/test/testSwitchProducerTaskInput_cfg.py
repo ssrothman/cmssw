@@ -6,8 +6,8 @@ class SwitchProducerTest(cms.SwitchProducer):
     def __init__(self, **kargs):
         super(SwitchProducerTest,self).__init__(
             dict(
-                test1 = lambda: (True, -10),
-                test2 = lambda: (enableTest2, -9)
+                test1 = lambda accelerators: (True, -10),
+                test2 = lambda accelerators: (enableTest2, -9)
             ), **kargs)
 
 process = cms.Process("PROD2")
@@ -32,7 +32,7 @@ process.out = cms.OutputModule("PoolOutputModule",
         'keep *_intProducer_*_*',
         'keep *_intProducerOther_*_*',
         'keep *_intProducerAlias_*_*',
-        'keep *_intProducerAlias2_foo_*',
+        'keep *_intProducerAlias2_other_*',
         'keep *_intProducerDep1_*_*',
         'keep *_intProducerDep2_*_*',
         'keep *_intProducerDep3_*_*',

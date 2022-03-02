@@ -1,13 +1,13 @@
-# hltGetConfiguration --full --data /dev/CMSSW_12_2_0/Fake --type Fake --unprescale --process HLTFake --globaltag auto:run1_hlt_Fake --input file:RelVal_Raw_Fake_DATA.root
+# hltGetConfiguration --full --data /dev/CMSSW_12_3_0/Fake --type Fake --unprescale --process HLTFake --globaltag auto:run1_hlt_Fake --input file:RelVal_Raw_Fake_DATA.root
 
-# /dev/CMSSW_12_2_0/Fake/V3 (CMSSW_12_2_0_pre1)
+# /dev/CMSSW_12_3_0/Fake/V6 (CMSSW_12_3_0_pre5)
 
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process( "HLTFake" )
 
 process.HLTConfigVersion = cms.PSet(
-  tableName = cms.string('/dev/CMSSW_12_2_0/Fake/V3')
+  tableName = cms.string('/dev/CMSSW_12_3_0/Fake/V6')
 )
 
 process.streams = cms.PSet(  A = cms.vstring( 'InitialPD' ) )
@@ -319,11 +319,11 @@ process.dqmOutput = cms.OutputModule("DQMRootOutputModule",
     fileName = cms.untracked.string("DQMIO.root")
 )
 
-process.DQMOutput = cms.EndPath( process.dqmOutput )
+process.DQMOutput = cms.FinalPath( process.dqmOutput )
 
 
 
-process.HLTSchedule = cms.Schedule( *(process.HLTriggerFirstPath, process.HLT_Physics_v1, process.HLT_Random_v1, process.HLT_ZeroBias_v1, process.HLTriggerFinalPath, process.HLTAnalyzerEndpath, process.AOutput, process.DQMOutput, ))
+process.schedule = cms.Schedule( *(process.HLTriggerFirstPath, process.HLT_Physics_v1, process.HLT_Random_v1, process.HLT_ZeroBias_v1, process.HLTriggerFinalPath, process.HLTAnalyzerEndpath, process.AOutput, process.DQMOutput, ))
 
 
 # source module (EDM inputs)
