@@ -23,16 +23,8 @@ hgcRecHitsToSimClusterTable = cms.EDProducer("CaloRecHitToSimClusterIndexTablePr
     objName = hgcRecHitsTable.name,
     branchName = cms.string("SimCluster"),
     objMap = cms.InputTag("hgcRecHitsToSimClusters:hgcRecHitsToSimClus"),
+    bestMatchTable = cms.untracked.bool(True),
     docString = cms.string("All SimCluster responsible for sim energy in RecHit DetId (ordered by fraction of energy)")
-)
-
-hgcRecHitsToBestSimClusterTable = cms.EDProducer("CaloRecHitToBestSimClusterIndexTableProducer",
-    cut = hgcRecHitsTable.cut,
-    src = hgcRecHitsTable.src,
-    objName = hgcRecHitsTable.name,
-    branchName = cms.string("BestSimCluster"),
-    objMap = cms.InputTag("hgcRecHitsToSimClusters:hgcRecHitsToBestSimClus"),
-    docString = cms.string("SimCluster responsible for most sim energy in RecHit DetId")
 )
 
 hgcRecHitsToMergedSimClusterTable = cms.EDProducer("CaloRecHitToSimClusterIndexTableProducer",
@@ -41,16 +33,8 @@ hgcRecHitsToMergedSimClusterTable = cms.EDProducer("CaloRecHitToSimClusterIndexT
     objName = hgcRecHitsTable.name,
     branchName = cms.string("MergedSimCluster"),
     objMap = cms.InputTag("hgcRecHitsToMergedSimClusters:hgcRecHitsToSimClus"),
+    bestMatchTable = cms.untracked.bool(True),
     docString = cms.string("MergedSimClusters ordered by most sim energy in RecHit DetId")
-)
-
-hgcRecHitsToBestMergedSimClusterTable = cms.EDProducer("CaloRecHitToBestSimClusterIndexTableProducer",
-    cut = hgcRecHitsTable.cut,
-    src = hgcRecHitsTable.src,
-    objName = hgcRecHitsTable.name,
-    branchName = cms.string("BestMergedSimCluster"),
-    objMap = cms.InputTag("hgcRecHitsToMergedSimClusters:hgcRecHitsToBestSimClus"),
-    docString = cms.string("MergedSimCluster responsible for most sim energy in RecHit DetId")
 )
 
 hgcRecHitsToMergedDRSimClusterTable = cms.EDProducer("CaloRecHitToSimClusterIndexTableProducer",
@@ -60,15 +44,6 @@ hgcRecHitsToMergedDRSimClusterTable = cms.EDProducer("CaloRecHitToSimClusterInde
     branchName = cms.string("MergedByDRSimCluster"),
     objMap = cms.InputTag("hgcRecHitsToMergedDRSimClusters:hgcRecHitsToSimClus"),
     docString = cms.string("MergedSimCluster responsible for most sim energy in RecHit DetId")
-)
-
-hgcRecHitsToBestMergedDRSimClusterTable = cms.EDProducer("CaloRecHitToBestSimClusterIndexTableProducer",
-    cut = hgcRecHitsTable.cut,
-    src = hgcRecHitsTable.src,
-    objName = hgcRecHitsTable.name,
-    branchName = cms.string("BestMergedByDRSimCluster"),
-    objMap = cms.InputTag("hgcRecHitsToMergedDRSimClusters:hgcRecHitsToBestSimClus"),
-    docString = cms.string("MergedSimCluster (DeltaR merger) responsible for most sim energy in RecHit DetId")
 )
 
 simClusterRecEnergyTable = cms.EDProducer("SimClusterRecEnergyTableProducer",
@@ -95,9 +70,6 @@ hgcRecHitSimAssociationSequence = cms.Sequence(hgcRecHitsToSimClusters
                 +simClusterRecEnergyTable 
                 +mergedSimClusterRecEnergyTable 
                 +hgcRecHitsToSimClusterTable
-                +hgcRecHitsToBestSimClusterTable
                 +hgcRecHitsToMergedSimClusterTable
-                +hgcRecHitsToBestMergedSimClusterTable
                 +hgcRecHitsToMergedDRSimClusterTable
-                +hgcRecHitsToBestMergedDRSimClusterTable
 )
