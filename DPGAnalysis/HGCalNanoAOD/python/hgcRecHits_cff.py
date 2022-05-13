@@ -70,8 +70,8 @@ hgcRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionTableProducer",
     doc  = hgcRecHitsTable.doc,
 )
 
-hgcRecHitsSequence = cms.Sequence(hgcRecHits
-				+hgcRecHitsTable
+hgcRecHitsSequence = cms.Sequence(
+				hgcRecHitsTable
                 +hgcRecHitsToPFCands
                 +hgcRecHitsToPFCandTable
                 +hgcRecHitsToPFTICLCands

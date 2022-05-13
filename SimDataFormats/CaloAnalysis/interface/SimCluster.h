@@ -234,6 +234,7 @@ public:
   /** @brief add simhit's energy to cluster */
   void addSimHit(const PCaloHit &hit) { simhit_energy_ += hit.energy(); }
 
+  void setImpactPoint(const math::XYZTLorentzVectorF &point) { impactPoint_ = point; }
   const math::XYZTLorentzVectorF &impactPoint() const { return impactPoint_; }
 
   void setImpactMomentum(const math::XYZTLorentzVectorF &mom) { impactMomentum_ = mom; }

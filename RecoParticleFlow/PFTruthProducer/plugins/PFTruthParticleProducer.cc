@@ -33,6 +33,10 @@
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include <set>
 
+//this is now just for HGCAL
+#include "RecoHGCal/GraphReco/interface/HGCalTrackPropagator.h"
+#include "../interface/HGCalSimClusterMerger.h"
+
 //
 // class declaration
 //
@@ -82,7 +86,9 @@ public:
   explicit PFTruthParticleProducer(const edm::ParameterSet &);
   ~PFTruthParticleProducer() override;
 
+
 private:
+
   void produce(edm::StreamID, edm::Event &, const edm::EventSetup &) const override;
 
   const SimTrack* getRoot(const SimTrack * st,
@@ -99,6 +105,10 @@ private:
   edm::EDGetTokenT<edm::View<reco::Track>> tracksToken_;
   edm::EDGetTokenT<edm::Association<SimClusterCollection>> recHitToSCToken_;
   edm::EDGetTokenT<reco::SimToRecoCollection> tpToTrackToken_;
+
+  //fix with proper beginRun
+  mutable HGCalTrackPropagator trackprop_;
+  mutable hgcal::RecHitTools hgcrechittools_;
 
 };
 
@@ -206,16 +216,33 @@ const SimTrack* SimHistoryTool::getRoot(const SimTrack * st) const{
 static std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
         const TrackingParticle& tp){
 
+
     //FIXME: this needs the actual logic
-
-    for(const auto& t:tp.g4Tracks()){
-
+    std::cout << "\nnew matching" << std::endl;
+    std::cout << "tp tracks"<< std::endl;
+    for(const auto& v: tp.decayVertices()){
+        std::cout << "tp dec pos "<< v->position().z() << std::endl;
     }
+    for(const auto& t:tp.g4Tracks()){
+        std::cout << t.crossedBoundary() <<" "<< t.trackId() << " " <<  std::endl;
+    }
+
+    /*
+     * some tp tracks cross boundary. if so, a simcluster can be found 'on the other side'
+     */
 
     //add more logic here
     std::vector<size_t>  out;
-    for(const auto& sc: simClusters)
+
+    std::cout << "sc tracks"<< std::endl;
+    for(const auto& sc: simClusters){
+        std::cout << sc->g4Tracks().at(0).trackId() << std::endl;
+
+
         out.push_back(sc.key());
+
+
+    }
     return out;
 
 }
@@ -223,6 +250,17 @@ static std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simCl
 
 // ------------ method called to produce the data  ------------
 void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const edm::EventSetup &iSetup) const {
+
+
+
+ //   throw std::runtime_error("PFTruthParticleProducer: currently not working yet, but skeleton is there");
+
+  bool onlycalo=true;
+
+  trackprop_.getEventSetup(iSetup);
+  edm::ESHandle<CaloGeometry> geom;
+  iSetup.get<CaloGeometryRecord>().get(geom);
+  hgcrechittools_.setGeometry(*geom);//OPT
 
   edm::Handle<TrackingParticleCollection> tpCollection;
   iEvent.getByToken(tpCollectionToken_, tpCollection);
@@ -285,6 +323,8 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   std::vector<int> tpToTrackIdxAsso(tpCollection->size(),-1);//fill with no asso
   std::vector<int> trackToTpIdxAsso(trackCollection->size(),-1);
   for(size_t i=0; i< tpCollection->size(); i++){
+
+
       TrackingParticleRef tp(tpCollection,i);
 
       if (tpToTrack->find(tp) != tpToTrack->end()) {
@@ -307,6 +347,9 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   std::vector<bool> scUsed(scCollection->size());
 
   for(size_t i_cp=0; i_cp < cpCollection->size(); i_cp++){
+
+      if(onlycalo)
+          break; //no track assignments, all "neutral"
       for(const size_t i_tp: cpToTpIdxAsso.at(i_cp)){//tracking part idxs
 
           int i_track = tpToTrackIdxAsso.at(i_tp);
@@ -333,6 +376,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
 
   //create charged PF truth
   for (size_t i_t = 0; i_t < trackToSCIdxAsso.size(); i_t++) {
+
       if(trackToSCIdxAsso.at(i_t).size()<1)
           continue;//not matched track
 
@@ -362,18 +406,27 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       PFtruth->push_back(pftp);
   }
 
+
+  ///// !!!!!!!  The indexing is not going to work!
+
   //scMerger;
   //take the remaining SCs and merge them and make PFTruth out of them
+  std::vector<const SimCluster*> tomergehgcsc;
+  std::vector<size_t> orig_indices;
   for(size_t i_sc=0;i_sc<scCollection->size();i_sc++){
       if(scUsed.at(i_sc)) continue;
+      tomergehgcsc.push_back(&scCollection->at(i_sc));
+      orig_indices.push_back(i_sc);
+  }
 
-      //scMerger.add(...)
-  }
+  HGCalSimClusterMerger scmerger(*caloRecHitCollection.product(),
+          &hgcrechittools_);
+
   std::vector<std::vector<size_t> > mergeIdxs;
-  for(size_t i_sc=0;i_sc<scCollection->size();i_sc++){
-      if(scUsed.at(i_sc)) continue;//FIXME not necessary later
-      mergeIdxs.push_back({i_sc}); //FIXME for testing
-  }
+
+  auto merged = scmerger.merge(tomergehgcsc,1.,mergeIdxs);
+  //merged not used for now, needs to  output new collection in the end
+  //but indices can help check basic functions for now
 
   for(const auto& mscs: mergeIdxs){
 
@@ -382,10 +435,14 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       SimClusterRefVector screfs;
       TrackingParticleRefVector tprefs;
 
-      for(const auto i_sc: mscs){
+      std::cout << "\n" ;
+      for(const auto ii_sc: mscs){
+          size_t i_sc = orig_indices.at(ii_sc);
+          std::cout << i_sc << "  ";
           screfs.push_back(SimClusterRef(scCollection, i_sc));
           scToPFpartIdx.at(i_sc)=PFTIdx;
       }
+      std::cout << std::endl;
 
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setCharge(0);
