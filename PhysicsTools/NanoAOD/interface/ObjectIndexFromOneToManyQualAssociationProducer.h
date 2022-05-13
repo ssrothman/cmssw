@@ -54,14 +54,14 @@ public:
       if (cut_(*tk)) {
         if (assoc->numberOfAssociations(tk)) {
             auto& matchWithQual = (*assoc)[tk];
-            size_t i = 0;
+            size_t j = 0;
             for (auto& match : matchWithQual) {
                 if (match.first.isNonnull()) {
                     keys.emplace_back(match.first.key());
                     qualities.emplace_back(match.second);
                 }
                 
-                if (i == 0 && storeBestMatch_) {
+                if (j == 0 && storeBestMatch_) {
                     if (match.first.isNonnull()) {
                         bestIndices[i] = match.first.key();
                         bestQualities[i] = match.second;
@@ -71,8 +71,9 @@ public:
                         bestQualities[i] = 0.;
                     }
                 }
+                j++;
             }
-            i++;
+
             nmatch = matchWithQual.size();
         } 
         else if (storeBestMatch_) {
