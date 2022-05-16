@@ -12,6 +12,7 @@
 //this can be used for PF truth but also for standalone
 //in case of PF, it needs to run differently if tracks are present
 //therefore, it is more convenient standalone than as an edm::producer
+//never merges any non-hgcal simcluster with an hgcal simcluster or never a non-hgcal simcluster
 class HGCalSimClusterMerger{
 public:
     HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
@@ -46,6 +47,7 @@ public:
     double calcCircle(const SimCluster* sc)const;
     void createHitMap();
     const HGCRecHit* getHit(DetId)const;
+    bool isHGCal(const SimCluster& cluster)const;
 
     inline LocalVector getHitPosVec(DetId id)const{
         auto gppos = rechittools_->getPosition(id);

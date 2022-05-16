@@ -137,6 +137,11 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
 
 
     std::cout << "initial: " << scCollection->size() << " merged: " << idxs.size() << std::endl;
+    size_t largestgroup=0;
+    for(const auto& iidx: idxs)
+        if(largestgroup<iidx.size())
+            largestgroup=iidx.size();
+    std::cout << "largest group " << largestgroup << std::endl;
     //generate output and associations
 
     auto output = std::make_unique<SimClusterCollection>();
@@ -170,7 +175,7 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
         for(size_t j=0; j< idxs.size(); j++){
             if(std::find(idxs.at(j).begin(),idxs.at(j).end(),i) != idxs.at(j).end()){
                 mergedIndices.at(i) = j;
-                std::cout << i <<" unmerged collection is merged to " << j << " merged collection " << std::endl;
+                //std::cout << i <<" unmerged collection is merged to " << j << " merged collection " << std::endl;
                 break;
             }
         }

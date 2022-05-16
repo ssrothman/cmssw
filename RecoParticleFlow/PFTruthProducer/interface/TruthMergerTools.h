@@ -152,7 +152,7 @@ float MergeObject<U,T>::maxMergeScore(const MergeObject& rhs)const{
 template<class U, class T>
 class ObjectMerger{
 public:
-    ObjectMerger():higherThreshold_(false){}
+    ObjectMerger(){}
     //keep track of the original objects here and just pass pointers to the MergeObject one
 
     void add(const T * o){
@@ -163,7 +163,6 @@ public:
             return &objects_.at(objects_.size()-1);
         return 0;}
 
-    void setThresholdIsUpper(bool is){higherThreshold_=is;}
 
     /*
      * returns merged target objects
@@ -171,7 +170,6 @@ public:
     std::vector<T> mergeSymmetric(const float& threshold, std::vector<std::vector<size_t> >* idxs=0)const;
 
 private:
-    bool higherThreshold_;
     std::vector<U> objects_;
     std::vector< MergeObject<U,T> > removeEmpty(const std::vector< MergeObject<U,T> >& mo)const;
 };
@@ -193,8 +191,6 @@ std::vector<T> ObjectMerger<U,T>::mergeSymmetric(const float& threshold, std::ve
         for(size_t i=0;i<merged.size();i++){
             for(size_t j=i;j<merged.size();j++){
                 bool merge = merged.at(i).maxMergeScore(merged.at(j)) > threshold;
-                if(higherThreshold_)
-                    merge = !merge;
                 if(merge){
                     merged.at(i).absorb(merged.at(j));
                 }

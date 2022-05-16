@@ -1,6 +1,10 @@
 #include "../interface/CaloSimClusterCircleMergeWrapper.h"
+#include <limits>
 
 float CaloSimClusterCircleMergeWrapper::mergeScore(const CaloSimClusterCircleMergeWrapper* rhs)const{
+
+    if(circle_radius_<0 || rhs->circle_radius_<0)
+        return  -std::numeric_limits<float>::max();//minimum score possible
 
     auto diff = boundaryPos()-rhs->boundaryPos();
     diff.SetE(0);//set time diff to zero for now
@@ -9,7 +13,8 @@ float CaloSimClusterCircleMergeWrapper::mergeScore(const CaloSimClusterCircleMer
 
     double rsum = circle_radius_+rhs->circle_radius_;
     double score = dmagsq / (rsum*rsum + 1e-9);
-    return score;
+    return -sqrt(score);
+
 }
 
 SimCluster CaloSimClusterCircleMergeWrapper::mergeAllInList(

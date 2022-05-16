@@ -8,6 +8,7 @@
 class CaloSimClusterCircleMergeWrapper: public merger::MergeWrapper<SimCluster,CaloSimClusterCircleMergeWrapper>{
 
 public:
+    enum caloEn {isHgcal,isBarrel}; //etc
 
     CaloSimClusterCircleMergeWrapper(const SimCluster* x):sc_(x),
     circle_radius_(0){ }
@@ -31,6 +32,7 @@ private:
     const SimCluster* sc_;
 
     float circle_radius_;
+
 };
 
 
