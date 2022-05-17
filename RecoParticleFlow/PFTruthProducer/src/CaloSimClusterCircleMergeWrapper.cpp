@@ -59,3 +59,14 @@ SimCluster CaloSimClusterCircleMergeWrapper::mergeAllInList(
 
     return out;
 }
+
+math::XYZTLorentzVectorF CaloSimClusterCircleMergeWrapper::boundaryPos()const{ //this is a workaround until fully filled
+    return sc_->g4Tracks().at(0).getPositionAtBoundary();//DEBUG FIXME check with below
+    math::XYZTLorentzVectorF p = sc_->impactPoint();
+    if(p.mag2()==0){//not filled
+        p = sc_->g4Tracks().at(0).getPositionAtBoundary();
+    }
+    return p;
+}
+
+

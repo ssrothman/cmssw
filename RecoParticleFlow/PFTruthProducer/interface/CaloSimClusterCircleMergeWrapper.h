@@ -21,13 +21,7 @@ public:
 
 private:
 
-    inline const math::XYZTLorentzVectorF boundaryPos()const{ //this is a workaround until fully filled
-        math::XYZTLorentzVectorF p = sc_->impactPoint();
-        if(p.mag2()==0){//not filled
-            p = sc_->g4Tracks().at(0).getPositionAtBoundary();
-        }
-        return p;
-    }
+    math::XYZTLorentzVectorF boundaryPos()const;
 
     const SimCluster* sc_;
 

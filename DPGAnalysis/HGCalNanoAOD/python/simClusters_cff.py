@@ -56,7 +56,7 @@ simClusterToCaloPartTable = cms.EDProducer("SimClusterToCaloParticleIndexTablePr
 )
 
 hgcSimTruth = cms.EDProducer("SimClusterMerger",#"simmerger","SimClusterMerger"
-    useNLayers = cms.int32(5),
+    useNLayers = cms.int32(3),
     searchRadiusScale = cms.double(3.),
     clusterRadiusScale = cms.double(1.2),
     mergeRadiusScale = cms.double(1.),
@@ -66,7 +66,9 @@ hgcSimTruth = cms.EDProducer("SimClusterMerger",#"simmerger","SimClusterMerger"
     simClusters= cms.InputTag("mix:MergedCaloTruth"),
     simVertices= cms.InputTag("g4SimHits"),
     simTracks= cms.InputTag("g4SimHits"),
-    caloRecHits = cms.InputTag("hgcRecHits"),
+    caloRecHits = cms.InputTag("hgcRecHits")
+    
+    #caloSimHits = cms.InputTag("g4SimHits")
 )
 
 hgcSimTruthDR = cms.EDProducer("HGCTruthProducer")

@@ -26,7 +26,9 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
         debugradii.push_back(rad);
     }
 
-    ;
+    // the underlying merger selects *above* threshold, so if
+    // we want to merge two SCs with a distance smaller than
+    // threshold, both have to be inverted
     auto merged = merger.mergeSymmetric(-threshold,&idxs);
 
     static int counter=0;
@@ -63,94 +65,87 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 double HGCalSimClusterMerger::calcCircle(const SimCluster* sc)const{
     auto hafs = sc->hits_and_fractions();
 
-    //get the hits that match the requirements only
-
+    // restrict to simclusters with at least one hit in the HGCAL
     if(!isHGCal(*sc))
         return -1;
 
+    // fill information for the hits belonging to the simcluster
+    // and determine first layer while at it
+    std::vector<HitStruct> scHits;
     int firstlayer=100;
     for(const auto haf:hafs){
         const HGCRecHit* rh = getHit(haf.first);
-        if(!rh) continue;
+        bool ishgcal = isHGCal(haf.first);
+        if(!rh || !ishgcal) continue;
+
         int layer = rechittools_->getLayer(haf.first);
         if(firstlayer > layer)
             firstlayer=layer;
+        float radius = getHitRadius(haf.first);
+        scHits.emplace_back(haf.first, rh, haf.second, radius);
+
     }
 
+    //create the reference point and axis
     LocalVector axis(sc->impactMomentum().x(),sc->impactMomentum().y(),sc->impactMomentum().z());
     axis=axis.unit();
 
-    //now get the relevant hits
-    std::vector<std::pair<DetId, float> > assignedHafs;
-    std::vector<float> hitDistanceToAxis, hitTime;
-    std::vector<LocalVector> hitProjAlongAxis;
+    auto bpos4v= sc->g4Tracks().at(0).getPositionAtBoundary();
+    LocalVector boundaryPos(bpos4v.x(),bpos4v.y(),bpos4v.z());
+
+
+    // store only the hits relevant to calculate the radii
+    // also determine their distance to the shower axis
+    // and their deposited energy sum
+    std::vector<const HitStruct*> assignedHits;
+    std::vector<float> hitDistanceToAxis;
     double assignedEnSum=0;
-    for(const auto haf:hafs){
-        const HGCRecHit* rh = getHit(haf.first);
-        if(!rh) continue;
-        int layer = rechittools_->getLayer(haf.first);
-        if(layer >= firstlayer+cNLayers_)
+    for(const auto& h: scHits){
+        if((int)rechittools_->getLayer(h.id) > cNLayers_)
             continue;
-        LocalVector hit_pos= getHitPosVec(haf.first);
 
-        auto projection_along_axis = hit_pos.dot(axis) * axis;
-        hitProjAlongAxis.push_back(projection_along_axis);
-        auto dist_to_axis = hit_pos-projection_along_axis;
+        assignedEnSum += h.energy();
+        auto rel_hit_pos = getHitPosVec(h.id) - boundaryPos;
+        auto projection_along_axis = rel_hit_pos.dot(axis) * axis;
+        float dist_to_axis = (rel_hit_pos-projection_along_axis).mag();
 
-        assignedHafs.emplace_back(haf.first,haf.second);
-        hitDistanceToAxis.push_back(dist_to_axis.mag());
-        hitTime.push_back(rh->time());
+        assignedHits.push_back(&h);
+        hitDistanceToAxis.push_back(dist_to_axis);
 
-        assignedEnSum += rh->energy();
     }
+    if(assignedHits.size()<1)
+        return -1;
 
-    if(assignedHafs.size()<1){
-        return 1e-1;
-    }
-    // assignedHafs are guaranteed to have rechits
-
-    auto ldsort = argsort(hitTime);//hitDistanceToAxis);
+    auto ldsort = argsort(hitDistanceToAxis);//hitDistanceToAxis);
+    apply_argsort_in_place(assignedHits,ldsort);
     apply_argsort_in_place(hitDistanceToAxis,ldsort);
-    apply_argsort_in_place(hitProjAlongAxis,ldsort);
-    apply_argsort_in_place(hitTime,ldsort);
-    apply_argsort_in_place(assignedHafs,ldsort);
 
-    auto centralId = assignedHafs.at(0).first;
+    auto centralHit = assignedHits.at(0);
 
-    if(hitDistanceToAxis.at(0) > cSearchRadius_ * rechittools_->getRadiusToSide(centralId))
+    if(hitDistanceToAxis.at(0) > cSearchRadius_ * centralHit->radius)
         return 1e-1; //not dense hit
 
-    LocalVector centralhitpos = getHitPosVec(centralId);
+ //   LocalVector centralHitPos = getHitPosVec(centralHit->id);
+
     double ensum=0;
     double currentradius=0;
     float hitradius = 1e-6;
-    for (size_t i = 0; i < assignedHafs.size(); i++) {
-        DetId hid = assignedHafs.at(i).first;
-       // rechittools_->
-        const HGCRecHit* rh = getHit(hid);
 
-        //auto hitpos = getHitPosVec(hid); //use projected positions here
-        float dist = (hitProjAlongAxis.at(i) - centralhitpos).mag();//
-        if(rechittools_->isSilicon(hid)){
-            hitradius = cClusterRadiusScale_ * rechittools_->getRadiusToSide(hid);
-        }
-        else if(rechittools_->isScintillator(hid)){
-            auto etaphi = rechittools_->getScintDEtaDPhi(hid);
-            float maxdetadphi = std::max(etaphi.first,etaphi.second);
-            hitradius = cClusterRadiusScale_ * 0.5 * centralhitpos.perp() * maxdetadphi;
-        }
-        else{ //not an hgcal hit
-            continue;}
-        if(hitradius > 50.)
-            continue;//invalid radius
+    for (size_t i = 0; i < assignedHits.size(); i++) {
+        auto hit = assignedHits.at(i);
 
-        double rsum = currentradius + hitradius;
+        auto hit_pos = getHitPosVec(hit->id) - boundaryPos;//centralHitPos;//now w.r.t. central hit
+        auto projection_along_axis = hit_pos.dot(axis) * axis;
+        float dist = (hit_pos-projection_along_axis).mag();
+
+        hitradius = hit->radius;
+        double rsum = currentradius + cClusterRadiusScale_ * hitradius;
         double reldist = dist / (rsum+1e-6);
 
         if(reldist>1.)
             break;// done
 
-        ensum += rh->energy();
+        ensum += hit->energy();
         if(ensum/assignedEnSum > cEContainment_)
             break;
 
@@ -165,30 +160,48 @@ double HGCalSimClusterMerger::calcCircle(const SimCluster* sc)const{
 }
 
 bool HGCalSimClusterMerger::isHGCal(const SimCluster& cluster)const{
-
     for (const auto& hitsAndEnergies : cluster.hits_and_fractions()) {
         const DetId id = hitsAndEnergies.first;
-        bool forward = id.det() == DetId::HGCalEE
-                || id.det() == DetId::HGCalHSi
-                || id.det() == DetId::HGCalHSc
-                || (id.det() == DetId::Forward && id.subdetId() != static_cast<int>(HFNose))
-                || (id.det() == DetId::Hcal && id.subdetId() == HcalSubdetector::HcalEndcap);
-
-        if(forward)
+        if(isHGCal(id))
             return true;
     }
     return false;
 }
 
-void HGCalSimClusterMerger::createHitMap(){
-    hitmap_.clear();
-    for(const auto& rh: *rechits_)
-        hitmap_[rh.detid()]=&rh;
+bool HGCalSimClusterMerger::isHGCal(DetId id)const{
+    return id.det() == DetId::HGCalEE
+            || id.det() == DetId::HGCalHSi
+            || id.det() == DetId::HGCalHSc
+            || (id.det() == DetId::Forward && id.subdetId() != static_cast<int>(HFNose))
+            || (id.det() == DetId::Hcal && id.subdetId() == HcalSubdetector::HcalEndcap);
 }
+
+float HGCalSimClusterMerger::getHitRadius(DetId id)const{
+    if(rechittools_->isSilicon(id)){
+        return rechittools_->getRadiusToSide(id);
+    }
+    else if(rechittools_->isScintillator(id)){
+        auto hit_pos = getHitPosVec(id);
+        auto etaphi = rechittools_->getScintDEtaDPhi(id);
+        float maxdetadphi = std::max(etaphi.first,etaphi.second);
+        return 0.5 * hit_pos.perp() * maxdetadphi * sqrt(2.);
+    }
+    return 0;
+}
+
+
+void HGCalSimClusterMerger::createHitMap(){
+  hitmap_.clear();
+  for (size_t i = 0; i < rechits_->size(); i++)
+    hitmap_[(*rechits_)[i].detid()] = i;
+}
+
+
 
 const HGCRecHit* HGCalSimClusterMerger::getHit(DetId id) const {
   auto it = hitmap_.find(id);
   if (it == hitmap_.end())
       return 0;
-  return it->second;
+  return &(*rechits_)[it->second];
 }
+

@@ -98,6 +98,13 @@ SimClusterMerger::SimClusterMerger(const edm::ParameterSet &pset) :
 
 void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup)const {
 
+    /*
+     *
+     * add simhits to get the time in a proper way
+     *
+     *
+     */
+
     //set tools
     edm::ESHandle<CaloGeometry> geom;
     iSetup.get<CaloGeometryRecord>().get(geom);
@@ -117,9 +124,9 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
     edm::Handle<std::vector<SimTrack> > stCollection;
     iEvent.getByToken(stCollectionToken_, stCollection);
 
-    //invoke merger and configure
 
-    HGCalSimClusterMerger merger(*caloRecHitCollection.product(),&hgcalRecHitToolInstance_);
+    HGCalSimClusterMerger merger(*caloRecHitCollection.product(),
+            &hgcalRecHitToolInstance_);
 
 
     merger.setCClusterRadiusScale(cClusterRadiusScale_);
@@ -136,18 +143,19 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
     auto mergedSC = merger.merge(tobemerged, cMergeThreshold_, idxs); //now idxs is filled
 
 
-    std::cout << "initial: " << scCollection->size() << " merged: " << idxs.size() << std::endl;
+    std::cout << "initial: " << scCollection->size() << " merged: " << idxs.size() << std::endl;//DEBUG
     size_t largestgroup=0;
     for(const auto& iidx: idxs)
         if(largestgroup<iidx.size())
             largestgroup=iidx.size();
     std::cout << "largest group " << largestgroup << std::endl;
+
     //generate output and associations
 
     auto output = std::make_unique<SimClusterCollection>();
 
     for(const auto& sc:mergedSC)
-        output->push_back(sc);//can be moved to constructor once validated
+        output->push_back(sc);//DEBUG can be moved to constructor once validated
 
     const auto& mergedSCHandle = iEvent.put(std::move(output));
 
