@@ -22,7 +22,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
         auto mobj = merger.getLast();
         float rad = calcCircle(sc);
         mobj->setRadius(rad);
-
+        mobj->setSimHistoryTool(histtool_);
         debugradii.push_back(rad);
     }
 

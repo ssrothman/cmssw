@@ -1,3 +1,8 @@
+
+#ifndef RECOPARTICLEFLOW_PFTRUTHPRODUCER_INTERFACE_HGCALSIMCLUSTERMERGER_H_
+#define RECOPARTICLEFLOW_PFTRUTHPRODUCER_INTERFACE_HGCALSIMCLUSTERMERGER_H_
+
+
 #include <algorithm>
 #include <numeric>
 
@@ -7,6 +12,7 @@
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
 #include "DataFormats/GeometryVector/interface/LocalVector.h"
+#include "SimHistoryTool.h"
 
 
 //this can be used for PF truth but also for standalone
@@ -16,9 +22,9 @@
 class HGCalSimClusterMerger{
 public:
     HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
-           const hgcal::RecHitTools * rechittools
-    ):rechits_(&rechits),
-    rechittools_(rechittools){
+           const hgcal::RecHitTools * rechittools,
+           const SimHistoryTool * hist
+    ):rechits_(&rechits),rechittools_(rechittools),histtool_(hist){
         createHitMap();
 
         cEContainment_=0.68;
@@ -45,6 +51,8 @@ public:
     void setCSearchRadius(float cSearchRadius) { cSearchRadius_ = cSearchRadius; }
 
   private:
+    HGCalSimClusterMerger(){}
+
     double calcCircle(const SimCluster* sc)const;
     void createHitMap();
     const HGCRecHit* getHit(DetId)const;
@@ -71,6 +79,7 @@ public:
 
     const HGCRecHitCollection * rechits_;
     const hgcal::RecHitTools* rechittools_ ;
+    const SimHistoryTool * histtool_;
     std::map<DetId, size_t> hitmap_;
 
     //helper class
@@ -132,3 +141,5 @@ void HGCalSimClusterMerger::apply_argsort_in_place(
         }
     }
 }
+
+#endif

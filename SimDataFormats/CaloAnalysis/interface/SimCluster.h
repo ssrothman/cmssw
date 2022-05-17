@@ -55,12 +55,7 @@ public:
    * Returns the PDG ID. If not id is set, the id of first associated gen particle is returned. If
    * there are no gen particles associated then it returns type() from the first SimTrack. */
   int pdgId() const {
-    if (pdgId_ != 0)
       return pdgId_;
-    else if (!genParticles_.empty())
-      return (*genParticles_.begin())->pdgId();
-    else
-      return g4Tracks_[0].type();
   }
 
   /** @brief Signal source, crossing number.

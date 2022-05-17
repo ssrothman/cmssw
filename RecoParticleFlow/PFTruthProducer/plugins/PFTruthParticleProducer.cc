@@ -36,6 +36,7 @@
 //this is now just for HGCAL
 #include "RecoHGCal/GraphReco/interface/HGCalTrackPropagator.h"
 #include "../interface/HGCalSimClusterMerger.h"
+#include "../interface/SimHistoryTool.h"
 
 //
 // class declaration
@@ -162,56 +163,9 @@ const SimTrack* PFTruthParticleProducer::getRoot(
     return out;
 }
 
-class SimHistoryTool{
-public:
-    SimHistoryTool(const std::vector<SimTrack> & simtracks,
-        const std::vector<SimVertex> & simvertices,
-        const std::map<int,int>&  trackIdToTrackIdxAsso):
-            simtracks_(simtracks),simvertices_(simvertices),trackIdToTrackIdxAsso_(trackIdToTrackIdxAsso)
-        {}
-
-    const SimTrack* getRoot(const SimTrack * st)const;
-    const SimTrack* traverseStep(const SimTrack * st)const;
-
-private:
-   // SimHistoryTool(){}
-
-    const std::vector<SimTrack> & simtracks_;
-    const std::vector<SimVertex> & simvertices_;
-    const std::map<int,int>&  trackIdToTrackIdxAsso_;
-};
-
-//use it above if needed
-const SimTrack* SimHistoryTool::traverseStep(const SimTrack * st)const{
-
-    const SimTrack* out=st;
-    int vidx = out->vertIndex();
-    if(vidx<0)
-        return out; //no vertex
-    const SimVertex& vertex = simvertices_.at(vidx);
-    int stid = vertex.parentIndex();//this is Geant track ID, not vector index
-    if(stid < 0)
-        return out;//no parent
-    int stidx = trackIdToTrackIdxAsso_.at(stid); //get vector index
-    if(stidx < 0)
-        return out;//id does not exist
-    const SimTrack & simtrack = simtracks_.at(stidx);
-    vidx = simtrack.vertIndex();
-    out=&simtrack;
-    return out;
-}
 
 
-const SimTrack* SimHistoryTool::getRoot(const SimTrack * st) const{
-    const SimTrack* out=st;
-    while(true){
-        const SimTrack * test = traverseStep(out);
-        if(test == out)//root
-            break;
-        out=test;
-    }
-    return out;
-}
+
 
 static std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
         const TrackingParticle& tp){
@@ -297,7 +251,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       trackIdToTrackIdxAsso[stCollection->at(i).trackId()] = i;
   }
 
-  SimHistoryTool histtool(*stCollection, *svCollection, trackIdToTrackIdxAsso);
+  SimHistoryTool histtool(*stCollection, *svCollection);
 
   //match tracking to calo particles
   std::vector<std::vector<size_t> > cpToTpIdxAsso(cpCollection->size());
@@ -420,7 +374,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   }
 
   HGCalSimClusterMerger scmerger(*caloRecHitCollection.product(),
-          &hgcrechittools_);
+          &hgcrechittools_,&histtool);
 
   std::vector<std::vector<size_t> > mergeIdxs;
 

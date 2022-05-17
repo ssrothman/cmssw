@@ -40,6 +40,7 @@
 #include "DataFormats/Common/interface/OneToManyWithQualityGeneric.h"
 
 #include "RecoParticleFlow/PFTruthProducer/interface/HGCalSimClusterMerger.h"
+#include "RecoParticleFlow/PFTruthProducer/interface/SimHistoryTool.h"
 
 #include <iterator> // For std::forward_iterator_tag
 #include <cstddef>  // For std::ptrdiff_t
@@ -124,10 +125,10 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
     edm::Handle<std::vector<SimTrack> > stCollection;
     iEvent.getByToken(stCollectionToken_, stCollection);
 
+    SimHistoryTool histtool(*stCollection.product(), *svCollection.product());
 
     HGCalSimClusterMerger merger(*caloRecHitCollection.product(),
-            &hgcalRecHitToolInstance_);
-
+            &hgcalRecHitToolInstance_, &histtool);
 
     merger.setCClusterRadiusScale(cClusterRadiusScale_);
     merger.setCEContainment(cEContainment_);
