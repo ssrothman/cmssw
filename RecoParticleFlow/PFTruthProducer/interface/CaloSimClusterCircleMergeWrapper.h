@@ -27,7 +27,6 @@ public:
 private:
 
     math::XYZTLorentzVectorF boundaryPos()const;
-    int createMergedSimClusterID(const SimCluster* sc)const;
 
     const SimCluster* sc_;
 

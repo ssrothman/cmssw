@@ -5,6 +5,7 @@
 
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
 #include "SimDataFormats/Track/interface/SimTrack.h"
+#include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include <vector>
 #include <map>
 
@@ -13,6 +14,7 @@ extern std::vector<SimTrack> dummyst;
 extern std::vector<SimVertex> dummysv;
 }
 
+// this is not PU safe yet. Needs protection against PU entries
 class SimHistoryTool{
 public:
     SimHistoryTool(const std::vector<SimTrack> & simtracks,
@@ -27,6 +29,8 @@ public:
      * (and including) the root track
      */
     std::vector<const SimTrack*> createHistory(const SimTrack * st)const;
+
+    int createMergedSimClusterID(const SimCluster* sc, double idenfrac=0.9)const;
 
 private:
     SimHistoryTool():simtracks_(dummy::dummyst),simvertices_(dummy::dummysv){}

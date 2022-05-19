@@ -6,6 +6,20 @@
 //DEBUG
 #include <fstream>
 
+HGCalSimClusterMerger::HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
+           const hgcal::RecHitTools * rechittools,
+           const SimHistoryTool * hist
+    ):rechits_(&rechits),rechittools_(rechittools),histtool_(hist){
+        createHitMap();
+
+        cNLayers_=3;
+        cSearchRadius_=3.;
+        cClusterRadiusScale_=1.2;
+        cMergeRadiusScale_=1.;
+        cEContainment_=0.68;
+
+}
+
 std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const SimCluster*>& scs,
         float threshold,
         std::vector<std::vector<size_t> >& idxs) const{

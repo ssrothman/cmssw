@@ -23,23 +23,14 @@ class HGCalSimClusterMerger{
 public:
     HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
            const hgcal::RecHitTools * rechittools,
-           const SimHistoryTool * hist
-    ):rechits_(&rechits),rechittools_(rechittools),histtool_(hist){
-        createHitMap();
+           const SimHistoryTool * hist);
 
-        cEContainment_=0.68;
-        cSearchRadius_=2.;
-        cClusterRadiusScale_=1.;
-        cMergeRadiusScale_=1;
-
-    }
-
-    //setters for circle parameters here
 
     std::vector<SimCluster> merge(const std::vector<const SimCluster*>& scs,
             float threshold,
             std::vector<std::vector<size_t> >& idxs) const;
 
+    //setters for circle parameters here
     void setCClusterRadiusScale(float cClusterRadiusScale) { cClusterRadiusScale_ = cClusterRadiusScale; }
 
     void setCEContainment(float cEContainment) { cEContainment_ = cEContainment; }
@@ -49,6 +40,16 @@ public:
     void setCNLayers(int cNLayers) { cNLayers_ = cNLayers; }
 
     void setCSearchRadius(float cSearchRadius) { cSearchRadius_ = cSearchRadius; }
+
+    //helper
+    //credit to Thomas
+    template <typename T>
+    std::vector<std::size_t> argsort(const std::vector<T>& vec)const;
+
+    //credit to Thomas
+    template <typename T>
+    void apply_argsort_in_place( std::vector<T>& vec,
+            const std::vector<std::size_t>& p)const;
 
   private:
     HGCalSimClusterMerger(){}
@@ -68,14 +69,7 @@ public:
 
     float getHitRadius(DetId id)const;
 
-    //credit to Thomas
-    template <typename T>
-    std::vector<std::size_t> argsort(const std::vector<T>& vec)const;
 
-    //credit to Thomas
-    template <typename T>
-    void apply_argsort_in_place( std::vector<T>& vec,
-            const std::vector<std::size_t>& p)const;
 
     const HGCRecHitCollection * rechits_;
     const hgcal::RecHitTools* rechittools_ ;
@@ -109,10 +103,7 @@ template <typename T>
 std::vector<std::size_t> HGCalSimClusterMerger::argsort(const std::vector<T>& vec)const{
     std::vector<std::size_t> p(vec.size());
     std::iota(p.begin(), p.end(), 0);
-    std::sort(
-            p.begin(), p.end(),
-            [&](std::size_t i, std::size_t j){ return vec[i] < vec[j]; }
-    );
+    std::sort(p.begin(), p.end(), [&](std::size_t i, std::size_t j) { return vec[i] < vec[j]; });
     return p;
 }
 
@@ -122,24 +113,21 @@ void HGCalSimClusterMerger::apply_argsort_in_place(
         std::vector<T>& vec,
         const std::vector<std::size_t>& p)const
 {
-    std::vector<bool> done(vec.size());
-    for (std::size_t i = 0; i < vec.size(); ++i)
-    {
-        if (done[i])
-        {
-            continue;
-        }
-        done[i] = true;
-        std::size_t prev_j = i;
-        std::size_t j = p[i];
-        while (i != j)
-        {
-            std::swap(vec[prev_j], vec[j]);
-            done[j] = true;
-            prev_j = j;
-            j = p[j];
-        }
+  std::vector<bool> done(vec.size());
+  for (std::size_t i = 0; i < vec.size(); ++i) {
+    if (done[i]) {
+      continue;
     }
+    done[i] = true;
+    std::size_t prev_j = i;
+    std::size_t j = p[i];
+    while (i != j) {
+      std::swap(vec[prev_j], vec[j]);
+      done[j] = true;
+      prev_j = j;
+      j = p[j];
+    }
+  }
 }
 
 #endif
