@@ -419,9 +419,9 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       pftp.setPdgId(tp.pdgId());
       //this needs to be refined
       //ID etc
-      //pftp.setP4(tpCollection->at(trackToTpIdxAsso.at(i_t)).p4());
-      //pftp.setVertex(tpCollection->at(trackToTpIdxAsso.at(i_t)).vertex());
-
+      pftp.setP4(PFTruthParticle::LorentzVectorF(tp.p4().px(), tp.p4().py(), tp.p4().pz(), tp.p4().t()));
+      //pftp.setVertex(tp.vertex());
+      //still missing time, etc
       PFtruth->push_back(pftp);
   }
 
@@ -445,8 +445,10 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   //merged not used for now, needs to  output new collection in the end
   //but indices can help check basic functions for now
 
-  for(const auto& mscs: mergeIdxs){
+  for(size_t i=0;i<mergeIdxs.size();i++){
 
+      const auto& mscs=mergeIdxs.at(i);
+      const auto& msc = merged.at(i);
       int PFTIdx = PFtruth->size();
 
       SimClusterRefVector screfs;
@@ -461,7 +463,9 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setCharge(0);
       //ID etc
-      pftp.setPdgId(0);//to be determined in same way as for SCs
+      pftp.setPdgId(msc.pdgId());//to be determined in same way as for SCs
+      pftp.setP4(msc.impactMomentum());
+      //still missing time, etc
       PFtruth->push_back(pftp);
   }
 
