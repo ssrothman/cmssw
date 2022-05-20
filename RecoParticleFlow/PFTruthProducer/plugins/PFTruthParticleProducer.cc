@@ -93,7 +93,11 @@ private:
   void produce(edm::StreamID, edm::Event &, const edm::EventSetup &) const override;
 
   std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
-          const TrackingParticle& tp, const HGCalSimClusterMerger& scmerger) const;
+          const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger) const;
+
+  std::vector<SimClusterRefVector> splitCPToTP(const SimClusterRefVector& allCPSimClusters,
+          TrackingParticleRefVector assoTPs, const SimHistoryTool& histtool) const;
+
   edm::EDGetTokenT<TrackingParticleCollection> tpCollectionToken_;
   edm::EDGetTokenT<CaloParticleCollection> cpCollectionToken_;
   edm::EDGetTokenT<SimClusterCollection> scCollectionToken_;
@@ -142,7 +146,8 @@ PFTruthParticleProducer::~PFTruthParticleProducer() {}
 
 
 std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
-        const TrackingParticle& tp, const HGCalSimClusterMerger& scmerger) const {
+        const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger
+        ) const {
 
     std::vector<size_t>  out;
     // the SCs are from the same CP the TP was matched to.
@@ -159,10 +164,13 @@ std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClust
     if(simClusters.size()<1)
         return out;
 
+    //check which G4 track is most likely to be representing the reco track
+
     std::vector<std::vector<size_t> > mergeIdxs;
     std::vector<const SimCluster* > tomerge;
-    for(const auto& scref: simClusters)
+    for(const auto& scref: simClusters){
         tomerge.push_back(&(*scref));
+    }
     auto merged = scmerger.merge(tomerge,1.1,mergeIdxs);//a bit more generous here
 
     std::vector<float> scmom;
@@ -179,14 +187,63 @@ std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClust
     if(sc0.impactMomentum().P() < tp.p4().P()*pfMatchThreshold_)
         return out;
 
-
+    std::cout << "merged for TP ";
     for(const auto& sc_i: mergeIdxs.at(0)){
         out.push_back(simClusters.at(sc_i).key());
+        std::cout << simClusters.at(sc_i).key() << " ";
     }
+    std::cout << std::endl;
     return out;
-
 }
 
+std::vector<SimClusterRefVector> PFTruthParticleProducer::splitCPToTP(const SimClusterRefVector& allCPSimClusters,
+        TrackingParticleRefVector assoTPs, const SimHistoryTool& histtool) const {
+
+    //cross-clean the TP g4 tracks (necessary?)
+    //find highest energy non-common g4 tracks, profit from descending momentum-ordering
+    //if any track is the same then the highest energy ones first
+    std::vector<std::vector<SimTrack> > tpgsts;//needed for ambiguous cases
+    std::vector<SimTrack> allsts;//needs copy as the above are also copies
+    bool ambiguous=false;
+    for(const auto& tp: assoTPs){
+        tpgsts.push_back(tp->g4Tracks());
+        for(const auto& st:tp->g4Tracks()){
+          if (std::find_if(allsts.begin(), allsts.end(), [&st](const SimTrack& x) {
+                return SimHistoryTool::simTrackEqual(x, st);
+              }) == allsts.end()) {
+            allsts.push_back(st);
+          } else {
+            ambiguous = true;
+          }
+        }
+    }
+    if(ambiguous){//more work needed, adapt tpgsts
+        std::cout << "ambiguous tp g4 track matches" << std::endl;
+
+        //clean up tpgsts here
+    }
+
+    //use (cleaned up) tpgsts to assign simclusters
+    //use highest energy/momentum non overlapping g4track as probe
+    std::vector<SimClusterRefVector> out;
+    for(const auto& tpscs: tpgsts){
+        out.push_back(SimClusterRefVector());
+        auto &tpsv = out.at(out.size()-1);
+        if(tpscs.size()<1)
+            continue;
+        const auto& parent = tpscs.at(0);
+        for(const auto& sc: allCPSimClusters){
+            for(const auto& scst: sc->g4Tracks()){//in case it is merged already, but usually only 1
+                if(histtool.inHistory(parent, &scst)){
+                    tpsv.push_back(sc);
+                    break;
+                }
+            }
+        }
+
+    }
+    return out;
+}
 
 // ------------ method called to produce the data  ------------
 void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const edm::EventSetup &iSetup) const {
@@ -240,7 +297,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
           &hgcrechittools_,&histtool);
 
   chargedSCMerger.setCNLayers(20);//go deeper
-  //configure
+  //configure more here FIXME
 
 
   //index helpers
@@ -299,17 +356,27 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
 
   for(size_t i_cp=0; i_cp < cpCollection->size(); i_cp++){
 
+      TrackingParticleRefVector cptps;
+      std::vector<size_t> trackidx;
       for(const size_t i_tp: cpToTpIdxAsso.at(i_cp)){//tracking part idxs
-
           int i_track = tpToTrackIdxAsso.at(i_tp);
           if(i_track<0)
               continue;
+          trackidx.push_back(i_track);
+          cptps.push_back(TrackingParticleRef(tpCollection,i_tp));
+      }
+      auto scgroups = splitCPToTP(cpCollection->at(i_cp).simClusters(), cptps, histtool);
+      //this has the same indexing as tpToTrackIdxAsso
+      for(size_t i_tt=0; i_tt< scgroups.size();i_tt++){
+          int i_track = trackidx.at(i_tt);
 
-          const auto tp = tpCollection->at(i_tp);
-          auto matchedsc = matchedSCtoTrackIdxs(cpCollection->at(i_cp).simClusters(),tp,chargedSCMerger);
+          auto matchedsc = matchedSCtoTrackIdxs(scgroups.at(i_tt),*cptps.at(i_tt),
+                  trackCollection->at(i_track),chargedSCMerger);
           trackToSCIdxAsso.at(i_track)=matchedsc;
-          for(const auto msc: matchedsc)
+
+          for(const auto msc: matchedsc){
               scUsed.at(msc)=true;
+          }
       }
   }
 
@@ -385,14 +452,11 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
       SimClusterRefVector screfs;
       TrackingParticleRefVector tprefs;
 
-      std::cout << "\n" ;
       for(const auto ii_sc: mscs){
           size_t i_sc = orig_indices.at(ii_sc);
-          std::cout << i_sc << "  ";
           screfs.push_back(SimClusterRef(scCollection, i_sc));
           scToPFpartIdx.at(i_sc)=PFTIdx;
       }
-      std::cout << std::endl;
 
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setCharge(0);

@@ -42,6 +42,18 @@ std::vector<const SimTrack*> SimHistoryTool::createHistory(const SimTrack * st)c
     return outv;
 }
 
+bool SimHistoryTool::inHistory(const SimTrack & possibleParent, const SimTrack * probe)const{
+    if(simTrackEqual(*probe, possibleParent))
+        return true;
+    while(true){
+        const SimTrack * test = traverseStep(probe);
+        if(test == probe || test==0)//root or invalid
+            return false;
+        if(simTrackEqual(*test, possibleParent))
+            return true;
+        probe=test;
+    }
+}
 
 int SimHistoryTool::createMergedSimClusterID(const SimCluster* sc, double idenfrac)const{
 
@@ -100,6 +112,14 @@ int SimHistoryTool::createMergedSimClusterID(const SimCluster* sc, double idenfr
 
     return mergedPdgId;
 
+}
+
+
+bool SimHistoryTool::simTrackEqual(const SimTrack& a,const SimTrack& b){
+    bool trkid = a.trackId() == b.trackId();
+    bool evid = a.eventId() == b.eventId();
+    bool vid = a.vertIndex() == b.vertIndex();//that enough?
+    return trkid && evid && vid;
 }
 
 const SimTrack* SimHistoryTool::getRoot(const SimTrack * st) const{

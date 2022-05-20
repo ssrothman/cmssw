@@ -30,7 +30,11 @@ public:
      */
     std::vector<const SimTrack*> createHistory(const SimTrack * st)const;
 
+    bool inHistory(const SimTrack & possibleParent, const SimTrack * probe)const;
+
     int createMergedSimClusterID(const SimCluster* sc, double idenfrac=0.9)const;
+
+    static bool simTrackEqual(const SimTrack&,const SimTrack&);
 
 private:
     SimHistoryTool():simtracks_(dummy::dummyst),simvertices_(dummy::dummysv){}
