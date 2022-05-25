@@ -15,6 +15,7 @@
 
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/HGCalGeometry/interface/HGCalGeometry.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
@@ -36,7 +37,8 @@ public:
       : name_(params.getParameter<std::string>("name")),
         doc_(params.getParameter<std::string>("doc")),
         src_(consumes<T>(params.getParameter<edm::InputTag>("src"))),
-        cut_(params.getParameter<std::string>("cut"), true) {
+        cut_(params.getParameter<std::string>("cut"), true),
+        caloGeomToken_(esConsumes<CaloGeometry, CaloGeometryRecord, edm::Transition::BeginRun>()) {
     produces<nanoaod::FlatTable>();
   }
 
@@ -44,11 +46,11 @@ public:
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
     // TODO: check that the geometry exists
-    iSetup.get<CaloGeometryRecord>().get(caloGeom_);
-    rhtools_.setGeometry(*caloGeom_);
-    iSetup.get<TrackerDigiGeometryRecord>().get("idealForDigi", trackGeom_);
+    edm::ESHandle<CaloGeometry> geom = iSetup.getHandle(caloGeomToken_);
+    rhtools_.setGeometry(*geom);
+    //iSetup.get<TrackerDigiGeometryRecord>().get("idealForDigi", trackGeom_);
     // Believe this is ideal, but we're not so precise here...
-    iSetup.get<GlobalTrackingGeometryRecord>().get(globalGeom_);
+    //iSetup.get<GlobalTrackingGeometryRecord>().get(globalGeom_);
   }
 
   GlobalPoint positionFromHit(const PCaloHit& hit) {
@@ -144,7 +146,7 @@ protected:
   const std::string name_, doc_;
   const edm::EDGetTokenT<T> src_;
   const StringCutObjectSelector<typename T::value_type> cut_;
-  edm::ESHandle<CaloGeometry> caloGeom_;
+  edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeomToken_;
   edm::ESHandle<TrackerGeometry> trackGeom_;
   edm::ESHandle<GlobalTrackingGeometry> globalGeom_;
   hgcal::RecHitTools rhtools_;
@@ -153,7 +155,7 @@ protected:
 #include "FWCore/Framework/interface/MakerMacros.h"
 typedef HitPositionTableProducer<std::vector<PCaloHit>> PCaloHitPositionTableProducer;
 typedef HitPositionTableProducer<std::vector<PSimHit>> PSimHitPositionTableProducer;
-typedef HitPositionTableProducer<HGCRecHitCollection> HGCRecHitPositionTableProducer;
-DEFINE_FWK_MODULE(HGCRecHitPositionTableProducer);
+typedef HitPositionTableProducer<edm::View<CaloRecHit>> CaloRecHitPositionTableProducer;
+DEFINE_FWK_MODULE(CaloRecHitPositionTableProducer);
 DEFINE_FWK_MODULE(PCaloHitPositionTableProducer);
 DEFINE_FWK_MODULE(PSimHitPositionTableProducer);

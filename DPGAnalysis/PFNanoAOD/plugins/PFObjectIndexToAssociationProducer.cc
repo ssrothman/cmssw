@@ -5,6 +5,11 @@
 #include "SimDataFormats/PFAnalysis/interface/PFTruthParticle.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
+#include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+
 #include "FWCore/Framework/interface/MakerMacros.h"
 
 typedef ObjectIndexFromAssociationTableProducer<SimClusterCollection, PFTruthParticleCollection>
@@ -13,6 +18,9 @@ typedef ObjectIndexFromAssociationTableProducer<TrackingParticleCollection, PFTr
     TrackingParticleToPFTruthParticleIndexTableProducer;
 typedef ObjectIndexFromAssociationTableProducer<edm::View<reco::Track>, PFTruthParticleCollection>
     TrackToPFTruthParticleIndexTableProducer;
+typedef ObjectIndexFromAssociationTableProducer<reco::PFClusterCollection, reco::PFCandidateCollection>
+    PFClusterToPFCandIndexTableProducer;
 DEFINE_FWK_MODULE(TrackingParticleToPFTruthParticleIndexTableProducer);
 DEFINE_FWK_MODULE(TrackToPFTruthParticleIndexTableProducer);
 DEFINE_FWK_MODULE(SimClusterToPFTruthParticleIndexTableProducer);
+DEFINE_FWK_MODULE(PFClusterToPFCandIndexTableProducer);

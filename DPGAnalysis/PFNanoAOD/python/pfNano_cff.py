@@ -5,7 +5,11 @@ from PhysicsTools.NanoAOD.genVertex_cff import *
 from DPGAnalysis.TrackNanoAOD.trackingParticles_cff import *
 from DPGAnalysis.TrackNanoAOD.tracks_cff import *
 from DPGAnalysis.PFNanoAOD.pfCands_cff import *
+from DPGAnalysis.PFNanoAOD.pfClusters_cff import *
+from DPGAnalysis.PFNanoAOD.pfTracks_cff import *
+from DPGAnalysis.PFNanoAOD.pfAssociations_cff import *
 #from DPGAnalysis.PFNanoAOD.pfTruth_cff import *
+from DPGAnalysis.CaloNanoAOD.hcalRecHits_cff import *
 from DPGAnalysis.CaloNanoAOD.caloParticles_cff import *
 from DPGAnalysis.CaloNanoAOD.simClusters_cff import *
 
@@ -21,11 +25,18 @@ genParticleTable.variables = cms.PSet(genParticleTable.variables,
 
 pfNanoSequence = cms.Sequence(nanoMetadata
     +genVertexTable+genVertexT0Table+genParticleTable
-    +caloParticleTables
-    +simClusterTables
+    +pfCandTables
+    +pfAssociationTables
+    +pfClusterTables
+    #+pfTrackTables
+    +trackTables
+	#+hcalRecHitTables
+    #+pfNanoSimSequence
+)
+
+pfNanoSimSequence = cms.Sequence(
+    simClusterTables
     +trackingParticleTables
     +caloParticleTables
-    +pfCandTables
     #+pfTruth
-    +trackTables
 )

@@ -1,0 +1,5 @@
+<lcgdict>
+  <class name="edm::RefProd<vector<reco::PFCluster>>"/>
+  <class name="edm::Association<std::vector<reco::PFCluster>>"/>
+  <class name="edm::Wrapper<edm::Association<std::vector<reco::PFCluster>>>"/>
+</lcgdict>

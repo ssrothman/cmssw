@@ -1,0 +1,153 @@
+#include <memory>
+#include <string>
+
+// user include files
+#include "FWCore/Framework/interface/stream/EDProducer.h"
+
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+
+#include "FWCore/Framework/interface/ESHandle.h"
+
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "DataFormats/CaloRecHit/interface/CaloRecHit.h"
+#include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
+
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
+#include "DataFormats/ParticleFlowReco/interface/PFRecHitFraction.h"
+#include "DataFormats/ParticleFlowReco/interface/PFBlock.h"
+#include "DataFormats/ParticleFlowReco/interface/PFBlockFwd.h"
+#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
+#include "DataFormats/ParticleFlowReco/interface/PFClusterFwd.h"
+
+#include "DataFormats/Common/interface/Association.h"
+#include "DataFormats/Common/interface/AssociationMap.h"
+#include "DataFormats/Common/interface/OneToManyWithQualityGeneric.h"
+
+#include "FWCore/Utilities/interface/transform.h"
+#include "FWCore/Utilities/interface/EDGetToken.h"
+#include <set>
+
+//
+// class decleration
+//
+// TODO: Does this work with an edm::View ?
+typedef edm::AssociationMap<edm::OneToManyWithQualityGeneric<
+    std::vector<CaloRecHit>, reco::PFCandidateCollection, float>> RecHitToPFCandidate;
+
+class PFCandAssociationsProducer : public edm::stream::EDProducer<> {
+public:
+  explicit PFCandAssociationsProducer(const edm::ParameterSet&);
+  ~PFCandAssociationsProducer() override;
+
+private:
+  void produce(edm::Event&, const edm::EventSetup&) override;
+
+  std::vector<edm::InputTag> caloRechitTags_;
+  std::vector<edm::EDGetTokenT<edm::View<CaloRecHit>>> caloRechitTokens_;
+  std::vector<edm::InputTag> pfClusterTags_;
+  std::vector<edm::EDGetTokenT<reco::PFClusterCollection>> pfClusterTokens_;
+  std::vector<edm::InputTag> trackTags_;
+  std::vector<edm::EDGetTokenT<edm::View<reco::Track>>> trackTokens_;
+  edm::EDGetTokenT<reco::PFCandidateCollection> pfCandCollectionToken_;
+};
+
+PFCandAssociationsProducer::PFCandAssociationsProducer(const edm::ParameterSet& pset)
+    : caloRechitTags_(pset.getParameter<std::vector<edm::InputTag>>("caloRecHits")),
+      caloRechitTokens_(edm::vector_transform(
+          caloRechitTags_, [this](const edm::InputTag& tag) { return consumes<edm::View<CaloRecHit>>(tag); })),
+      pfClusterTags_(pset.getParameter<std::vector<edm::InputTag>>("pfClusters")),
+      pfClusterTokens_(edm::vector_transform(
+          pfClusterTags_, [this](const edm::InputTag& tag) { return consumes<reco::PFClusterCollection>(tag); })),
+      trackTags_(pset.getParameter<std::vector<edm::InputTag>>("tracks")),
+      trackTokens_(edm::vector_transform(
+          trackTags_, [this](const edm::InputTag& tag) { return consumes<edm::View<reco::Track>>(tag); })),
+      pfCandCollectionToken_(consumes<reco::PFCandidateCollection>(pset.getParameter<edm::InputTag>("pfCands"))) {
+  for (auto& tag : pfClusterTags_) {
+    const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+    produces<edm::Association<reco::PFCandidateCollection>>(label + "ToPFCand");
+  }
+  // TODO: Make OneToMany associations for rechits
+}
+
+PFCandAssociationsProducer::~PFCandAssociationsProducer() {}
+
+//
+// member functions
+//
+
+// ------------ method called to produce the data  ------------
+void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  edm::Handle<reco::PFCandidateCollection> pfCandCollection;
+  iEvent.getByToken(pfCandCollectionToken_, pfCandCollection);
+
+  std::unordered_map<std::string, size_t> clusterNameToID;
+  std::unordered_map<size_t, std::vector<int>> clusterIDToCandMatchIdx;
+  std::vector<edm::Handle<reco::PFClusterCollection>> clusterHands = { {}, {}, {}};
+
+  for (size_t i = 0; i < pfClusterTokens_.size(); i++) {
+    auto& hand = clusterHands[i];
+    iEvent.getByToken(pfClusterTokens_[i], hand);
+    size_t prodId = hand.id().id();
+    auto& tag = pfClusterTags_[i];
+    const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+    clusterNameToID[label] = prodId;
+    clusterIDToCandMatchIdx[prodId] = std::vector<int>(hand->size(), -1);
+  }
+
+  for (size_t j = 0; j < pfCandCollection->size(); j++) {
+    const auto& pfCand = pfCandCollection->at(j);
+    const reco::PFCandidate::ElementsInBlocks& elements = pfCand.elementsInBlocks();
+    for (auto& element : elements) {
+      // ElementInBlock, first is the ref, second is the index (of blocks in the cand)
+      const reco::PFBlockRef blockRef = element.first;
+      if (!blockRef.isNonnull())
+          continue;
+	  // TODO: Add tracks
+      for (const auto& block : blockRef->elements()) {
+        const reco::TrackRef trackRef = block.trackRef();
+        if (trackRef.isNonnull()) {
+            std::cout << "Track prod ID is " << trackRef.id().id() << std::endl;
+        }
+        const reco::PFClusterRef cluster = block.clusterRef();
+        if (cluster.isNonnull()) {
+          size_t prodId = cluster.id().id();
+          if (clusterIDToCandMatchIdx.find(prodId) != std::end(clusterIDToCandMatchIdx)) {
+            auto& idxvec = clusterIDToCandMatchIdx[prodId];
+            // Length of vector matches length of cluster collection, ith element should point to index of
+            // containing PFCand, i.e., j here
+            idxvec[cluster.key()] = j;
+          }
+
+          // TODO: Make one-to-many association of hit to cluster and cand. Need to handle all the rechit
+          // products
+          const std::vector<reco::PFRecHitFraction>& rhf = cluster->recHitFractions();
+          for (const auto& hf : rhf) {
+            auto hit = hf.recHitRef();
+            if (!hit)
+              throw cms::Exception("PFCandAssociationsProducer") << "Invalid RecHit ref";
+          }
+        }
+      }
+    }
+  }
+
+  for (size_t i = 0; i < pfClusterTags_.size(); i++) {
+    auto clusToCand = std::make_unique<edm::Association<reco::PFCandidateCollection>>(pfCandCollection);
+    edm::Association<reco::PFCandidateCollection>::Filler filler(*clusToCand);
+    auto& tag = pfClusterTags_[i];
+    const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+    auto& indices = clusterIDToCandMatchIdx[clusterNameToID[label]];
+    filler.insert(clusterHands[i], indices.begin(), indices.end());
+    filler.fill();
+    iEvent.put(std::move(clusToCand), label + "ToPFCand");
+  }
+
+}
+
+// define this as a plug-in
+DEFINE_FWK_MODULE(PFCandAssociationsProducer);
