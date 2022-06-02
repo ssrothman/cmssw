@@ -30,7 +30,7 @@ pfNanoSequence = cms.Sequence(nanoMetadata
     +pfClusterTables
     #+pfTrackTables
     +trackTables
-	#+hcalRecHitTables
+	+hcalRecHitTables
     #+pfNanoSimSequence
 )
 

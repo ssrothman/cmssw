@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import Var,P3Vars
 
 hbheRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
-    src = cms.InputTag("reducedHcalRecHits:hbhereco"),
+    src = cms.InputTag("hbhereco"),
     cut = cms.string(""), 
     name = cms.string("RecHitHBHE"),
     doc  = cms.string("HCAL RecHits"),
@@ -15,7 +15,7 @@ hbheRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     )
 )
 
-hbheRecHitPositionTable = cms.EDProducer("CaloRecHitPositionTableProducer",
+hbheRecHitPositionTable = cms.EDProducer("HCALRecHitPositionTableProducer",
     src = hbheRecHitsTable.src,
     cut = hbheRecHitsTable.cut, 
     name = hbheRecHitsTable.name,
