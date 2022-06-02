@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import Var,P3Vars
 
-hbheRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
+hbheRecHitTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     src = cms.InputTag("hbhereco"),
     cut = cms.string(""), 
     name = cms.string("RecHitHBHE"),
@@ -16,13 +16,13 @@ hbheRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
 )
 
 hbheRecHitPositionTable = cms.EDProducer("HCALRecHitPositionTableProducer",
-    src = hbheRecHitsTable.src,
-    cut = hbheRecHitsTable.cut, 
-    name = hbheRecHitsTable.name,
-    doc  = hbheRecHitsTable.doc,
+    src = hbheRecHitTable.src,
+    cut = hbheRecHitTable.cut, 
+    name = hbheRecHitTable.name,
+    doc  = hbheRecHitTable.doc,
 )
 
-hfRecHitsTable = hbheRecHitsTable.clone()
+hfRecHitsTable = hbheRecHitTable.clone()
 hfRecHitsTable.src = "hfreco"
 hfRecHitsTable.name = "RecHitHF"
 hfRecHitsTable.doc = "HCAL forward (HF) rechits"
@@ -33,7 +33,7 @@ hfRecHitPositionTable.cut = hfRecHitsTable.cut
 hfRecHitPositionTable.name = hfRecHitsTable.name
 hfRecHitPositionTable.doc  = hfRecHitsTable.doc
 
-hoRecHitsTable = hbheRecHitsTable.clone()
+hoRecHitsTable = hbheRecHitTable.clone()
 hoRecHitsTable.src = "horeco"
 hoRecHitsTable.name = "RecHitHO"
 hoRecHitsTable.doc = "HCAL outer (HO) rechits"
@@ -45,7 +45,7 @@ hoRecHitPositionTable.name = hoRecHitsTable.name
 hoRecHitPositionTable.doc  = hoRecHitsTable.doc
 
 hcalRecHitTables = cms.Sequence(
-	hbheRecHitsTable
+	hbheRecHitTable
 	+hbheRecHitPositionTable 
     +hfRecHitsTable
     +hfRecHitPositionTable

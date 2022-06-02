@@ -2,9 +2,10 @@ import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import CandVars,Var,P3Vars
 from DPGAnalysis.PFNanoAOD.pfClusters_cff import *
 from DPGAnalysis.PFNanoAOD.pfCands_cff import *
+from DPGAnalysis.CaloNanoAOD.hcalRecHits_cff import *
 
 hitsAndElementsToPFCands = cms.EDProducer("PFCandAssociationsProducer",
-    caloRecHits = cms.VInputTag("reducedHcalRecHits:hbhereco"),
+    caloRecHits = cms.VInputTag("hbhereco", "hfreco", "horeco"),
     pfClusters = cms.VInputTag("particleFlowClusterECAL", "particleFlowClusterHCAL", "particleFlowClusterHF"),
     tracks = cms.VInputTag("generalTracks"),
     pfCands = cms.InputTag("particleFlow"),
@@ -37,10 +38,21 @@ pfClusterHFToCandTable = cms.EDProducer("PFClusterToPFCandIndexTableProducer",
     docString = cms.string("Index of PFCand containing PFCluster")
 )
 
+#hbheRecHitToPFCandTable = cms.Producer("CaloRecHitToPFCandidate
+hbheRecHitsToPFCandTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer",
+    cut = hbheRecHitTable.cut,
+    src = hbheRecHitTable.src,
+    objName = hbheRecHitTable.name,
+    branchName = pfCandTable.name,
+    objMap = cms.InputTag(f"hitsAndElementsToPFCands:{hbheRecHitTable.src.value()}ToPFCand"),
+    docString = cms.string("MergedSimCluster responsible for most sim energy in RecHit DetId")
+)
+
 pfAssociationTables = cms.Sequence(
 	hitsAndElementsToPFCands
 	+pfClusterECALToCandTable
 	+pfClusterHCALToCandTable
 	+pfClusterHFToCandTable
+ 	+hbheRecHitsToPFCandTable
 )
 

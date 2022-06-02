@@ -1,4 +1,5 @@
 #include "PhysicsTools/NanoAOD/interface/ObjectIndexFromAssociationProducer.h"
+#include "PhysicsTools/NanoAOD/interface/ObjectIndexFromOneToManyQualAssociationProducer.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimClusterFwd.h"
 #include "SimDataFormats/PFAnalysis/interface/PFTruthParticleFwd.h"
@@ -20,7 +21,10 @@ typedef ObjectIndexFromAssociationTableProducer<edm::View<reco::Track>, PFTruthP
     TrackToPFTruthParticleIndexTableProducer;
 typedef ObjectIndexFromAssociationTableProducer<reco::PFClusterCollection, reco::PFCandidateCollection>
     PFClusterToPFCandIndexTableProducer;
+typedef ObjectIndexFromOneToManyQualAssociationTableProducer<edm::View<CaloRecHit>, reco::PFCandidateCollection, float>
+    CaloRecHitToPFCandIndexTableProducer;
 DEFINE_FWK_MODULE(TrackingParticleToPFTruthParticleIndexTableProducer);
 DEFINE_FWK_MODULE(TrackToPFTruthParticleIndexTableProducer);
 DEFINE_FWK_MODULE(SimClusterToPFTruthParticleIndexTableProducer);
 DEFINE_FWK_MODULE(PFClusterToPFCandIndexTableProducer);
+DEFINE_FWK_MODULE(CaloRecHitToPFCandIndexTableProducer);

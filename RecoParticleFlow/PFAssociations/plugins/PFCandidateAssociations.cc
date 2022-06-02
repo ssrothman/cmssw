@@ -37,7 +37,9 @@
 //
 // TODO: Does this work with an edm::View ?
 typedef edm::AssociationMap<edm::OneToManyWithQualityGeneric<
-    std::vector<CaloRecHit>, reco::PFCandidateCollection, float>> RecHitToPFCandidate;
+    edm::View<CaloRecHit>, reco::PFCandidateCollection, float>> CaloRecHitToPFCandidate;
+typedef edm::AssociationMap<edm::OneToManyWithQualityGeneric<
+    edm::View<CaloRecHit>, reco::PFClusterCollection, float>> CaloRecHitToPFCluster;
 
 class PFCandAssociationsProducer : public edm::stream::EDProducer<> {
 public:
@@ -72,6 +74,12 @@ PFCandAssociationsProducer::PFCandAssociationsProducer(const edm::ParameterSet& 
     produces<edm::Association<reco::PFCandidateCollection>>(label + "ToPFCand");
   }
   // TODO: Make OneToMany associations for rechits
+  for (auto& tag : caloRechitTags_) {
+     const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+     produces<CaloRecHitToPFCandidate>(label+"ToPFCand");
+     // TODO: this is kind of a pain because you need to match rechits to the right PFCluster collections
+     //produces<CaloRecHitToPFCluster>(label+"ToPFClus")
+  }
 }
 
 PFCandAssociationsProducer::~PFCandAssociationsProducer() {}
@@ -99,9 +107,22 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
     clusterIDToCandMatchIdx[prodId] = std::vector<int>(hand->size(), -1);
   }
 
+  std::unordered_map<size_t, edm::RefToBase<CaloRecHit>> detIdToRecHit;
+  std::map<size_t, std::unique_ptr<CaloRecHitToPFCandidate>> recHitColToAssociation;
+  //std::unordered_map<size_t, CaloRecHitToPFCluster> recHitColToAssociation;
+  for (size_t i = 0; i < caloRechitTokens_.size(); i++) {
+      edm::Handle<edm::View<CaloRecHit>> hand;
+      iEvent.getByToken(caloRechitTokens_[i], hand);
+      recHitColToAssociation[hand.id().id()] = std::make_unique<CaloRecHitToPFCandidate>(hand, pfCandCollection);
+      for (size_t j = 0; j < hand->size(); j++) {
+        edm::RefToBase<CaloRecHit> ch(hand, j);
+        detIdToRecHit[ch->detid().rawId()] = ch;
+      }
+  }
+
   for (size_t j = 0; j < pfCandCollection->size(); j++) {
-    const auto& pfCand = pfCandCollection->at(j);
-    const reco::PFCandidate::ElementsInBlocks& elements = pfCand.elementsInBlocks();
+    reco::PFCandidateRef pfCandRef(pfCandCollection, j);
+    const reco::PFCandidate::ElementsInBlocks& elements = pfCandRef->elementsInBlocks();
     for (auto& element : elements) {
       // ElementInBlock, first is the ref, second is the index (of blocks in the cand)
       const reco::PFBlockRef blockRef = element.first;
@@ -127,13 +148,24 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
           // products
           const std::vector<reco::PFRecHitFraction>& rhf = cluster->recHitFractions();
           for (const auto& hf : rhf) {
-            auto hit = hf.recHitRef();
-            if (!hit)
-              throw cms::Exception("PFCandAssociationsProducer") << "Invalid RecHit ref";
+            auto pfRecHit = hf.recHitRef();
+            auto rechit = detIdToRecHit[pfRecHit->detId()];
+            size_t prodId = rechit.id().id();
+            if (recHitColToAssociation.find(prodId) != std::end(recHitColToAssociation)) {
+              recHitColToAssociation[prodId]->insert(rechit, std::make_pair(pfCandRef, hf.fraction()));
+            }
           }
         }
       }
     }
+  }
+
+  size_t i = 0;
+  for (auto& entry : recHitColToAssociation) {
+    auto& tag = caloRechitTags_[i];
+    const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+    iEvent.put(std::move(entry.second), label+"ToPFCand");
+	i++;
   }
 
   for (size_t i = 0; i < pfClusterTags_.size(); i++) {
@@ -144,7 +176,7 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
     auto& indices = clusterIDToCandMatchIdx[clusterNameToID[label]];
     filler.insert(clusterHands[i], indices.begin(), indices.end());
     filler.fill();
-    iEvent.put(std::move(clusToCand), label + "ToPFCand");
+    iEvent.put(std::move(clusToCand), label+"ToPFCand");
   }
 
 }
