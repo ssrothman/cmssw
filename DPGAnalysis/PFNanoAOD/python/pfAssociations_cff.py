@@ -38,14 +38,22 @@ pfClusterHFToCandTable = cms.EDProducer("PFClusterToPFCandIndexTableProducer",
     docString = cms.string("Index of PFCand containing PFCluster")
 )
 
-#hbheRecHitToPFCandTable = cms.Producer("CaloRecHitToPFCandidate
 hbheRecHitsToPFCandTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer",
     cut = hbheRecHitTable.cut,
     src = hbheRecHitTable.src,
     objName = hbheRecHitTable.name,
     branchName = pfCandTable.name,
     objMap = cms.InputTag(f"hitsAndElementsToPFCands:{hbheRecHitTable.src.value()}ToPFCand"),
-    docString = cms.string("MergedSimCluster responsible for most sim energy in RecHit DetId")
+    docString = cms.string("Association to PFCandidate containing RecHit, and its energy fraction")
+)
+
+hbheRecHitsToPFClusterTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer",
+    cut = hbheRecHitTable.cut,
+    src = hbheRecHitTable.src,
+    objName = hbheRecHitTable.name,
+    branchName = hcalPFClusTable.name,
+    objMap = cms.InputTag(f"hitsAndElementsToPFCands:{hbheRecHitTable.src.value()}ToPFClus{hcalPFClusTable.src}"),
+    docString = cms.string("Association to PFCluster containing RecHit, and its energy fraction")
 )
 
 pfAssociationTables = cms.Sequence(
@@ -54,5 +62,6 @@ pfAssociationTables = cms.Sequence(
 	+pfClusterHCALToCandTable
 	+pfClusterHFToCandTable
  	+hbheRecHitsToPFCandTable
+	+hbheRecHitsToPFClusterTable 
 )
 
