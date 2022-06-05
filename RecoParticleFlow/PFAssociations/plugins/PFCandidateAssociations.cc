@@ -58,8 +58,8 @@ private:
   edm::EDGetTokenT<reco::PFCandidateCollection> pfCandCollectionToken_;
   // TODO: read from configuration
   const std::unordered_map<std::string, std::string> rechitNameToPFClusName_ = {
-	{"hbhereco", "pfClusterHCAL"},
-	{"hfreco", "pfClusterHF"},
+	{"hbhereco", "particleFlowClusterHCAL"},
+	{"hfreco", "particleFlowClusterHF"},
   };
 };
 
@@ -84,7 +84,11 @@ PFCandAssociationsProducer::PFCandAssociationsProducer(const edm::ParameterSet& 
      produces<CaloRecHitToPFCandidate>(label+"ToPFCand");
      // TODO: this is kind of a pain because you need to match rechits to the right PFCluster collections
 	 if (rechitNameToPFClusName_.find(label) != std::end(rechitNameToPFClusName_))
-       produces<CaloRecHitToPFCluster>(label+"ToPFClus"+rechitNameToPFClusName_.at(label));
+       produces<CaloRecHitToPFCluster>(label+"To"+rechitNameToPFClusName_.at(label));
+  }
+  for (auto& tag : trackTags_) {
+    const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+    produces<edm::Association<reco::PFCandidateCollection>>(label + "ToPFCand");
   }
 }
 
@@ -101,9 +105,9 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
 
   std::unordered_map<std::string, size_t> clusterNameToID;
   std::unordered_map<size_t, std::vector<int>> clusterIDToCandMatchIdx;
-  std::vector<edm::Handle<reco::PFClusterCollection>> clusterHands = { {}, {}, {}};
-
+  std::vector<edm::Handle<reco::PFClusterCollection>> clusterHands;
   for (size_t i = 0; i < pfClusterTokens_.size(); i++) {
+    clusterHands.push_back({});
     auto& hand = clusterHands[i];
     iEvent.getByToken(pfClusterTokens_[i], hand);
     size_t prodId = hand.id().id();
@@ -113,14 +117,25 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
     clusterIDToCandMatchIdx[prodId] = std::vector<int>(hand->size(), -1);
   }
 
+  std::map<size_t, std::vector<int>> trackToPFCandIndices;
+  std::vector<edm::Handle<edm::View<reco::Track>>> trackHands;
+  for (size_t i = 0; i < trackTokens_.size(); i++) {
+	trackHands.push_back({});
+	auto& hand = trackHands.back();
+	iEvent.getByToken(trackTokens_[i], hand);	
+    size_t prodId = hand.id().id();
+	trackToPFCandIndices[prodId] = std::vector<int>(hand->size(), -1);
+  }
+
   std::unordered_map<size_t, edm::RefToBase<CaloRecHit>> detIdToRecHit;
-  std::map<size_t, std::unique_ptr<CaloRecHitToPFCandidate>> recHitColToCandAssoc;
-  std::map<size_t, std::unique_ptr<CaloRecHitToPFCluster>> recHitColToClusterAssoc;
+  std::unordered_map<size_t, std::unique_ptr<CaloRecHitToPFCandidate>> recHitColToCandAssoc;
+  std::unordered_map<size_t, std::unique_ptr<CaloRecHitToPFCluster>> recHitColToClusterAssoc;
+  std::vector<size_t> rhColIds;
   for (size_t i = 0; i < caloRechitTokens_.size(); i++) {
     edm::Handle<edm::View<CaloRecHit>> rhHand;
     iEvent.getByToken(caloRechitTokens_[i], rhHand);
-	size_t chColId = rhHand.id().id();
-    recHitColToCandAssoc[chColId] = std::make_unique<CaloRecHitToPFCandidate>(rhHand, pfCandCollection);
+	rhColIds.push_back(rhHand.id().id());
+    recHitColToCandAssoc[rhColIds.back()] = std::make_unique<CaloRecHitToPFCandidate>(rhHand, pfCandCollection);
     for (size_t j = 0; j < rhHand->size(); j++) {
       edm::RefToBase<CaloRecHit> ch(rhHand, j);
       detIdToRecHit[ch->detid().rawId()] = ch;
@@ -130,8 +145,10 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
 	if (rechitNameToPFClusName_.find(label) != std::end(rechitNameToPFClusName_)) {
 	  size_t clusterId = clusterNameToID[rechitNameToPFClusName_.at(label)];
 	  auto clusterHandIt = std::find_if(std::begin(clusterHands), std::end(clusterHands), 
-		[clusterId](auto& h) { return h.id().id() == clusterId; });
-	  recHitColToClusterAssoc[chColId] = std::make_unique<CaloRecHitToPFCluster>(rhHand, *clusterHandIt);
+	    [clusterId](auto& h) { return h.id().id() == clusterId; });
+	  if (clusterHandIt != std::end(clusterHands)) {
+	    recHitColToClusterAssoc[rhColIds.back()] = std::make_unique<CaloRecHitToPFCluster>(rhHand, *clusterHandIt);
+	  }
     }
   }
 
@@ -147,7 +164,10 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
       for (const auto& block : blockRef->elements()) {
         const reco::TrackRef trackRef = block.trackRef();
         if (trackRef.isNonnull()) {
-            std::cout << "Track prod ID is " << trackRef.id().id() << std::endl;
+			size_t prodId = trackRef.id().id();
+			if (trackToPFCandIndices.find(prodId) != std::end(trackToPFCandIndices)) {
+				trackToPFCandIndices[prodId][trackRef.key()] = j;
+			}
         }
         const reco::PFClusterRef cluster = block.clusterRef();
         if (cluster.isNonnull()) {
@@ -178,16 +198,19 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
     }
   }
 
-  auto pfCandAssocEntry = std::begin(recHitColToCandAssoc);
-  auto pfClusAssocEntry = std::begin(recHitColToClusterAssoc);
-  //for (auto& entry : recHitColToCandAssoc) {
   for (size_t i = 0; i < caloRechitTags_.size(); i++) {
     auto& tag = caloRechitTags_[i];
     const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
-    iEvent.put(std::move(pfClusAssocEntry->second), label+"ToPFClus"+rechitNameToPFClusName_.at(label));
-    iEvent.put(std::move(pfCandAssocEntry->second), label+"ToPFCand");
-	pfClusAssocEntry++;
-	pfCandAssocEntry++;
+	size_t rhId = rhColIds[i];
+	auto pfCandAssocEntry = recHitColToCandAssoc.find(rhId);
+	if (pfCandAssocEntry != std::end(recHitColToCandAssoc)) {
+      iEvent.put(std::move(pfCandAssocEntry->second), label+"ToPFCand");
+	}
+
+	auto pfClusAssocEntry = recHitColToClusterAssoc.find(rhId);
+    if (pfClusAssocEntry != std::end(recHitColToClusterAssoc)) {
+      iEvent.put(std::move(pfClusAssocEntry->second), label+"To"+rechitNameToPFClusName_.at(label));
+    }
   }
 
   for (size_t i = 0; i < pfClusterTags_.size(); i++) {
@@ -199,6 +222,18 @@ void PFCandAssociationsProducer::produce(edm::Event& iEvent, const edm::EventSet
     filler.insert(clusterHands[i], indices.begin(), indices.end());
     filler.fill();
     iEvent.put(std::move(clusToCand), label+"ToPFCand");
+  }
+
+  for (size_t i = 0; i < trackTags_.size(); i++) {
+	auto& hand = trackHands[i];
+	auto& indices = trackToPFCandIndices[hand.id().id()];
+    auto trackToCand = std::make_unique<edm::Association<reco::PFCandidateCollection>>(pfCandCollection);
+    edm::Association<reco::PFCandidateCollection>::Filler filler(*trackToCand);
+    auto& tag = trackTags_[i];
+    const std::string& label = !tag.instance().empty() ? tag.instance() : tag.label();
+    filler.insert(trackHands[i], indices.begin(), indices.end());
+    filler.fill();
+    iEvent.put(std::move(trackToCand), label+"ToPFCand");
   }
 
 }

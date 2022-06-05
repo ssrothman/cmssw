@@ -19,6 +19,8 @@ typedef ObjectIndexFromAssociationTableProducer<TrackingParticleCollection, PFTr
     TrackingParticleToPFTruthParticleIndexTableProducer;
 typedef ObjectIndexFromAssociationTableProducer<edm::View<reco::Track>, PFTruthParticleCollection>
     TrackToPFTruthParticleIndexTableProducer;
+typedef ObjectIndexFromAssociationTableProducer<edm::View<reco::Track>, reco::PFCandidateCollection>
+    TrackToPFCandIndexTableProducer;
 typedef ObjectIndexFromAssociationTableProducer<reco::PFClusterCollection, reco::PFCandidateCollection>
     PFClusterToPFCandIndexTableProducer;
 typedef ObjectIndexFromOneToManyQualAssociationTableProducer<edm::View<CaloRecHit>, reco::PFCandidateCollection, float>
@@ -31,3 +33,5 @@ DEFINE_FWK_MODULE(SimClusterToPFTruthParticleIndexTableProducer);
 DEFINE_FWK_MODULE(PFClusterToPFCandIndexTableProducer);
 DEFINE_FWK_MODULE(CaloRecHitToPFCandIndexTableProducer);
 DEFINE_FWK_MODULE(CaloRecHitToPFClusterIndexTableProducer);
+DEFINE_FWK_MODULE(TrackToPFCandIndexTableProducer);
+

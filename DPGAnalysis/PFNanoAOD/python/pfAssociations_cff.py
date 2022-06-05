@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import CandVars,Var,P3Vars
 from DPGAnalysis.PFNanoAOD.pfClusters_cff import *
 from DPGAnalysis.PFNanoAOD.pfCands_cff import *
+from DPGAnalysis.TrackNanoAOD.tracks_cff import *
 from DPGAnalysis.CaloNanoAOD.hcalRecHits_cff import *
 
 hitsAndElementsToPFCands = cms.EDProducer("PFCandAssociationsProducer",
@@ -9,6 +10,15 @@ hitsAndElementsToPFCands = cms.EDProducer("PFCandAssociationsProducer",
     pfClusters = cms.VInputTag("particleFlowClusterECAL", "particleFlowClusterHCAL", "particleFlowClusterHF"),
     tracks = cms.VInputTag("generalTracks"),
     pfCands = cms.InputTag("particleFlow"),
+)
+
+trackToCandTable = cms.EDProducer("TrackToPFCandIndexTableProducer",
+    cut = generalTrackTable.cut,
+    src = generalTrackTable.src,
+    objName = generalTrackTable.name,
+    branchName = pfCandTable.name,
+    objMap = cms.InputTag(f"hitsAndElementsToPFCands:{generalTrackTable.src.value()}ToPFCand"),
+    docString = cms.string("Index of PFCand containing track")
 )
 
 pfClusterECALToCandTable = cms.EDProducer("PFClusterToPFCandIndexTableProducer",
@@ -47,17 +57,18 @@ hbheRecHitsToPFCandTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer"
     docString = cms.string("Association to PFCandidate containing RecHit, and its energy fraction")
 )
 
-hbheRecHitsToPFClusterTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer",
+hbheRecHitsToPFClusterTable = cms.EDProducer("CaloRecHitToPFClusterIndexTableProducer",
     cut = hbheRecHitTable.cut,
     src = hbheRecHitTable.src,
     objName = hbheRecHitTable.name,
     branchName = hcalPFClusTable.name,
-    objMap = cms.InputTag(f"hitsAndElementsToPFCands:{hbheRecHitTable.src.value()}ToPFClus{hcalPFClusTable.src}"),
+    objMap = cms.InputTag(f"hitsAndElementsToPFCands:{hbheRecHitTable.src.value()}To{hcalPFClusTable.src.value()}"),
     docString = cms.string("Association to PFCluster containing RecHit, and its energy fraction")
 )
 
 pfAssociationTables = cms.Sequence(
 	hitsAndElementsToPFCands
+	+trackToCandTable
 	+pfClusterECALToCandTable
 	+pfClusterHCALToCandTable
 	+pfClusterHFToCandTable
