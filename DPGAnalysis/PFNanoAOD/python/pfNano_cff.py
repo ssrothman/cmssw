@@ -13,6 +13,8 @@ from DPGAnalysis.CaloNanoAOD.hcalRecHits_cff import *
 from DPGAnalysis.CaloNanoAOD.caloParticles_cff import *
 from DPGAnalysis.CaloNanoAOD.simClusters_cff import *
 from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import *
+from DPGAnalysis.HGCalNanoAOD.hgcRecHitSimAssociations_cff import *
+from DPGAnalysis.HGCalNanoAOD.layerClusters_cff import *
 
 nanoMetadata = cms.EDProducer("UniqueStringProducer",
     strings = cms.PSet(
@@ -42,6 +44,9 @@ pfNanoSimSeq = cms.Sequence(
     #+pfTruth
 )
 
-pfNanoHGCSeq = cms.Sequence(
-    
+pfNanoHGCSeq = cms.Sequence(pfNanoSequence
+    +hgcRecHitsSequence
+    +hgcRecHitSimAssociationSequence
+    +pfTICLCandTable
+    +layerClusterTables
 )
