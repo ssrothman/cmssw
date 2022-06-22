@@ -229,7 +229,7 @@ class ConfigBuilder(object):
             stepParts = step.split(":")
             stepName = stepParts[0]
             if stepName not in stepList and not stepName.startswith('re'):
-                raise ValueError("Step "+stepName+" unknown")
+                raise ValueError(f"Step {stepName} unknown. Valid steps are {stepList}")
             if len(stepParts)==1:
                 self.stepMap[stepName]=""
             elif len(stepParts)==2:
@@ -966,6 +966,7 @@ class ConfigBuilder(object):
         self.PATDefaultCFF="Configuration/StandardSequences/PAT_cff"
         self.NANODefaultCFF="PhysicsTools/NanoAOD/nano_cff"
         self.NANOGENDefaultCFF="PhysicsTools/NanoAOD/nanogen_cff"
+        self.PFNANODefaultCFF="DPGAnalysis/PFNanoAOD/pfNano_cff"
         self.EIDefaultCFF=None
         self.SKIMDefaultCFF="Configuration/StandardSequences/Skims_cff"
         self.POSTRECODefaultCFF="Configuration/StandardSequences/PostRecoGenerator_cff"
@@ -1017,6 +1018,7 @@ class ConfigBuilder(object):
         self.PATGENDefaultSeq='miniGEN'
         #TODO: Check based of file input
         self.NANOGENDefaultSeq='nanogenSequence'
+        self.PFNANODefaultSeq='pfNanoSequence'
         self.NANODefaultSeq='nanoSequence'
 
         self.EVTCONTDefaultCFF="Configuration/EventContent/EventContent_cff"
@@ -1734,6 +1736,11 @@ class ConfigBuilder(object):
             self._options.customisation_file_unsch.insert(0, '.'.join([self.NANOGENDefaultCFF, custom]))
         else:
             self._options.customisation_file.insert(0, '.'.join([self.NANOGENDefaultCFF, custom]))
+
+    def prepare_PFNANO(self, sequence = "pfNano"):
+        ''' Enrich the schedule with PFNANO'''
+        self.loadDefaultOrSpecifiedCFF(sequence,self.PFNANODefaultCFF)
+        self.scheduleSequence(sequence.split('.')[-1],'nanoAOD_step')
 
     def prepare_EI(self, sequence = None):
         ''' Enrich the schedule with event interpretation '''

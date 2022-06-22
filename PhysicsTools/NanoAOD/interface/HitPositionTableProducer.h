@@ -50,6 +50,7 @@ public:
     tab->addColumn<float>("x", xvals, "x position");
     tab->addColumn<float>("y", yvals, "y position");
     tab->addColumn<float>("z", zvals, "z position");
+    //addExtraColumns(tab);
     //tab->addColumn<float>("hitr", hitrvals, "radius");
 
     iEvent.put(std::move(tab));
