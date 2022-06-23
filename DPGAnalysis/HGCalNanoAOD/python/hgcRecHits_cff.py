@@ -21,34 +21,6 @@ hgcRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     )
 )
 
-hgcRecHitsToPFCands = cms.EDProducer("RecHitToPFCandAssociationProducer",
-    caloRecHits = cms.VInputTag("hgcRecHits"),
-    pfCands = cms.InputTag("particleFlow"),
-)
-
-hgcRecHitsToPFCandTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer",
-    cut = hgcRecHitsTable.cut,
-    src = hgcRecHitsTable.src,
-    objName = hgcRecHitsTable.name,
-    branchName = cms.string("PFCand"),
-    objMap = cms.InputTag("hgcRecHitsToPFCands:hgcRecHitsToPFCand"),
-    docString = cms.string("PFCand with most associated energy in RecHit DetId")
-)
-
-hgcRecHitsToPFTICLCands = cms.EDProducer("RecHitToPFCandAssociationProducer",
-    caloRecHits = cms.VInputTag("hgcRecHits"),
-    pfCands = cms.InputTag("pfTICL"),
-)
-
-hgcRecHitsToPFTICLCandTable = cms.EDProducer("CaloRecHitToPFCandIndexTableProducer",
-    cut = hgcRecHitsTable.cut,
-    src = hgcRecHitsTable.src,
-    objName = hgcRecHitsTable.name,
-    branchName = cms.string("PFTICLCand"),
-    objMap = cms.InputTag("hgcRecHitsToPFTICLCands:hgcRecHitsToPFCand"),
-    docString = cms.string("PFTICLCand with most associated energy in RecHit DetId")
-)
-
 hgcRecHitsToLayerClusters = cms.EDProducer("RecHitToLayerClusterAssociationProducer",
     caloRecHits = cms.VInputTag("hgcRecHits"),
     layerClusters = cms.InputTag("hgcalLayerClusters"),
@@ -63,7 +35,7 @@ hgcRecHitsToLayerClusterTable = cms.EDProducer("HGCRecHitToLayerClusterIndexTabl
     docString = cms.string("LayerCluster assigned largest RecHit fraction")
 )
 
-hgcRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionTableProducer",
+hgcRecHitsPositionTable = cms.EDProducer("HGCALRecHitPositionTableProducer",
     src = hgcRecHitsTable.src,
     cut = hgcRecHitsTable.cut, 
     name = hgcRecHitsTable.name,
@@ -72,10 +44,6 @@ hgcRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionTableProducer",
 
 hgcRecHitsSequence = cms.Sequence(hgcRecHits
 				+hgcRecHitsTable
-                +hgcRecHitsToPFCands
-                +hgcRecHitsToPFCandTable
-                +hgcRecHitsToPFTICLCands
-                +hgcRecHitsToPFTICLCandTable
                 +hgcRecHitsToLayerClusters 
                 +hgcRecHitsToLayerClusterTable
                 +hgcRecHitsPositionTable

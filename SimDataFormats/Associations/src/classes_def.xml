@@ -145,6 +145,8 @@
   <class name="edm::Wrapper<edm::Association<std::vector<SimCluster> > >"/>
   <class name="edm::Association<std::vector<reco::CaloCluster> >"/>
   <class name="edm::Wrapper<edm::Association<std::vector<reco::CaloCluster> > >"/>
+  <class name="edm::Association<std::vector<TICLCandidate>>"/>
+  <class name="edm::Wrapper<edm::Association<std::vector<TICLCandidate>> >"/>
 
   <class name="edm::Association<std::vector<PFTruthParticle> >"/>
   <class name="edm::Wrapper<edm::Association<std::vector<PFTruthParticle> > >"/>

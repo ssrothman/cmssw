@@ -21,6 +21,7 @@
 #include "DataFormats/HGCRecHit/interface/HGCRecHit.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+#include "DataFormats/HGCalReco/interface/TICLCandidate.h"
 #include "SimDataFormats/PFAnalysis/interface/PFTruthParticle.h"
 
 #include "DataFormats/Common/interface/Association.h"
