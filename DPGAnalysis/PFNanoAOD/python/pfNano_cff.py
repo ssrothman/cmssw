@@ -38,9 +38,9 @@ pfNanoSimSeq = cms.Sequence(
 hgcalTask = cms.Task()
 phase2_hgcal.toReplaceWith(hgcalTask,
     cms.Task(hgcRecHitsTask,
-    	#hgcRecHitSimAssociationSequence,
-    	#layerClusterTables,
-    	#ticlTables
+    	hgcRecHitSimAssociationTask,
+    	layerClusterTables,
+    	ticlTables
 	)
 )
 

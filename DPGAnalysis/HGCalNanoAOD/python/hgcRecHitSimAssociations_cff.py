@@ -26,7 +26,7 @@ simClusterRecEnergyTable = cms.EDProducer("SimClusterRecEnergyTableProducer",
     docString = cms.string("SimCluster deposited reconstructed energy associated to SimCluster")
 )
 
-hgcRecHitSimAssociationSequence = cms.Sequence(hgcRecHitsToSimClusters
-                +simClusterRecEnergyTable 
-                +hgcRecHitsToSimClusterTable
+hgcRecHitSimAssociationTask = cms.Task(hgcRecHitsToSimClusters,
+	simClusterRecEnergyTable,
+	hgcRecHitsToSimClusterTable
 )

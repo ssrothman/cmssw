@@ -32,5 +32,5 @@ hgcRecHitToTiclTable = cms.EDProducer("RecHitToTICLCandidateIndexTableProducer",
 )
 
 
-ticlTables = cms.Sequence(ticlTable+hgcRecHitsToTiclCands+hgcRecHitToTiclTable)
+ticlTables = cms.Task(ticlTable, hgcRecHitsToTiclCands, hgcRecHitToTiclTable)
 

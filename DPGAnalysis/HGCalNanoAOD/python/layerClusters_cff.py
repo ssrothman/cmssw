@@ -60,13 +60,13 @@ hgcRecHitsToLayerClusterTable = cms.EDProducer("HGCRecHitToLayerClusterIndexTabl
     docString = cms.string("LayerCluster assigned largest RecHit fraction")
 )
 
-layerClusterTables = cms.Sequence(layerClusterTable
-	+hgcalRecHitMapProducer
-	+lcAssocByEnergyScoreProducer
-	+scAssocByEnergyScoreProducer
-	+layerClusterCaloParticleAssociation
-	+layerClusterSimClusterAssociation
-	+layerClusterToSimClusterTable
-	+layerClusterToCaloParticleTable
-    +hgcRecHitsToLayerClusters
-	+hgcRecHitsToLayerClusterTable)
+layerClusterTables = cms.Task(layerClusterTable,
+    hgcalRecHitMapProducer,
+    lcAssocByEnergyScoreProducer,
+    scAssocByEnergyScoreProducer,
+    layerClusterCaloParticleAssociation,
+    layerClusterSimClusterAssociation,
+    layerClusterToSimClusterTable,
+    layerClusterToCaloParticleTable,
+    hgcRecHitsToLayerClusters,
+    hgcRecHitsToLayerClusterTable)
