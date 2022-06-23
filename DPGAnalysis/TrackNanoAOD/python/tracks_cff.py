@@ -45,16 +45,7 @@ trackDisplacedTable = cms.EDProducer("SimpleTrackFlatTableProducer",
     )
 )
 
-trackToTrackingParticleTable = cms.EDProducer("TrackToTrackingParticleIndexTableProducer",
-    cut = generalTrackTable.cut,
-    src = generalTrackTable.src,
-    objName = generalTrackTable.name,
-    branchName = cms.string("TrackingPart"),
-    objMap = cms.InputTag("trackingParticleRecoTrackAsssociation"),
-    docString = cms.string("Index of the matching TrackingParticles") 
+trackTables = cms.Sequence(generalTrackTable
+        +trackConversionsTable
+        +trackDisplacedTable
 )
-
-
-trackTables = cms.Sequence(generalTrackTable+
-        trackConversionsTable+trackDisplacedTable
-        +trackToTrackingParticleTable)

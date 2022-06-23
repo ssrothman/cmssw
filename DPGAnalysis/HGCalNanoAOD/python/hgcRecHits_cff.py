@@ -21,20 +21,6 @@ hgcRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     )
 )
 
-hgcRecHitsToLayerClusters = cms.EDProducer("RecHitToLayerClusterAssociationProducer",
-    caloRecHits = cms.VInputTag("hgcRecHits"),
-    layerClusters = cms.InputTag("hgcalLayerClusters"),
-)
-
-hgcRecHitsToLayerClusterTable = cms.EDProducer("HGCRecHitToLayerClusterIndexTableProducer",
-    cut = hgcRecHitsTable.cut,
-    src = hgcRecHitsTable.src,
-    objName = hgcRecHitsTable.name,
-    branchName = cms.string("LayerCluster"),
-    objMap = cms.InputTag("hgcRecHitsToLayerClusters:hgcRecHitsToLayerCluster"),
-    docString = cms.string("LayerCluster assigned largest RecHit fraction")
-)
-
 hgcRecHitsPositionTable = cms.EDProducer("HGCALRecHitPositionTableProducer",
     src = hgcRecHitsTable.src,
     cut = hgcRecHitsTable.cut, 
@@ -42,9 +28,7 @@ hgcRecHitsPositionTable = cms.EDProducer("HGCALRecHitPositionTableProducer",
     doc  = hgcRecHitsTable.doc,
 )
 
-hgcRecHitsSequence = cms.Sequence(hgcRecHits
-				+hgcRecHitsTable
-                +hgcRecHitsToLayerClusters 
-                +hgcRecHitsToLayerClusterTable
-                +hgcRecHitsPositionTable
+hgcRecHitsTask = cms.Task(hgcRecHits,
+	hgcRecHitsTable,
+	hgcRecHitsPositionTable
 )
