@@ -1,5 +1,4 @@
 #include "PhysicsTools/NanoAOD/interface/ObjectIndexFromOneToManyQualAssociationProducer.h"
-#include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimClusterFwd.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
@@ -12,7 +11,10 @@ typedef ObjectIndexFromOneToManyQualAssociationTableProducer<HGCRecHitCollection
     HGCRecHitToLayerClusterIndexTableProducer;
 typedef ObjectIndexFromOneToManyQualAssociationTableProducer<SimClusterCollection, SimClusterCollection, float>
     SimClusterToSimClustersIndexTableProducer;
+typedef ObjectIndexFromOneToManyQualAssociationTableProducer<HGCRecHitCollection, SimClusterCollection, float>
+    HGCRecHitToSimClusterIndexTableProducer;
 
 DEFINE_FWK_MODULE(LayerClusterToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(HGCRecHitToLayerClusterIndexTableProducer);
+DEFINE_FWK_MODULE(HGCRecHitToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(SimClusterToSimClustersIndexTableProducer);

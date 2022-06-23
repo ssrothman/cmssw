@@ -7,7 +7,7 @@ hgcRecHitsToSimClusters = cms.EDProducer("SimClusterRecHitAssociationProducer",
     simClusters = cms.InputTag("mix:MergedCaloTruth"),
 )
 
-hgcRecHitsToSimClusterTable = cms.EDProducer("CaloRecHitToSimClusterIndexTableProducer",
+hgcRecHitsToSimClusterTable = cms.EDProducer("HGCRecHitToSimClusterIndexTableProducer",
     cut = hgcRecHitsTable.cut,
     src = hgcRecHitsTable.src,
     objName = hgcRecHitsTable.name,
