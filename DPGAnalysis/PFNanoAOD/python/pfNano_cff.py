@@ -51,7 +51,7 @@ pfNanoSequence = cms.Sequence(nanoMetadata
     +pfAssociationTables
     +pfClusterTables
     #+pfTrackTables
-    +trackTables
+    +cms.Sequence(trackTables)
 	+hcalRecHitTables
 	+cms.Sequence(hgcalTask)
 )

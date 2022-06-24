@@ -45,7 +45,21 @@ trackDisplacedTable = cms.EDProducer("SimpleTrackFlatTableProducer",
     )
 )
 
-trackTables = cms.Sequence(generalTrackTable
-        +trackConversionsTable
-        +trackDisplacedTable
+generalTrackHGCPositionTable = cms.EDProducer("TrackPositionAtHGCALTableProducer",
+    src = generalTrackTable.src,
+    name = generalTrackTable.name,
+    cut = generalTrackTable.cut,
+)
+
+trackTables = cms.Task(generalTrackTable,
+        trackConversionsTable,
+        trackDisplacedTable
+)
+
+from Configuration.Eras.Modifier_phase2_hgcal_cff import phase2_hgcal
+from TrackingTools.MaterialEffects.MaterialPropagator_cfi import *
+
+phase2_hgcal.toReplaceWith(
+	trackTables, cms.Task(generalTrackTable, 
+        trackConversionsTable, trackDisplacedTable, MaterialPropagator, generalTrackHGCPositionTable)
 )

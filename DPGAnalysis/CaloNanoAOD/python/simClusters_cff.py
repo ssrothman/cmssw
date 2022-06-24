@@ -20,6 +20,7 @@ simClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
         nHits = Var('numberOfRecHits', 'int', precision=-1, doc='number of simhits'),
         sumHitEnergy = Var('energy', 'float', precision=14, doc='total energy of simhits'),
         trackId = Var('g4Tracks().at(0).trackId()', 'int', precision=-1, doc='Geant track id'),
+        crossedBoundary = Var('g4Tracks().at(0).crossedBoundary()', 'bool', doc='Crossed the HGCAL boundary')
     )
 )
 

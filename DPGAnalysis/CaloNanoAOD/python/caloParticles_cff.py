@@ -19,6 +19,7 @@ caloParticleTable = cms.EDProducer("SimpleCaloParticleFlatTableProducer",
         nSimHit = Var('numberOfSimHits', 'int', precision=-1, doc='Number of simhits'),
         trackId = Var('g4Tracks().at(0).trackId', 'int', precision=-1, doc='Geant4 track ID of first track'),
         nSimTrack = Var('g4Tracks().size', 'int', precision=-1, doc='Number of associated simtracks'),
+        crossedBoundary = Var('g4Tracks().at(0).crossedBoundary()', 'bool', doc='Crossed the HGCAL boundary')
     )
 )
 
