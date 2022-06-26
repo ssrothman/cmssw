@@ -72,9 +72,13 @@ class SimClusterMerger : public edm::global::EDProducer<> {
         float cSearchRadius_;
         float cClusterRadiusScale_;
         float cMergeRadiusScale_;
-        float cMergeThreshold_;
-    };
 
+        float cMergeThreshold_;
+
+        float cSmear_;
+        float cIsHighEfracThreshold_;
+        float cConnectThreshold_;
+    };
 
 SimClusterMerger::SimClusterMerger(const edm::ParameterSet &pset) :
         scCollectionToken_(consumes<SimClusterCollection>(pset.getParameter<edm::InputTag>("simClusters"))),
@@ -93,6 +97,10 @@ SimClusterMerger::SimClusterMerger(const edm::ParameterSet &pset) :
     cMergeRadiusScale_ = pset.getParameter<double> ( "mergeRadiusScale" );
     cEContainment_ = pset.getParameter<double> ( "energyContainment" );
     cMergeThreshold_ = pset.getParameter<double> ( "relOverlapDistance" );
+
+    cSmear_ = pset.getParameter<double> ( "smear" );
+    cIsHighEfracThreshold_ = pset.getParameter<double> ( "highEfracThreshold" );
+    cConnectThreshold_ = pset.getParameter<double> ( "connectThreshold" );
 
     }
 
@@ -140,11 +148,12 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
     for(size_t i = 0; i < scCollection->size(); i++)
         tobemerged.push_back(&scCollection->at(i));
 
+    //cMergeThreshold_
+    //FIXME remove hard coded
     std::vector<std::vector<size_t> > idxs; //// <--- @Shah Rukh: that's the one to check if something is merged
-    auto mergedSC = merger.merge(tobemerged, cMergeThreshold_, idxs); //now idxs is filled
+    auto mergedSC = merger.merge(tobemerged, cIsHighEfracThreshold_, cConnectThreshold_, cSmear_, idxs,true); //now idxs is filled
 
-
-    std::cout << "initial: " << scCollection->size() << " merged: " << idxs.size() << std::endl;//DEBUG
+    std::cout << "SCmerger initial: " << scCollection->size() << " merged: " << idxs.size() << std::endl;//DEBUG
     size_t largestgroup=0;
     for(const auto& iidx: idxs)
         if(largestgroup<iidx.size())

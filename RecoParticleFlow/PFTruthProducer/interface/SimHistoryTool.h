@@ -22,6 +22,13 @@ public:
             simtracks_(simtracks),simvertices_(simvertices)
         {createIdxAsso();}
 
+    /// high-level functions
+
+    SimCluster createMergedSimCluster(std::vector<const SimCluster* >)const;
+
+
+    // low level functions
+
     const SimTrack* getRoot(const SimTrack * st)const;
     const SimTrack* traverseStep(const SimTrack * st)const;
     /**

@@ -6,8 +6,6 @@
 #include <algorithm>
 #include <numeric>
 
-#include "CaloSimClusterCircleMergeWrapper.h"
-
 #include "DataFormats/HGCRecHit/interface/HGCRecHit.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
@@ -27,8 +25,8 @@ public:
 
 
     std::vector<SimCluster> merge(const std::vector<const SimCluster*>& scs,
-            float threshold,
-            std::vector<std::vector<size_t> >& idxs) const;
+            float isHighEfracThreshold, float connectThreshold, float expandWidth,
+            std::vector<std::vector<size_t> >& idxs, bool debugplots=false) const;
 
     //setters for circle parameters here
     void setCClusterRadiusScale(float cClusterRadiusScale) { cClusterRadiusScale_ = cClusterRadiusScale; }
@@ -54,7 +52,7 @@ public:
   private:
     HGCalSimClusterMerger(){}
 
-    double calcCircle(const SimCluster* sc)const;
+    double calcCircle(const SimCluster* sc, float& assignedEnsum, float& regionEnSum)const;
     void createHitMap();
     const HGCRecHit* getHit(DetId)const;
     bool isHGCal(const SimCluster& cluster)const;

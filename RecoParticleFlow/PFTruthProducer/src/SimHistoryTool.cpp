@@ -9,6 +9,29 @@ std::vector<SimVertex> dummysv;
 }
 
 
+SimCluster SimHistoryTool::createMergedSimCluster(std::vector<const SimCluster* > tomerge)const{
+
+    SimCluster out;
+
+    if(tomerge.size()<1)
+        return out;
+    if(tomerge.size()==1)
+        return *tomerge.at(0);
+
+    math::XYZTLorentzVectorF p4, point;
+    double totalE=0;
+    for(const auto& sc: tomerge){
+        out += *sc;
+    }
+    //////// more complex part assigning an ID
+
+    out.setPdgId(createMergedSimClusterID(&out));
+
+    return out;
+
+}
+
+// FIXME: this needs to be made PU safe with event ID etc
 const SimTrack* SimHistoryTool::traverseStep(const SimTrack * st)const{
 
     const SimTrack* out=st;
@@ -105,8 +128,8 @@ int SimHistoryTool::createMergedSimClusterID(const SimCluster* sc, double idenfr
             mergedPdgId = allst.at(idx)->type();
         }
 
-        std::cout << allst.at(idx)->type() << ": " << allst.at(idx)->momentum().E()
-                << "; " << enIntoGroup.at(idx) << " | "<<totalE << "\n";
+        //std::cout << allst.at(idx)->type() << ": " << allst.at(idx)->momentum().E()
+        //        << "; " << enIntoGroup.at(idx) << " | "<<totalE << "\n";
     }
 
 

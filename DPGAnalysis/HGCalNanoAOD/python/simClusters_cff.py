@@ -55,14 +55,21 @@ simClusterToCaloPartTable = cms.EDProducer("SimClusterToCaloParticleIndexTablePr
     docString = cms.string("Index of CaloPart containing SimCluster")
 )
 
-hgcSimTruth = cms.EDProducer("SimClusterMerger",#"simmerger","SimClusterMerger"
-    useNLayers = cms.int32(3),
-    searchRadiusScale = cms.double(3.),
-    clusterRadiusScale = cms.double(1.2),
-    mergeRadiusScale = cms.double(1.),
-    energyContainment = cms.double(0.68),
-    relOverlapDistance = cms.double(.9),# dist/(merged radius + sensor radius)
 
+hgcSimTruth = cms.EDProducer("SimClusterMerger",#"simmerger","SimClusterMerger"
+                             
+    useNLayers = cms.int32(2),
+    searchRadiusScale = cms.double(2.),
+    clusterRadiusScale = cms.double(1.),
+    mergeRadiusScale = cms.double(10.),
+    energyContainment = cms.double(0.7),
+    
+    smear = cms.double(-0.0),
+    highEfracThreshold = cms.double(0.95), 
+    connectThreshold = cms.double(.5),
+    
+    relOverlapDistance = cms.double(.9),# dist/(merged radius + sensor radius)
+    
     simClusters= cms.InputTag("mix:MergedCaloTruth"),
     simVertices= cms.InputTag("g4SimHits"),
     simTracks= cms.InputTag("g4SimHits"),

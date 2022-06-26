@@ -66,6 +66,21 @@ public:
      */
     bool recalcVariables(std::vector<U *>& v){return false;}
 
+    /**
+     * default implementation as max 1:1 comparison
+     */
+    static float groupMergeScore(const std::vector<U *>& va,const std::vector<U *>& vb){
+        float maxscore=-1e12;
+        for(const auto oi: va){
+            for(const auto oj: vb){
+                float score = oi->mergeScore(oj);
+                if(score>maxscore)
+                    maxscore=score;
+            }
+        }
+        return maxscore;
+    }
+
 };
 
 
@@ -131,15 +146,7 @@ private:
 
 template<class U,class T>
 float MergeObject<U,T>::maxMergeScore(const MergeObject& rhs)const{
-    float maxscore=-1e12;
-    for(const auto oi: objects_){
-        for(const auto oj: rhs.objects_){
-            float score = oi->mergeScore(oj);
-            if(score>maxscore)
-                maxscore=score;
-        }
-    }
-    return maxscore;
+    return U::groupMergeScore(objects_,rhs.objects_);
 }
 
 /*

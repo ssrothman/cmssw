@@ -171,7 +171,8 @@ std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClust
     for(const auto& scref: simClusters){
         tomerge.push_back(&(*scref));
     }
-    auto merged = scmerger.merge(tomerge,1.1,mergeIdxs);//a bit more generous here
+    //FIXME hard coded number
+    auto merged = scmerger.merge(tomerge,0.9, 0.1,0.,mergeIdxs);//a bit more generous here
 
     std::vector<float> scmom;
     for(const auto& sc: merged)
@@ -441,7 +442,7 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
 
   std::vector<std::vector<size_t> > mergeIdxs;
 
-  auto merged = neutralSCMerger.merge(tomergehgcsc,.9,mergeIdxs);
+  auto merged = neutralSCMerger.merge(tomergehgcsc,.9,0.1,0.,mergeIdxs);
   //merged not used for now, needs to  output new collection in the end
   //but indices can help check basic functions for now
 
