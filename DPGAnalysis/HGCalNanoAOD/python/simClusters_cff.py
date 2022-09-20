@@ -61,12 +61,13 @@ hgcSimTruth = cms.EDProducer("SimClusterMerger",#"simmerger","SimClusterMerger"
     useNLayers = cms.int32(2),
     searchRadiusScale = cms.double(2.),
     clusterRadiusScale = cms.double(1.),
-    mergeRadiusScale = cms.double(10.),
-    energyContainment = cms.double(0.7),
+    
+    mergeRadiusScale = cms.double(7.),#13 is about 10 layers in CE
+    energyContainment = cms.double(1.1),
     
     smear = cms.double(-0.0),
-    highEfracThreshold = cms.double(0.95), 
-    connectThreshold = cms.double(.5),
+    highEfracThreshold = cms.double(0.85), 
+    connectThreshold = cms.double(.3),
     
     relOverlapDistance = cms.double(.9),# dist/(merged radius + sensor radius)
     

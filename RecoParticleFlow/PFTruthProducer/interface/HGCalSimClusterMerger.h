@@ -52,7 +52,7 @@ public:
   private:
     HGCalSimClusterMerger(){}
 
-    double calcCircle(const SimCluster* sc, float& assignedEnsum, float& regionEnSum)const;
+    double calcCircle(const SimCluster* sc, float& assignedEnsum, float& regionEnSum, float& firsthitradius)const;
     void createHitMap();
     const HGCRecHit* getHit(DetId)const;
     bool isHGCal(const SimCluster& cluster)const;

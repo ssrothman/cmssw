@@ -163,6 +163,9 @@ public:
      */
     float calcScore(const HitMergeVertex* rhs)const;
 
+    static float connectThreshold;
+    static float singleClusterEfrac;
+
 private:
 
     void updateEnergies();

@@ -137,6 +137,10 @@ bool RadiusMergeVertex::shouldConnect(const RadiusMergeVertex* rhs)const{
 }
 
 
+
+float HitMergeVertex::connectThreshold=0.2;
+float HitMergeVertex::singleClusterEfrac=0.9;
+
 HitMergeVertex::HitMergeVertex(const SimClusterMergeWrapper* t,
         const std::vector<RecHit> & allhits,
         const std::vector<std::pair<uint32_t,float> >& hafs
@@ -164,7 +168,7 @@ bool HitMergeVertex::shouldConnect(const HitMergeVertex* rhs)const{
     if(this == rhs)
         return false;
     float s = calcScore(rhs);
-    return s > 0.2 && MergeVertex<SimClusterMergeWrapper>::shouldConnect(rhs);
+    return s > connectThreshold && MergeVertex<SimClusterMergeWrapper>::shouldConnect(rhs);
 }
 
 void HitMergeVertex::updateIsLow(){
@@ -177,7 +181,7 @@ void HitMergeVertex::updateIsLow(){
     }
     float efrac = fracsum/(ensum+1e-6);
 
-    isLow_ = efrac < 0.95;//DEBUG HARDCODED
+    isLow_ = efrac < singleClusterEfrac;//DEBUG HARDCODED
 }
 
 void HitMergeVertex::absorb(HitMergeVertex* rhs){
@@ -263,5 +267,7 @@ void HitMergeVertex::absorbHafs(const std::vector<Haf>& h_rhs){
     //both are sorted FIXME TBI (to check if it's actually faster)
     insertSortedInSorted(rhsu,hafs_);
 }
+
+
 
 

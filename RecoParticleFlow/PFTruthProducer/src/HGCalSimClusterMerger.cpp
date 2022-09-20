@@ -24,6 +24,7 @@ using SCWrapper=SimClusterMergeWrapper;
 #include "TEllipse.h"
 #include "TLatex.h"
 #include "TStyle.h"
+#include <chrono>
 
 
 void drawVertices(const std::vector<SCVertex>& result, bool onlytext=false, bool merged=false){
@@ -224,6 +225,10 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
     //create the wrappers
 
 
+    HitMergeVertex::connectThreshold=connectThreshold;
+    HitMergeVertex::singleClusterEfrac=isHighEfracThreshold;
+
+
     std::cout << "merging " << scs.size() << std::endl;//DEBUG
 
     std::vector<SCWrapper> scwappers;
@@ -235,7 +240,8 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
         float e=0;//fraction weighted energy in hits
         float etot=0;
         // for isolated shower, both are (almost) the same
-        float r = calcCircle(sc,e,etot) * (1.+expandWidth);
+        float firsthitr=0;
+        float r = calcCircle(sc,e,etot,firsthitr) * (1.+expandWidth);
         //etot as closest to center total hit energy
         if(r<0.){
             r=1e-3;
@@ -243,7 +249,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
             etot=1e-6;
         }
 
-        scwappers.push_back(SCWrapper(sc,e,etot,r,idx));
+        scwappers.push_back(SCWrapper(sc,e,etot,firsthitr,idx));
 
         debugradii.push_back(r);
         debugenergies.push_back(e);
@@ -275,6 +281,9 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
     for(size_t i=0;i<rechits_->size();i++)
         allhits.push_back((*rechits_)[i]);
 
+
+    auto start = std::chrono::high_resolution_clock::now();//DEBUG
+
     for(const auto& scw: scwappers){
         auto hafs = scw.SC()->hits_and_fractions();
         graph.addVertex( SCVertex(&scw, allhits, hafs) );
@@ -287,6 +296,10 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 
     graph.merge();
 
+
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "took "<< duration.count()/1000. <<" milliseconds for "<< scwappers.size()<< " showers." << std::endl;
 
     //collect the result
     std::vector<SimCluster> out;
@@ -313,7 +326,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
     if(!debugplots)
         return out;
     static int counter=-1;
-    if(counter>2)
+    if(true || counter>2)
         return out;//only a few debug plots
 
     std::cout << "prepare debug plots..." << std::endl;
@@ -383,7 +396,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 }
 
 
-double HGCalSimClusterMerger::calcCircle(const SimCluster* sc, float& assignedEnSum, float& regionEnSum)const{
+double HGCalSimClusterMerger::calcCircle(const SimCluster* sc, float& assignedEnSum, float& regionEnSum, float& firsthitradius)const{
     auto hafs = sc->hits_and_fractions();
 
     // restrict to simclusters with at least one hit in the HGCAL
@@ -428,14 +441,17 @@ double HGCalSimClusterMerger::calcCircle(const SimCluster* sc, float& assignedEn
         assignedEnSum+=rh->energy() * haf.second;
     }
 
-    if(scHits.size()<1)
+    if(scHits.size()<1){
         return -1;
+        firsthitradius=1;
+    }
 
     auto ldsort = argsort(hitDistToBoundary);//hitDistanceToAxis);//hitDistToBoundary);//hitDistanceToAxis);
     apply_argsort_in_place(scHits,ldsort);
     apply_argsort_in_place(hitDistanceToAxis,ldsort);
     apply_argsort_in_place(hitDistToBoundary,ldsort);//just in case
 
+    firsthitradius=scHits.at(0).radius;
 
     float tmpensum=0;
     float currentradius=0;

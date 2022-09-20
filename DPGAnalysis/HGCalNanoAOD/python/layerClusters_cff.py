@@ -26,7 +26,8 @@ layerClusterToSimClusterTable = cms.EDProducer("LayerClusterToSimClusterIndexTab
     objName = layerClusterTable.name,
     branchName = cms.string("SimCluster"),
     objMap = cms.InputTag("layerClusterCaloParticleAssociationProducer"),
-    docString = cms.string("Index of SimCluster matched to LayerCluster")
+    docString = cms.string("Index of SimCluster matched to LayerCluster"),
+    bestMatchTable = cms.untracked.bool(True)
 )
 
 layerClusterTables = cms.Sequence(layerClusterTable+layerClusterToSimClusterTable)
