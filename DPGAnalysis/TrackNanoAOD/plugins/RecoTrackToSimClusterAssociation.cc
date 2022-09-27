@@ -33,7 +33,7 @@ public:
   ~RecoTrackToSimClusterAssociation() override {}
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
-    trackprop_.getEventSetup(iSetup);
+    //trackprop_.getEventSetup(iSetup);
   }
 
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override {

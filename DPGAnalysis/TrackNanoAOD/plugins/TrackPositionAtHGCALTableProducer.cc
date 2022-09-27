@@ -6,8 +6,13 @@
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/Common/interface/View.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
 #include "RecoHGCal/GraphReco/interface/HGCalTrackPropagator.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
+#include "MagneticField/Engine/interface/MagneticField.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include <vector>
 
 class TrackPositionAtHGCALTableProducer : public edm::stream::EDProducer<> {
@@ -15,14 +20,21 @@ public:
   TrackPositionAtHGCALTableProducer(edm::ParameterSet const& params)
       : name_(params.getParameter<std::string>("name")),
         src_(consumes<reco::TrackCollection>(params.getParameter<edm::InputTag>("src"))),
-        cut_(params.getParameter<std::string>("cut"), true) {
+        cut_(params.getParameter<std::string>("cut"), true),
+        bFieldToken_(esConsumes<MagneticField, IdealMagneticFieldRecord>()),
+        hgcEEToken_(esConsumes<edm::Transition::BeginRun>(edm::ESInputTag{"", "HGCalEESensitive"})),
+        propagatorToken_(esConsumes(edm::ESInputTag("", "PropagatorWithMaterial"))) {
     produces<nanoaod::FlatTable>();
   }
 
   ~TrackPositionAtHGCALTableProducer() override {}
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
-    trackprop_.getEventSetup(iSetup);
+    const MagneticField* bField = &iSetup.getData(bFieldToken_);
+    const Propagator* prop = &iSetup.getData(propagatorToken_);
+    const HGCalDDDConstants* ddd = &iSetup.getData(hgcEEToken_);
+
+    trackprop_.initialize(prop, bField, ddd);
   }
 
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override {
@@ -60,6 +72,9 @@ protected:
   const edm::EDGetTokenT<reco::TrackCollection> src_;
   const StringCutObjectSelector<reco::Track> cut_;
   HGCalTrackPropagator trackprop_;
+  edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
+  edm::ESGetToken<HGCalDDDConstants, CaloGeometryRecord> hgcEEToken_;
+  edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorToken_;
 };
 
 DEFINE_FWK_MODULE(TrackPositionAtHGCALTableProducer);

@@ -92,7 +92,7 @@ class peprCandidateFromHitProducer: public SonicEDProducer<TritonClient> {
 };
 
 
-peprCandidateFromHitProducer::peprCandidateFromHitProducer(edm::ParameterSet const& config) : SonicEDProducer<TritonClient>(config, "peprCandidate"),
+peprCandidateFromHitProducer::peprCandidateFromHitProducer(edm::ParameterSet const& config) : SonicEDProducer<TritonClient>(config),
         recHitCollections_(config.getParameter<std::vector<edm::InputTag> >("recHitCollections")), 
         tracksToken_(consumes<edm::View<reco::Track>>(config.getParameter<edm::InputTag>("tracks"))),
         minCandEnergy_(config.getParameter<double>("minCandEnergy")),

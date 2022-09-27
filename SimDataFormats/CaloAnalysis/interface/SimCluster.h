@@ -259,9 +259,9 @@ private:
   uint64_t nsimhits_{0};
   EncodedEventId event_;
 
+  int pdgId_{0};
   uint32_t particleId_{0};
   float simhit_energy_{0.f};
-  float simhit_energy_;
   std::vector<uint32_t> hits_;
   std::vector<float> fractions_;
   std::vector<float> energies_;
