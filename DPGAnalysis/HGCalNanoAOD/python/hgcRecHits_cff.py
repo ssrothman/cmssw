@@ -60,7 +60,8 @@ hgcRecHitsToLayerClusterTable = cms.EDProducer("HGCRecHitToLayerClusterIndexTabl
     objName = hgcRecHitsTable.name,
     branchName = cms.string("LayerCluster"),
     objMap = cms.InputTag("hgcRecHitsToLayerClusters:hgcRecHitsToLayerCluster"),
-    docString = cms.string("LayerCluster assigned largest RecHit fraction")
+    docString = cms.string("LayerCluster assigned largest RecHit fraction"),
+    bestMatchTable = cms.untracked.bool(True)
 )
 
 hgcRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionTableProducer",
@@ -70,8 +71,8 @@ hgcRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionTableProducer",
     doc  = hgcRecHitsTable.doc,
 )
 
-hgcRecHitsSequence = cms.Sequence(hgcRecHits
-				+hgcRecHitsTable
+hgcRecHitsSequence = cms.Sequence(
+				hgcRecHitsTable
                 +hgcRecHitsToPFCands
                 +hgcRecHitsToPFCandTable
                 +hgcRecHitsToPFTICLCands

@@ -73,10 +73,10 @@ SimCluster& SimCluster::operator+=(const SimCluster& toMerge) {
     impactPoint_ = (impactPoint_*impactMomentum_.energy() + mergeMom.energy()*toMerge.impactPoint())/sumE;
 
     this->impactMomentum_ += mergeMom;
+    pdgId_=0;//undefined
     return *this;
 }
 
-// At least one simHit in the HGCAL
 bool SimCluster::allHitsHGCAL() const {
     for (const auto& hitsAndEnergies : hits_and_fractions()) {
         const DetId id = hitsAndEnergies.first;

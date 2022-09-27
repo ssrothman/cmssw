@@ -55,12 +55,7 @@ public:
    * Returns the PDG ID. If not id is set, the id of first associated gen particle is returned. If
    * there are no gen particles associated then it returns type() from the first SimTrack. */
   int pdgId() const {
-    if (pdgId_ != 0)
       return pdgId_;
-    else if (!genParticles_.empty())
-      return (*genParticles_.begin())->pdgId();
-    else
-      return g4Tracks_[0].type();
   }
 
   /** @brief Signal source, crossing number.
@@ -234,6 +229,7 @@ public:
   /** @brief add simhit's energy to cluster */
   void addSimHit(const PCaloHit &hit) { simhit_energy_ += hit.energy(); }
 
+  void setImpactPoint(const math::XYZTLorentzVectorF &point) { impactPoint_ = point; }
   const math::XYZTLorentzVectorF &impactPoint() const { return impactPoint_; }
 
   void setImpactMomentum(const math::XYZTLorentzVectorF &mom) { impactMomentum_ = mom; }

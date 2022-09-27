@@ -40,6 +40,7 @@ simClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
     )
 )
 
+
 simClusterToCaloPart = cms.EDProducer("SimClusterToCaloParticleAssociationProducer",
     caloParticles = cms.InputTag("mix:MergedCaloTruth"),
     simClusters = cms.InputTag("mix:MergedCaloTruth"),
@@ -54,14 +55,29 @@ simClusterToCaloPartTable = cms.EDProducer("SimClusterToCaloParticleIndexTablePr
     docString = cms.string("Index of CaloPart containing SimCluster")
 )
 
-hgcSimTruth = cms.EDProducer("simmerger",
-    useNLayers = cms.int32(1),
+
+hgcSimTruth = cms.EDProducer("SimClusterMerger",#"simmerger","SimClusterMerger"
+                             
+    useNLayers = cms.int32(2),
     searchRadiusScale = cms.double(2.),
-    clusterRadiusScale = cms.double(1.5),
-    mergeRadiusScale = cms.double(1.5),
-    energyContainment = cms.double(0.5),
-    relOverlapDistance = cms.double(0.9)
-                           )
+    clusterRadiusScale = cms.double(1.),
+    
+    mergeRadiusScale = cms.double(7.),#13 is about 10 layers in CE
+    energyContainment = cms.double(1.1),
+    
+    smear = cms.double(-0.0),
+    highEfracThreshold = cms.double(0.85), 
+    connectThreshold = cms.double(.3),
+    
+    relOverlapDistance = cms.double(.9),# dist/(merged radius + sensor radius)
+    
+    simClusters= cms.InputTag("mix:MergedCaloTruth"),
+    simVertices= cms.InputTag("g4SimHits"),
+    simTracks= cms.InputTag("g4SimHits"),
+    caloRecHits = cms.InputTag("hgcRecHits")
+    
+    #caloSimHits = cms.InputTag("g4SimHits")
+)
 
 hgcSimTruthDR = cms.EDProducer("HGCTruthProducer")
 
