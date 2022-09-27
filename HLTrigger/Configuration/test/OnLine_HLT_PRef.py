@@ -1,6 +1,10 @@
 # hltGetConfiguration --full --data /dev/CMSSW_12_4_0/PRef --type PRef --unprescale --process HLTPRef --globaltag auto:run3_hlt_PRef --input file:RelVal_Raw_PRef_DATA.root
 
+<<<<<<< HEAD
 # /dev/CMSSW_12_4_0/PRef/V110 (CMSSW_12_4_0)
+=======
+# /dev/CMSSW_12_1_0/PRef/V14 (CMSSW_12_1_0)
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 
 import FWCore.ParameterSet.Config as cms
 
@@ -12,7 +16,11 @@ process = cms.Process( "HLTPRef" )
 process.ProcessAcceleratorCUDA = ProcessAcceleratorCUDA()
 
 process.HLTConfigVersion = cms.PSet(
+<<<<<<< HEAD
   tableName = cms.string('/dev/CMSSW_12_4_0/PRef/V110')
+=======
+  tableName = cms.string('/dev/CMSSW_12_1_0/PRef/V14')
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 )
 
 process.transferSystem = cms.PSet( 
@@ -8883,6 +8891,15 @@ process.hltHIRPCMuonNormaL1Filtered0 = cms.EDFilter( "HLTMuonL1TFilter",
     CentralBxOnly = cms.bool( True ),
     SelectQualities = cms.vint32(  )
 )
+<<<<<<< HEAD
+=======
+process.hltPixelTrackerHVOn = cms.EDFilter( "DetectorStateFilter",
+    DebugOn = cms.untracked.bool( False ),
+    DetectorType = cms.untracked.string( "pixel" ),
+    DcsStatusLabel = cms.untracked.InputTag( "hltScalersRawToDigi" ),
+    DCSRecordLabel = cms.untracked.InputTag( "onlineMetaDataDigis" )
+)
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 process.hltPreAlCaLumiPixelsCountsRandom = cms.EDFilter( "HLTPrescaler",
     offset = cms.uint32( 0 ),
     L1GtReadoutRecordTag = cms.InputTag( "hltGtStage2Digis" )

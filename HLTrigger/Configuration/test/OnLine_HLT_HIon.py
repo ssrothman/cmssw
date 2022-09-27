@@ -1,6 +1,10 @@
 # hltGetConfiguration --full --data /dev/CMSSW_12_4_0/HIon --type HIon --unprescale --process HLTHIon --globaltag auto:run3_hlt_HIon --input file:RelVal_Raw_HIon_DATA.root
 
+<<<<<<< HEAD
 # /dev/CMSSW_12_4_0/HIon/V110 (CMSSW_12_4_0)
+=======
+# /dev/CMSSW_12_1_0/HIon/V14 (CMSSW_12_1_0)
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 
 import FWCore.ParameterSet.Config as cms
 
@@ -12,7 +16,11 @@ process = cms.Process( "HLTHIon" )
 process.ProcessAcceleratorCUDA = ProcessAcceleratorCUDA()
 
 process.HLTConfigVersion = cms.PSet(
+<<<<<<< HEAD
   tableName = cms.string('/dev/CMSSW_12_4_0/HIon/V110')
+=======
+  tableName = cms.string('/dev/CMSSW_12_1_0/HIon/V14')
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 )
 
 process.transferSystem = cms.PSet( 

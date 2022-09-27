@@ -13,6 +13,7 @@ def getPathList(config):
   if config.menu.run:
     configline = f'--runNumber {config.menu.run}'
   else:
+<<<<<<< HEAD
     configline = f'--{config.menu.database} --{config.menu.version} --configName {config.menu.name}'
 
   # cmd to download HLT configuration
@@ -27,6 +28,24 @@ def getPathList(config):
     process = foo['process']
   except:
     raise Exception(f'query did not return a valid python file:\n query="{cmdline}"')
+=======
+    return '--%s --%s --configName %s' % (menu.database, menu.version, menu.name)
+
+def getPathList(config):
+  cmdline = 'hltConfigFromDB --cff %s --noedsources --noes --noservices --nosequences --nomodules' % _build_query(config.menu)
+  if config.proxy:
+     cmdline += f" --dbproxy --dbproxyhost {config.proxy_host} --dbproxyport {config.proxy_port}"
+  data = pipe.pipe(cmdline).decode()
+  if 'Exhausted Resultset' in data or 'CONFIG_NOT_FOUND' in data:
+    raise ImportError('%s is not a valid HLT menu' % menu.value)
+
+  if config.selection == 'paths':
+    filter = re.compile(r' *= *cms.Path.*')
+  elif config.selection == 'endpaths':
+    filter = re.compile(r' *= *cms.EndPath.*')
+  else: # 'all'
+    filter = re.compile(r' *= *cms.(End)?Path.*')
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 
   if not isinstance(process, cms.Process):
     raise Exception(f'query did not return a valid HLT menu:\n query="{cmdline}"')
@@ -125,6 +144,24 @@ parser.add_argument('menu',
                     type    = options.ConnectionHLTMenu,
                     metavar = 'MENU',
                     help    = 'HLT menu to dump from the database. Supported formats are:\n  - /path/to/configuration[/Vn]\n  - [[{v1|v2|v3}/]{run3|run2|online|adg}:]/path/to/configuration[/Vn]\n  - run:runnumber\nThe possible converters are "v1", "v2, and "v3" (default).\nThe possible databases are "run3" (default, used for offline development), "run2" (used for accessing run2 offline development menus), "online" (used to extract online menus within Point 5) and "adg" (used to extract the online menus outside Point 5).\nIf no menu version is specified, the latest one is automatically used.\nIf "run:" is used instead, the HLT menu used for the given run number is looked up and used.\nNote other converters and databases exist as options but they are only for expert/special use.' )
+parser.add_argument('--dbproxy',
+                    dest    = 'proxy',
+                    action  = 'store_true',
+                    default = defaults.proxy,
+                    help    = 'Use a socks proxy to connect outside CERN network (default: False)' )
+parser.add_argument('--dbproxyport',
+                    dest    = 'proxy_port',
+                    action  = 'store',
+                    metavar = 'PROXYPORT',
+                    default = defaults.proxy_port,
+                    help    = 'Port of the socks proxy (default: 8080)' )
+parser.add_argument('--dbproxyhost',
+                    dest    = 'proxy_host',
+                    action  = 'store',
+                    metavar = 'PROXYHOST',
+                    default = defaults.proxy_host,
+                    help    = 'Host of the socks proxy (default: "localhost")' )
+
 
 # options
 parser.add_argument('--dbproxy',
@@ -187,6 +224,10 @@ parser.add_argument('-h', '--help',
 
 # parse command line arguments and options
 config = parser.parse_args()
+<<<<<<< HEAD
 paths = getPathList(config)
+=======
+paths  = getPathList(config)
+>>>>>>> kdlong/pepr_CMSSW_12_1_1
 for path in paths:
   print(path)
