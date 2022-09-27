@@ -25,7 +25,9 @@
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "Geometry/HGCalCommonData/interface/HGCalDDDConstants.h"
-
+#include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
 
 
 
@@ -45,12 +47,19 @@ class HGCalObjectPropagator{
 public:
     enum zpos{ negZ=0, posZ=1};
     HGCalObjectPropagator() {}
+    HGCalObjectPropagator(edm::ConsumesCollector&& cc) :
+        bFieldToken_(cc.esConsumes<MagneticField, IdealMagneticFieldRecord>()),
+        hgcEEToken_(cc.esConsumes<edm::Transition::BeginRun>(edm::ESInputTag{"", "HGCalEESensitive"})),
+        propagatorToken_(cc.esConsumes(edm::ESInputTag("", "PropagatorWithMaterial"))) {}
 
-    void initialize(const Propagator* propagator, const MagneticField* bfield, const HGCalDDDConstants* hgdc);
+    void setupRun(const edm::EventSetup& iSetup);
 
     ObjectWithPos<T> propagateObject(const T&, int charge=-200)const;
 
 private:
+    edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
+    edm::ESGetToken<HGCalDDDConstants, CaloGeometryRecord> hgcEEToken_;
+    edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorToken_;
     bool setup_;
     const MagneticField* bField_;
     const Propagator* propagator_;
@@ -70,10 +79,10 @@ typedef HGCalObjectPropagator<reco::Track> HGCalTrackPropagator ;
 
 
 template<class T>
-void HGCalObjectPropagator<T>::initialize(const Propagator* propagator, 
-        const MagneticField* bfield, const HGCalDDDConstants* hgdc) {
-    propagator_ = propagator;
-    bField_ = bfield;
+void HGCalObjectPropagator<T>::setupRun(const edm::EventSetup& iSetup) {
+    bField_ = &iSetup.getData(bFieldToken_);
+    propagator_ = &iSetup.getData(propagatorToken_);
+    const HGCalDDDConstants* hgdc = &iSetup.getData(hgcEEToken_);
 
     frontz_ = hgdc->waferZ(1, true);
     backz_ = - frontz_;
@@ -99,7 +108,6 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
     // TODO: Check that bfield and geom are defined
     //if(!setup_)
     //    throw cms::Exception("HGCalTrackPropagator")
-
 
     typedef TrajectoryStateOnSurface TSOS;
 
