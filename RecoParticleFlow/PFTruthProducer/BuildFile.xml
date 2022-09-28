@@ -17,7 +17,6 @@
 <use name="MagneticField/Engine" />
 <use name="TrackingTools/Records" />
 <use name="RecoLocalCalo/HGCalRecAlgos" />
-    <use name="RecoParticleFlow/PFTruthProducer" />
 <use name="hepmc" />
 <use name="heppdt" />
 

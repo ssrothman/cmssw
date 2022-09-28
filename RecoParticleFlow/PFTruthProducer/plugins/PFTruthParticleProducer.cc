@@ -33,6 +33,11 @@
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include <set>
 
+//this is now just for HGCAL
+#include "RecoHGCal/GraphReco/interface/HGCalTrackPropagator.h"
+#include "../interface/HGCalSimClusterMerger.h"
+#include "../interface/SimHistoryTool.h"
+
 //
 // class declaration
 //
@@ -82,13 +87,16 @@ public:
   explicit PFTruthParticleProducer(const edm::ParameterSet &);
   ~PFTruthParticleProducer() override;
 
+
 private:
+
   void produce(edm::StreamID, edm::Event &, const edm::EventSetup &) const override;
 
-  const SimTrack* getRoot(const SimTrack * st,
-          const std::vector<SimTrack> & simtracks,
-          const std::vector<SimVertex> & simvertices,
-          const std::map<int,int>&  trackIdToTrackIdxAsso ) const;
+  std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
+          const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger) const;
+
+  std::vector<SimClusterRefVector> splitCPToTP(const SimClusterRefVector& allCPSimClusters,
+          TrackingParticleRefVector assoTPs, const SimHistoryTool& histtool) const;
 
   edm::EDGetTokenT<TrackingParticleCollection> tpCollectionToken_;
   edm::EDGetTokenT<CaloParticleCollection> cpCollectionToken_;
@@ -99,6 +107,12 @@ private:
   edm::EDGetTokenT<edm::View<reco::Track>> tracksToken_;
   edm::EDGetTokenT<edm::Association<SimClusterCollection>> recHitToSCToken_;
   edm::EDGetTokenT<reco::SimToRecoCollection> tpToTrackToken_;
+
+  //fix with proper beginRun
+  mutable HGCalTrackPropagator trackprop_;
+  mutable hgcal::RecHitTools hgcrechittools_;
+
+  float pfMatchThreshold_;
 
 };
 
@@ -118,6 +132,8 @@ PFTruthParticleProducer::PFTruthParticleProducer(const edm::ParameterSet &pset)
   produces<edm::Association<PFTruthParticleCollection>>("simClusToPFTruth");
   produces<edm::Association<PFTruthParticleCollection>>("caloRecHitToPFTruth");
   produces<edm::Association<PFTruthParticleCollection>>("trackToPFTruth");
+
+  pfMatchThreshold_=0.95;//to be configured
 }
 
 PFTruthParticleProducer::~PFTruthParticleProducer() {}
@@ -127,34 +143,121 @@ PFTruthParticleProducer::~PFTruthParticleProducer() {}
 //
 
 
-const SimTrack* PFTruthParticleProducer::getRoot(
-        const SimTrack * st,
-        const std::vector<SimTrack> & simtracks,
-        const std::vector<SimVertex> & simvertices,
-        const std::map<int,int>&  trackIdToTrackIdxAsso ) const{
 
-    const SimTrack* out=st;
-    int vidx = out->vertIndex();//starting point
-    while(true){
-        if(vidx<0)
-            break; //no vertex
-        const SimVertex& vertex = simvertices.at(vidx);
-        int stid = vertex.parentIndex();//this is Geant track ID, not vector index
-        if(stid < 0)
-            break;
-        int stidx = trackIdToTrackIdxAsso.at(stid); //get vector index
-        if(stidx < 0)
-            break;
-        const SimTrack & simtrack = simtracks.at(stidx);
-        vidx = simtrack.vertIndex();
-        out=&simtrack;
+
+std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
+        const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger
+        ) const {
+
+    std::vector<size_t>  out;
+    // the SCs are from the same CP the TP was matched to.
+    // here, the question is if a subset can be found that match also by
+    // additional criteria. For now, just use all of them.
+    // But the criterion needs to be related whether the match actually helps to determine the
+    // properties.
+    // e.g. if they are close enough to each other, if the last track in the TP
+    // still has the right momentum etc etc.
+
+    //merge the SCs and compare to TP momentum. If that is useful then it will be useful for PF
+
+    //configure the merger here
+    if(simClusters.size()<1)
+        return out;
+
+    //check which G4 track is most likely to be representing the reco track
+
+    std::vector<std::vector<size_t> > mergeIdxs;
+    std::vector<const SimCluster* > tomerge;
+    for(const auto& scref: simClusters){
+        tomerge.push_back(&(*scref));
+    }
+    //FIXME hard coded number
+    auto merged = scmerger.merge(tomerge,0.95, 0.3,0.,mergeIdxs);//a bit more generous here
+
+    std::vector<float> scmom;
+    for(const auto& sc: merged)
+        scmom.push_back(-sc.impactMomentum().P());
+
+    auto momsorting = scmerger.argsort(scmom);
+    scmerger.apply_argsort_in_place(mergeIdxs,momsorting);
+    scmerger.apply_argsort_in_place(merged,momsorting);
+
+    auto sc0 = merged.at(0);//now if this is close to tp.momentum take it
+
+    //the generously merged cluster does not carry most of the track momentum
+    if(sc0.impactMomentum().P() < tp.p4().P()*pfMatchThreshold_)
+        return out;
+
+    std::cout << "merged for TP ";
+    for(const auto& sc_i: mergeIdxs.at(0)){
+        out.push_back(simClusters.at(sc_i).key());
+        std::cout << simClusters.at(sc_i).key() << " ";
+    }
+    std::cout << std::endl;
+    return out;
+}
+
+std::vector<SimClusterRefVector> PFTruthParticleProducer::splitCPToTP(const SimClusterRefVector& allCPSimClusters,
+        TrackingParticleRefVector assoTPs, const SimHistoryTool& histtool) const {
+
+    //cross-clean the TP g4 tracks (necessary?)
+    //find highest energy non-common g4 tracks, profit from descending momentum-ordering
+    //if any track is the same then the highest energy ones first
+    std::vector<std::vector<SimTrack> > tpgsts;//needed for ambiguous cases
+    std::vector<SimTrack> allsts;//needs copy as the above are also copies
+    bool ambiguous=false;
+    for(const auto& tp: assoTPs){
+        tpgsts.push_back(tp->g4Tracks());
+        for(const auto& st:tp->g4Tracks()){
+          if (std::find_if(allsts.begin(), allsts.end(), [&st](const SimTrack& x) {
+                return SimHistoryTool::simTrackEqual(x, st);
+              }) == allsts.end()) {
+            allsts.push_back(st);
+          } else {
+            ambiguous = true;
+          }
+        }
+    }
+    if(ambiguous){//more work needed, adapt tpgsts
+        std::cout << "ambiguous tp g4 track matches" << std::endl;
+
+        //clean up tpgsts here
+    }
+
+    //use (cleaned up) tpgsts to assign simclusters
+    //use highest energy/momentum non overlapping g4track as probe
+    std::vector<SimClusterRefVector> out;
+    for(const auto& tpscs: tpgsts){
+        out.push_back(SimClusterRefVector());
+        auto &tpsv = out.at(out.size()-1);
+        if(tpscs.size()<1)
+            continue;
+        const auto& parent = tpscs.at(0);
+        for(const auto& sc: allCPSimClusters){
+            for(const auto& scst: sc->g4Tracks()){//in case it is merged already, but usually only 1
+                if(histtool.inHistory(parent, &scst)){
+                    tpsv.push_back(sc);
+                    break;
+                }
+            }
+        }
+
     }
     return out;
 }
 
-
 // ------------ method called to produce the data  ------------
 void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const edm::EventSetup &iSetup) const {
+
+
+
+ //   throw std::runtime_error("PFTruthParticleProducer: currently not working yet, but skeleton is there");
+
+
+  trackprop_.getEventSetup(iSetup);
+  edm::ESHandle<CaloGeometry> geom;
+  iSetup.get<CaloGeometryRecord>().get(geom);
+  hgcrechittools_.setGeometry(*geom);//OPT
 
   edm::Handle<TrackingParticleCollection> tpCollection;
   iEvent.getByToken(tpCollectionToken_, tpCollection);
@@ -183,166 +286,198 @@ void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const e
   edm::Handle<reco::SimToRecoCollection> tpToTrack;
   iEvent.getByToken(tpToTrackToken_, tpToTrack);
 
+
+  SimHistoryTool histtool(*stCollection, *svCollection);
+  //set up mergers
+
+  HGCalSimClusterMerger neutralSCMerger(*caloRecHitCollection.product(),
+          &hgcrechittools_,&histtool);
+  //configure
+
+  HGCalSimClusterMerger chargedSCMerger(*caloRecHitCollection.product(),
+          &hgcrechittools_,&histtool);
+
+  chargedSCMerger.setCNLayers(20);//go deeper
+  //configure more here FIXME
+
+
+  //index helpers
   std::map<int,int>  trackIdToTrackIdxAsso;
   for(size_t i=0;i<stCollection->size();i++){
       trackIdToTrackIdxAsso[stCollection->at(i).trackId()] = i;
   }
 
-  //unrealistic / ideal PF Truth: create one PFParticle form Geant handover aka CaloParticle
 
-  std::vector<size_t> matchedtptocp;
-  PFTruthParticleCollection idealPFTruth;
+  //match tracking to calo particles
+  std::vector<std::vector<size_t> > cpToTpIdxAsso(cpCollection->size());
+  for(size_t i_cp=0; i_cp < cpCollection->size(); i_cp++){
+      const auto& cp = cpCollection->at(i_cp);
+
+      for(size_t i_tp=0; i_tp< tpCollection->size(); i_tp++){
+
+          const auto& tp = tpCollection->at(i_tp);
+          auto tproot = histtool.getRoot(&tp.g4Tracks().at(0));
+
+          if(tproot->trackId() == cp.g4Tracks().at(0).trackId()
+                  && tproot->eventId() == cp.g4Tracks().at(0).eventId()){
+              cpToTpIdxAsso.at(i_cp).push_back(i_tp);
+          }
+      }
+  }
+
+  //take only CPs with TP
+
+
+  //best TP for each track & <-> one-to-one
+  std::vector<int> tpToTrackIdxAsso(tpCollection->size(),-1);//fill with no asso
+  std::vector<int> trackToTpIdxAsso(trackCollection->size(),-1);
+  for(size_t i=0; i< tpCollection->size(); i++){
+
+
+      TrackingParticleRef tp(tpCollection,i);
+
+      if (tpToTrack->find(tp) != tpToTrack->end()) {
+          auto& trackRefs = (*tpToTrack)[tp];
+          auto& bestTrackRef = trackRefs.at(0).first;
+          double bestQual = trackRefs.at(0).second;
+          //possible quality requirement here
+
+          double relptdiff = (tp->pt() - bestTrackRef->pt())/tp->pt();
+          if((relptdiff>1.5 || relptdiff<0.75) && bestTrackRef->pt()>100)//take all straight tracks
+              continue; //just a test
+
+          tpToTrackIdxAsso.at(i)=  bestTrackRef.key();
+          trackToTpIdxAsso.at(bestTrackRef.key())=i;
+      }
+  }
+
+  //take only CPs with TP with track, final association
+  std::vector<std::vector<size_t> > trackToSCIdxAsso(trackCollection->size());
+  std::vector<bool> scUsed(scCollection->size());
+
+  for(size_t i_cp=0; i_cp < cpCollection->size(); i_cp++){
+
+      TrackingParticleRefVector cptps;
+      std::vector<size_t> trackidx;
+      for(const size_t i_tp: cpToTpIdxAsso.at(i_cp)){//tracking part idxs
+          int i_track = tpToTrackIdxAsso.at(i_tp);
+          if(i_track<0)
+              continue;
+          trackidx.push_back(i_track);
+          cptps.push_back(TrackingParticleRef(tpCollection,i_tp));
+      }
+      auto scgroups = splitCPToTP(cpCollection->at(i_cp).simClusters(), cptps, histtool);
+      //this has the same indexing as tpToTrackIdxAsso
+      for(size_t i_tt=0; i_tt< scgroups.size();i_tt++){
+          int i_track = trackidx.at(i_tt);
+
+          auto matchedsc = matchedSCtoTrackIdxs(scgroups.at(i_tt),*cptps.at(i_tt),
+                  trackCollection->at(i_track),chargedSCMerger);
+          trackToSCIdxAsso.at(i_track)=matchedsc;
+
+          for(const auto msc: matchedsc){
+              scUsed.at(msc)=true;
+          }
+      }
+  }
+
+  //create PF truth from trackingParticles with tracks
+
+
+  auto PFtruth = std::make_unique<PFTruthParticleCollection>() ;
 
   std::vector<int> tpToPFpartIdx(tpCollection->size(), -1);
   std::vector<int> scToPFpartIdx(scCollection->size(), -1);
   std::vector<int> rhToPFpartIdx(caloRecHitCollection->size(), -1);
   std::vector<int> trackToPFpartIdx(trackCollection->size(), -1);
 
-  for(const auto& cp: *cpCollection){
+  //create charged PF truth
+  for (size_t i_t = 0; i_t < trackToSCIdxAsso.size(); i_t++) {
+
+      if(trackToSCIdxAsso.at(i_t).size()<1)
+          continue;//not matched SC, don't create a PF particle from it
+
+      int PFTIdx = PFtruth->size();
+
+      trackToPFpartIdx.at(i_t) = PFTIdx;
+
+      auto tp = tpCollection->at(trackToTpIdxAsso.at(i_t));
 
       TrackingParticleRefVector tprefs;
-      const SimClusterRefVector& screfs = cp.simClusters();
+      SimClusterRefVector screfs;
 
-      bool hasfulltrack=false;
-      //match the tracking particle(s)
-      for(size_t i=0; i< tpCollection->size(); i++){
-          if(std::find(matchedtptocp.begin(),matchedtptocp.end(), i) != matchedtptocp.end())
-              continue; //already matched
+      //make the associations...
+      tprefs.push_back(TrackingParticleRef(tpCollection,trackToTpIdxAsso.at(i_t)));
+      tpToPFpartIdx.at(trackToTpIdxAsso.at(i_t)) = PFTIdx;
 
-          TrackingParticleRef tpref(tpCollection, i);
-          if(tpref->g4Tracks().size()<1)
-              continue;
-
-          if(!tpref->charge())
-              continue; //only charged ones
-
-          // Seems to fail this always
-          //if(tpref->numberOfTrackerLayers() < 5)
-          //    continue; //not reconstrucable: simple approx for now needs to be refined with tracking POG selection on input level
-
-          if(tpref->pt() < 0.5)//throw out very low energy: simple approx...
-              continue;
-
-          //go through whole history
-          auto stp = getRoot(& tpref->g4Tracks().at(0),
-                  *stCollection,*svCollection, trackIdToTrackIdxAsso);
-
-
-          //match
-          //this needs some more logic
-          if(stp->trackId() == cp.g4Tracks().at(0).trackId()
-                  && stp->eventId() == cp.g4Tracks().at(0).eventId()){
-              matchedtptocp.push_back(i);
-              tprefs.push_back(tpref);
-
-              //std::cout << "added track " << tpref->pdgId() << " "<< tpref->momentum() << ", pt " << tpref->pt()<< std::endl;//DEBUG
-          }
-
-          for(const auto g4t: tpref->g4Tracks()){
-              if(g4t.trackId() == cp.g4Tracks().at(0).trackId()
-                      && g4t.eventId() == cp.g4Tracks().at(0).eventId()){
-                  hasfulltrack=true;
-              }
-          }
-
+      for(const auto i_sc: trackToSCIdxAsso.at(i_t)){
+          screfs.push_back(SimClusterRef(scCollection,i_sc));
+          scToPFpartIdx.at(i_sc) = PFTIdx;
       }
 
-      //std::cout << "PF particle with "<< tprefs.size() << " attached tracking particles " <<std::endl;//DEBUG
       PFTruthParticle pftp(tprefs,screfs);
-      pftp.setP4(cp.p4());
-      pftp.setPdgId(cp.pdgId());
-      if(hasfulltrack)
-          pftp.setCharge(cp.charge());
-      else
-          pftp.setCharge(0);
-      int vidx = cp.g4Tracks().at(0).vertIndex();
-      auto vertpos = svCollection->at(vidx).position();
-
-      pftp.setVertex(PFTruthParticle::LorentzVectorF(
-              vertpos.x(),vertpos.y(),vertpos.z(),vertpos.t()));
-
-      idealPFTruth.push_back(pftp);
+      pftp.setCharge(tp.charge());
+      pftp.setPdgId(tp.pdgId());
+      //this needs to be refined
+      //ID etc
+      pftp.setP4(PFTruthParticle::LorentzVectorF(tp.p4().px(), tp.p4().py(), tp.p4().pz(), tp.p4().t()));
+      //pftp.setVertex(tp.vertex());
+      //still missing time, etc
+      PFtruth->push_back(pftp);
   }
 
-  //std::cout << "ideal PF truth built, splitting" << std::endl;//DEBUG
 
 
-  // --- now we have the ideal PF truth, far from realistic.
-  // --- this is where the actual "meat" of the implementation starts
+  //scMerger;
+  //take the remaining SCs and merge them and make PFTruth out of them
+  std::vector<const SimCluster*> tomergehgcsc;
+  std::vector<size_t> orig_indices;
+  for(size_t i_sc=0;i_sc<scCollection->size();i_sc++){
+      if(scUsed.at(i_sc)) continue;
+      tomergehgcsc.push_back(&scCollection->at(i_sc));
+      orig_indices.push_back(i_sc);
+  }
 
-  double softkill_relthreshold = 0.001;//just to avoid ambiguities.
-  //not used currently double hardsplit_deltaR = 0.3;
+  //configure the merger here
 
+  std::vector<std::vector<size_t> > mergeIdxs;
 
-  auto PFtruth = std::make_unique<PFTruthParticleCollection>() ;
+  auto merged = neutralSCMerger.merge(tomergehgcsc,.85,0.3,0.,mergeIdxs);
+  //merged not used for now, needs to  output new collection in the end
+  //but indices can help check basic functions for now
 
-  //apply splitting particle by particle
-  //this is where the physics happens
-  int pfidx = 0;
-  for(const auto & pftp: idealPFTruth){
+  for(size_t i=0;i<mergeIdxs.size();i++){
 
-      //consider the ones without tracking particles // this is not the same as the ones without charge,
-      // because e.g. a very early converting photon would have charge 0, but two tracking particles associated
-      if(! pftp.charge()) {
+      const auto& mscs=mergeIdxs.at(i);
+      const auto& msc = merged.at(i);
+      int PFTIdx = PFtruth->size();
 
-          //size_t pre = PFtruth->size();
+      SimClusterRefVector screfs;
+      TrackingParticleRefVector tprefs;
 
-          for(const auto& sc: pftp.simClusters()){
-              //create PF particle per SimCluster
-              //vertex position will remain the initial CP one (timing)
-              auto npftp = pftp;
-              npftp.clearTrackingParticles();
-              npftp.clearSimClusters();
-              npftp.addSimCluster(sc);
-              //this is now defined to be a neutral PF Particle. Even if the SC happens to be charged
-              npftp.setCharge(0);
-              npftp.setP4(sc->impactMomentum());//that's all we measure
-              npftp.setPdgId(sc->pdgId()); //to be discussed
-              scToPFpartIdx[sc.key()] = PFtruth->size();
-              PFtruth->push_back(npftp);
-          }
-          //std::cout << "Split PF Particle to "<< PFtruth->size()-pre << " neutrals " <<std::endl;//DEBUG
+      for(const auto ii_sc: mscs){
+          size_t i_sc = orig_indices.at(ii_sc);
+          screfs.push_back(SimClusterRef(scCollection, i_sc));
+          scToPFpartIdx.at(i_sc)=PFTIdx;
       }
-      else {
-        //remaining: the ones that have tracking particles associated
 
-
-        //some more cases, like far away brem...
-
-
-        //trim
-        auto trimmed_pfp = pftp;
-        SimClusterRefVector trimmersc;
-        for(auto & sc: trimmed_pfp.simClusters()){
-            if(sc->impactMomentum().E() > trimmed_pfp.p4().E() * softkill_relthreshold){
-                trimmersc.push_back(sc);
-                scToPFpartIdx[sc.key()] = PFtruth->size();
-            }
-        }
-        trimmed_pfp.setSimClusters(trimmersc);
-        //no split
-        PFtruth->push_back(trimmed_pfp);
-        for (auto& tp : trimmed_pfp.trackingParticles()) {
-            tpToPFpartIdx[tp.key()] = pfidx;
-            if (tpToTrack->find(tp) != tpToTrack->end()) {
-                auto& trackRefs = (*tpToTrack)[tp];
-                auto& bestTrackRef = trackRefs.at(0).first;
-                if (bestTrackRef.isNonnull())
-                    trackToPFpartIdx[bestTrackRef.key()] = pfidx;
-            }
-        }
-
-    }
-    pfidx++;
+      PFTruthParticle pftp(tprefs,screfs);
+      pftp.setCharge(0);
+      //ID etc
+      pftp.setPdgId(msc.pdgId());//to be determined in same way as for SCs
+      pftp.setP4(msc.impactMomentum());
+      //still missing time, etc
+      PFtruth->push_back(pftp);
   }
 
+  //assign rechits
   for (size_t i = 0; i <  caloRecHitCollection->size(); i++) {
       HGCRecHitRef rh(caloRecHitCollection, i);
       auto scRef = (*recHitToSC)[rh];
       int scIdx = scRef.isNonnull() ? scRef.key() : -1;
       int pfIdx = scIdx >= 0 ? scToPFpartIdx[scIdx] : -1;
       if (scIdx >= 0)
-      rhToPFpartIdx.at(i) = pfIdx;
+          rhToPFpartIdx.at(i) = pfIdx;
   }
 
   auto pfTruthHand = iEvent.put(std::move(PFtruth));
