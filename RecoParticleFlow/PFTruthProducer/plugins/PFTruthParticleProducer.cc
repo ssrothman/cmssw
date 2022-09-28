@@ -3,7 +3,7 @@
 #include <string>
 
 // user include files
-#include "FWCore/Framework/interface/global/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -82,15 +82,20 @@
 typedef edm::AssociationMap<edm::OneToMany<
     TrackingParticleCollection, SimClusterCollection>> TrackingParticleToSimCluster;
 
-class PFTruthParticleProducer : public edm::global::EDProducer<> {
+class PFTruthParticleProducer : public edm::stream::EDProducer<> {
 public:
   explicit PFTruthParticleProducer(const edm::ParameterSet &);
   ~PFTruthParticleProducer() override;
 
+  void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
+    trackprop_.setupRun(iSetup);
+    auto& geom = iSetup.getData(caloGeoToken_);
+    hgcrechittools_.setGeometry(geom);//OPT
+  }
+
+  void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override;
 
 private:
-
-  void produce(edm::StreamID, edm::Event &, const edm::EventSetup &) const override;
 
   std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
           const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger) const;
@@ -109,8 +114,9 @@ private:
   edm::EDGetTokenT<reco::SimToRecoCollection> tpToTrackToken_;
 
   //fix with proper beginRun
-  mutable HGCalTrackPropagator trackprop_;
-  mutable hgcal::RecHitTools hgcrechittools_;
+  HGCalTrackPropagator trackprop_;
+  edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
+  hgcal::RecHitTools hgcrechittools_;
 
   float pfMatchThreshold_;
 
@@ -125,7 +131,9 @@ PFTruthParticleProducer::PFTruthParticleProducer(const edm::ParameterSet &pset)
       caloRecHitToken_(consumes<HGCRecHitCollection>(pset.getParameter<edm::InputTag>("caloRecHits"))),
       tracksToken_(consumes<edm::View<reco::Track>>(pset.getParameter<edm::InputTag>("tracks"))),
       recHitToSCToken_(consumes<edm::Association<SimClusterCollection> >(pset.getParameter<edm::InputTag>("rechitToSimClusAssoc"))),
-      tpToTrackToken_(consumes<reco::SimToRecoCollection>(pset.getParameter<edm::InputTag>("trackingPartToTrackAssoc")))
+      tpToTrackToken_(consumes<reco::SimToRecoCollection>(pset.getParameter<edm::InputTag>("trackingPartToTrackAssoc"))),
+      trackprop_(consumesCollector()),
+      caloGeoToken_(esConsumes<edm::Transition::BeginRun>())
 {
   produces<PFTruthParticleCollection>();
   produces<edm::Association<PFTruthParticleCollection>>("trackingPartToPFTruth");
@@ -247,17 +255,12 @@ std::vector<SimClusterRefVector> PFTruthParticleProducer::splitCPToTP(const SimC
 }
 
 // ------------ method called to produce the data  ------------
-void PFTruthParticleProducer::produce(edm::StreamID, edm::Event &iEvent, const edm::EventSetup &iSetup) const {
+void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup &iSetup) {
 
 
 
  //   throw std::runtime_error("PFTruthParticleProducer: currently not working yet, but skeleton is there");
 
-
-  trackprop_.getEventSetup(iSetup);
-  edm::ESHandle<CaloGeometry> geom;
-  iSetup.get<CaloGeometryRecord>().get(geom);
-  hgcrechittools_.setGeometry(*geom);//OPT
 
   edm::Handle<TrackingParticleCollection> tpCollection;
   iEvent.getByToken(tpCollectionToken_, tpCollection);
