@@ -1,6 +1,5 @@
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import CandVars,Var
-from DPGAnalysis.HGCalNanoAOD.simClusters_cff import mergedSimClusterTable
 
 caloParticleTable = cms.EDProducer("SimpleCaloParticleFlatTableProducer",
     src = cms.InputTag("mix:MergedCaloTruth"),
@@ -20,23 +19,8 @@ caloParticleTable = cms.EDProducer("SimpleCaloParticleFlatTableProducer",
         nSimHit = Var('numberOfSimHits', 'int', precision=-1, doc='Number of simhits'),
         trackId = Var('g4Tracks().at(0).trackId', 'int', precision=-1, doc='Geant4 track ID of first track'),
         nSimTrack = Var('g4Tracks().size', 'int', precision=-1, doc='Number of associated simtracks'),
+        crossedBoundary = Var('g4Tracks().at(0).crossedBoundary()', 'bool', doc='Crossed the HGCAL boundary')
     )
 )
 
-mergedSCCaloParts = cms.EDProducer("CaloParticleToMergedSimClustersProducer",
-    caloParticles = cms.InputTag("mix:MergedCaloTruth"), 
-    mergedSimClusters = cms.InputTag("hgcSimTruth"),
-    unmergedToMergedSimClusters = cms.InputTag("hgcSimTruth"),
-)
-
-mergedSCToCaloPartTable = cms.EDProducer("SimClusterToCaloParticleIndexTableProducer",
-    cut = mergedSimClusterTable.cut,
-    src = mergedSimClusterTable.src,
-    objName = mergedSimClusterTable.name,
-    branchName = caloParticleTable.name,
-    objMap = cms.InputTag("mergedSCCaloParts"),
-    docString = cms.string("Index of CaloParticle containing MergedSimCluster")
-)
-
 caloParticleTables = cms.Sequence(caloParticleTable)
-caloParticleMergedTables = cms.Sequence(mergedSCCaloParts+mergedSCToCaloPartTable)
