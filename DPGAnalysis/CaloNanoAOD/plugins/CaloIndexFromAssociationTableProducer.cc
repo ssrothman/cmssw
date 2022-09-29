@@ -21,6 +21,8 @@ typedef ObjectIndexFromAssociationTableProducer<SimClusterCollection, CaloPartic
 typedef ObjectIndexFromAssociationTableProducer<SimClusterCollection, SimClusterCollection>
     SimClusterToSimClusterIndexTableProducer;
 
+#include "FWCore/Framework/interface/MakerMacros.h"
+
 DEFINE_FWK_MODULE(SimTrackToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(CaloHitToSimClusterIndexTableProducer);
 DEFINE_FWK_MODULE(SimClusterToCaloParticleIndexTableProducer);
