@@ -6,6 +6,7 @@
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "DataFormats/Common/interface/View.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
 #include "RecoLocalCalo/HGCalRecAlgos/interface/HGCalTrackPropagator.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include <vector>
@@ -15,14 +16,15 @@ public:
   TrackPositionAtHGCALTableProducer(edm::ParameterSet const& params)
       : name_(params.getParameter<std::string>("name")),
         src_(consumes<reco::TrackCollection>(params.getParameter<edm::InputTag>("src"))),
-        cut_(params.getParameter<std::string>("cut"), true) {
+        cut_(params.getParameter<std::string>("cut"), true),
+        trackprop_(consumesCollector()) {
     produces<nanoaod::FlatTable>();
   }
 
   ~TrackPositionAtHGCALTableProducer() override {}
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
-    trackprop_.getEventSetup(iSetup);
+    trackprop_.setupRun(iSetup);
   }
 
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override {

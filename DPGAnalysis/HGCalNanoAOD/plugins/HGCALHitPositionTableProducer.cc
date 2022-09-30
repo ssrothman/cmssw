@@ -4,6 +4,7 @@
 #include "DataFormats/ForwardDetId/interface/HGCSiliconDetId.h"
 
 #include "DataFormats/CaloRecHit/interface/CaloRecHit.h"
+#include "SimDataFormats/CaloHit/interface/PCaloHit.h"
 
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
@@ -12,20 +13,28 @@
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
 
-class HGCALHitPositionTableProducer : public HitPositionTableProducer<edm::View<CaloRecHit>> {
+template <typename T>
+class HGCalHitPositionTableProducer : public HitPositionTableProducer<edm::View<T>> {
 public:
-  HGCALHitPositionTableProducer(edm::ParameterSet const& params)
-      : HitPositionTableProducer(params) {}
-        //caloGeomToken_(esConsumes<CaloGeometry, CaloGeometryRecord>()) {
+  HGCalHitPositionTableProducer(edm::ParameterSet const& params)
+      : HitPositionTableProducer<edm::View<T>>(params), 
+        caloGeoToken_(edm::stream::EDProducer<>::esConsumes<edm::Transition::BeginRun>()) {}
 
-  ~HGCALHitPositionTableProducer() override {}
+  ~HGCalHitPositionTableProducer() override {}
 
-  GlobalPoint positionFromHit(const CaloRecHit& hit) { return positionFromDetId(hit.detid()); }
+  GlobalPoint positionFromHit(const CaloRecHit& hit) { 
+    DetId detId = hit.detid();
+    return positionFromDetId(detId); 
+  }
+
+  GlobalPoint positionFromHit(const PCaloHit& hit) { 
+    DetId detId = hit.id();
+    return positionFromDetId(detId); 
+  }
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
-    // TODO: convert to esConsumes
-    iSetup.get<CaloGeometryRecord>().get(caloGeom_);
-    rhtools_.setGeometry(*caloGeom_);
+    auto& geom = iSetup.getData(caloGeoToken_);
+    rhtools_.setGeometry(geom);
   }
 
   GlobalPoint positionFromDetId(DetId id) {
@@ -33,17 +42,17 @@ public:
     if (det == DetId::HGCalEE || det == DetId::HGCalHSi || det == DetId::HGCalHSc) {
       return rhtools_.getPosition(id);
     } else {
-      throw cms::Exception("HGCALHitPositionTableProducer") << "Unsupported DetId type";
+      throw cms::Exception("HGCalHitPositionTableProducer") << "Unsupported DetId type";
     }
   }
 
 protected:
-  //edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeomToken_;
-  edm::ESHandle<CaloGeometry> caloGeom_;
+  edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
   hgcal::RecHitTools rhtools_;
 };
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-typedef HGCALHitPositionTableProducer HGCALRecHitPositionTableProducer;
-DEFINE_FWK_MODULE(HGCALRecHitPositionTableProducer);
-
+typedef HGCalHitPositionTableProducer<CaloRecHit> HGCalRecHitPositionTableProducer;
+typedef HGCalHitPositionTableProducer<PCaloHit> HGCalSimHitPositionTableProducer;
+DEFINE_FWK_MODULE(HGCalRecHitPositionTableProducer);
+DEFINE_FWK_MODULE(HGCalSimHitPositionTableProducer);

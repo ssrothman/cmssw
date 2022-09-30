@@ -69,6 +69,7 @@ class RecHitToTICLCandidateAssociationProducer : public edm::stream::EDProducer<
 public:
   explicit RecHitToTICLCandidateAssociationProducer(const edm::ParameterSet&);
   ~RecHitToTICLCandidateAssociationProducer() override;
+  void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override;
 
 private:
   void produce(edm::Event&, const edm::EventSetup&) override;
@@ -76,25 +77,28 @@ private:
   edm::EDGetTokenT<reco::CaloClusterCollection> layerClustersToken_;
   edm::EDGetTokenT<TICLCandidateCollection> ticlCandToken_;
   edm::EDGetTokenT<HGCRecHitCollection> recHitToken_;
-  hgcal::RecHitTools recHitTools_;
+  edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
+  hgcal::RecHitTools rhtools_;
 };
 
 RecHitToTICLCandidateAssociationProducer::RecHitToTICLCandidateAssociationProducer(const edm::ParameterSet& pset)
     : layerClustersToken_(consumes<std::vector<reco::CaloCluster>>(pset.getParameter<edm::InputTag>("layerClusters"))),
       ticlCandToken_(consumes<TICLCandidateCollection>(pset.getParameter<edm::InputTag>("ticlCandidates"))),
-      recHitToken_(consumes<HGCRecHitCollection>(pset.getParameter<edm::InputTag>("caloRecHits"))){
+      recHitToken_(consumes<HGCRecHitCollection>(pset.getParameter<edm::InputTag>("caloRecHits"))),
+      caloGeoToken_(edm::stream::EDProducer<>::esConsumes<edm::Transition::BeginRun>()) {
 
     produces<edm::Association<TICLCandidateCollection>>();
 }
 
 RecHitToTICLCandidateAssociationProducer::~RecHitToTICLCandidateAssociationProducer() {}
 
+void RecHitToTICLCandidateAssociationProducer::beginRun(const edm::Run&, const edm::EventSetup& iSetup) {
+  auto& geom = iSetup.getData(caloGeoToken_);
+  rhtools_.setGeometry(geom);
+}
+
 // ------------ method called to produce the data  ------------
 void RecHitToTICLCandidateAssociationProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  edm::ESHandle<CaloGeometry> geom;
-  iSetup.get<CaloGeometryRecord>().get(geom);
-  recHitTools_.setGeometry(*geom);
-
   edm::Handle<TICLCandidateCollection> ticlCands;
   iEvent.getByToken(ticlCandToken_, ticlCands);
 
@@ -136,7 +140,7 @@ void RecHitToTICLCandidateAssociationProducer::produce(edm::Event& iEvent, const
         //calculate hit distances^2
         std::vector<float> distances;
         for (const auto& hwf : hafv) {
-          auto pos = recHitTools_.getPosition(hwf.first);
+          auto pos = rhtools_.getPosition(hwf.first);
           float dist =
               reco::deltaR2(pos.eta(), pos.phi(), trackster->barycenter().eta(), trackster->barycenter().phi());
           distances.push_back(dist);

@@ -25,7 +25,9 @@
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "Geometry/HGCalCommonData/interface/HGCalDDDConstants.h"
-
+#include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
 
 
 
@@ -44,17 +46,23 @@ template<class T>
 class HGCalObjectPropagator{
 public:
     enum zpos{ negZ=0, posZ=1};
-    HGCalObjectPropagator():setup_(false){}
-    HGCalObjectPropagator(const edm::EventSetup &es); //sets up geometry etc.
+    HGCalObjectPropagator() {}
+    HGCalObjectPropagator(edm::ConsumesCollector&& cc) :
+        bFieldToken_(cc.esConsumes<edm::Transition::BeginRun>()),
+        hgcEEToken_(cc.esConsumes<HGCalDDDConstants, IdealGeometryRecord, edm::Transition::BeginRun>(edm::ESInputTag{"", "HGCalEESensitive"})),
+        propagatorToken_(cc.esConsumes<edm::Transition::BeginRun>(edm::ESInputTag("", "PropagatorWithMaterial"))) {}
 
-    void getEventSetup(const edm::EventSetup &es);
+    void setupRun(const edm::EventSetup& iSetup);
 
     ObjectWithPos<T> propagateObject(const T&, int charge=-200)const;
 
 private:
+    edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
+    edm::ESGetToken<HGCalDDDConstants, IdealGeometryRecord> hgcEEToken_;
+    edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorToken_;
     bool setup_;
-    edm::ESHandle<MagneticField> bField_;
-    edm::ESHandle<Propagator> propagator_;
+    const MagneticField* bField_;
+    const Propagator* propagator_;
     std::unique_ptr<GeomDet> frontFaces_[2];
 
     double frontz_,backz_;
@@ -71,24 +79,14 @@ typedef HGCalObjectPropagator<reco::Track> HGCalTrackPropagator ;
 
 
 template<class T>
-HGCalObjectPropagator<T>::HGCalObjectPropagator(const edm::EventSetup &es){
-    getEventSetup(es);
-}
+void HGCalObjectPropagator<T>::setupRun(const edm::EventSetup& iSetup) {
+    bField_ = &iSetup.getData(bFieldToken_);
+    propagator_ = &iSetup.getData(propagatorToken_);
+    const HGCalDDDConstants* hgdc = &iSetup.getData(hgcEEToken_);
 
-template<class T>
-void HGCalObjectPropagator<T>::getEventSetup(const edm::EventSetup &es){
-    //get the propagator
-    es.get<IdealMagneticFieldRecord>().get(bField_);
-    es.get<TrackingComponentsRecord>().get("PropagatorWithMaterial", propagator_);
-
-
-    //create the hgcal inner surface for both z
-    edm::ESHandle<HGCalDDDConstants> hdc;
-    es.get<IdealGeometryRecord>().get("HGCalEESensitive", hdc);
-
-    frontz_ = hdc.product()->waferZ(1, true);
+    frontz_ = hgdc->waferZ(1, true);
     backz_ = - frontz_;
-    auto frontradii = hdc.product()->rangeR(frontz_, true);
+    auto frontradii = hgdc->rangeR(frontz_, true);
 
     frontFaces_[posZ] = std::make_unique < GeomDet
             > (Disk::build(Disk::PositionType(0, 0, frontz_),
@@ -107,10 +105,9 @@ void HGCalObjectPropagator<T>::getEventSetup(const edm::EventSetup &es){
 
 template<class T>
 ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int charge)const{
-    if(!setup_)
-        throw cms::Exception("HGCalTrackPropagator")
-                        << "event setup not loaded";
-
+    // TODO: Check that bfield and geom are defined
+    //if(!setup_)
+    //    throw cms::Exception("HGCalTrackPropagator")
 
     typedef TrajectoryStateOnSurface TSOS;
 
@@ -147,8 +144,6 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
         failed=false;
     }
     else{
-        const MagneticField * field=bField_.product();
-
         GlobalPoint gpoint(point.x(),point.y(),point.z());
         GlobalVector gmomentum(momentum.x(),momentum.y(),momentum.z());
 
@@ -156,9 +151,9 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
             gmomentum *= -1;
 
         TSOS startingState( GlobalTrajectoryParameters(gpoint,
-                gmomentum, charge, field));
+                gmomentum, charge, bField_));
 
-        TSOS propState = (*propagator_).propagate( startingState, frontFaces_[trackz]->surface());
+        TSOS propState = propagator_->propagate( startingState, frontFaces_[trackz]->surface());
 
         if (propState.isValid()){
             auto proppoint = propState.globalPosition();
@@ -198,9 +193,9 @@ inline ObjectWithPos<reco::Track> HGCalObjectPropagator<reco::Track>::propagateO
     if(t.pz()<0) trackz = negZ;
 
 
-    FreeTrajectoryState fts = trajectoryStateTransform::outerFreeState(t, bField_.product());
+    FreeTrajectoryState fts = trajectoryStateTransform::outerFreeState(t, bField_);
 
-    TrajectoryStateOnSurface tsos = (*propagator_).propagate(fts, frontFaces_[trackz]->surface());
+    TrajectoryStateOnSurface tsos = propagator_->propagate(fts, frontFaces_[trackz]->surface());
     if (tsos.isValid())
         return ObjectWithPos<reco::Track>{&t, tsos.globalPosition(), tsos.globalMomentum()};
     return ObjectWithPos<reco::Track>{&t, GlobalPoint(t.vx(), t.vy(),t.vz()),

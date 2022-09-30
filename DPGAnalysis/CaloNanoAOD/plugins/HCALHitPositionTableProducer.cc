@@ -18,16 +18,15 @@
 class HCALHitPositionTableProducer : public HitPositionTableProducer<edm::View<CaloRecHit>> {
 public:
   HCALHitPositionTableProducer(edm::ParameterSet const& params)
-      : HitPositionTableProducer(params) {}
-        //caloGeomToken_(esConsumes<CaloGeometry, CaloGeometryRecord>()) {
+      : HitPositionTableProducer(params),
+        caloGeoToken_(esConsumes<edm::Transition::BeginRun>()) {}
 
   ~HCALHitPositionTableProducer() override {}
 
   GlobalPoint positionFromHit(const CaloRecHit& hit) { return positionFromDetId(hit.detid()); }
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
-    // TODO: check that the geometry exists
-    iSetup.get<CaloGeometryRecord>().get(caloGeom_);
+    caloGeom_ = &iSetup.getData(caloGeoToken_);
   }
 
   GlobalPoint positionFromDetId(DetId detid) {
@@ -44,8 +43,8 @@ public:
   }
 
 protected:
-  //edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeomToken_;
-  edm::ESHandle<CaloGeometry> caloGeom_;
+  edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
+  const CaloGeometry* caloGeom_;
 };
 
 #include "FWCore/Framework/interface/MakerMacros.h"
