@@ -35,6 +35,7 @@ public:
 
     void setCMergeRadiusScale(float cMergeRadiusScale) { cMergeRadiusScale_ = cMergeRadiusScale; }
 
+    //with the current algorithm, this is the only one that matters!
     void setCNLayers(int cNLayers) { cNLayers_ = cNLayers; }
 
     void setCSearchRadius(float cSearchRadius) { cSearchRadius_ = cSearchRadius; }
@@ -49,13 +50,14 @@ public:
     void apply_argsort_in_place( std::vector<T>& vec,
             const std::vector<std::size_t>& p)const;
 
+    bool isHGCal(const SimCluster& cluster)const;
+
   private:
     HGCalSimClusterMerger(){}
 
     double calcCircle(const SimCluster* sc, float& assignedEnsum, float& regionEnSum, float& firsthitradius)const;
     void createHitMap();
     const HGCRecHit* getHit(DetId)const;
-    bool isHGCal(const SimCluster& cluster)const;
 
     //this one could be moved to the rechit tools?
     bool isHGCal(DetId)const;

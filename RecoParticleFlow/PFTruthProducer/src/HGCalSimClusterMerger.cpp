@@ -208,10 +208,10 @@ HGCalSimClusterMerger::HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
     ):rechits_(&rechits),rechittools_(rechittools),histtool_(hist){
         createHitMap();
 
-        cNLayers_=3;
+        cNLayers_=5;
         cSearchRadius_=3.;
         cClusterRadiusScale_=1.2;
-        cMergeRadiusScale_=1.;
+        cMergeRadiusScale_=6.;
         cEContainment_=0.68;
 
 }
@@ -259,6 +259,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 
     //since we're using a gaussian approx here, also total energies need to be adapted
     //N^2 loop, but rather straight forwards, could be binned
+    //not necessary in the last implementation that is hit based
     for(auto& scw : scwappers){
         float otherenergy=0;
         for(const auto& rhscw: scwappers){
@@ -285,7 +286,20 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
     auto start = std::chrono::high_resolution_clock::now();//DEBUG
 
     for(const auto& scw: scwappers){
-        auto hafs = scw.SC()->hits_and_fractions();
+        auto hafs_in = scw.SC()->hits_and_fractions();
+
+        unsigned int minlayer = 100;
+        for(const auto& hf: hafs_in){
+            if(rechittools_->getLayer(hf.first) < minlayer)
+                minlayer = rechittools_->getLayer(hf.first);
+        }
+        //filter the hafs here to include only the first layers
+        std::vector<std::pair<uint32_t,float>> hafs;
+        for(const auto& hf: hafs_in){
+            if(rechittools_->getLayer(hf.first) < cNLayers_ + minlayer)
+                hafs.push_back(hf);
+        }
+
         graph.addVertex( SCVertex(&scw, allhits, hafs) );
     }
 
