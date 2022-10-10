@@ -419,6 +419,10 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
       }
 
       PFTruthParticle pftp(tprefs,screfs);
+
+      std::cout << "calo_xyzt " << pftp.calo_xyzt() << std::endl;
+
+
       pftp.setCharge(tp.charge());
       pftp.setPdgId(tp.pdgId());
       //this needs to be refined

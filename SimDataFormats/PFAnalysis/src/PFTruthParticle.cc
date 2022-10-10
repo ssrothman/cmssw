@@ -48,3 +48,14 @@ void PFTruthParticle::setP4(LorentzVectorF p4) { p4_ = p4; }
 void PFTruthParticle::setVertex(LorentzVectorF vertex) { vertex_ = vertex; }
 
 void PFTruthParticle::addG4Track(const SimTrack& t) { g4Tracks_.push_back(t); }
+
+
+PFTruthParticle::LorentzVectorF PFTruthParticle::calo_xyzt() const {
+    LorentzVectorF pos;
+    double tote=0;
+    for (const auto& sc: simClusters_) {
+        pos += sc->impactPoint() * sc->energy();
+        tote += sc->energy();
+    }
+    return pos / tote;
+}

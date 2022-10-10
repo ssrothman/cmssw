@@ -75,6 +75,9 @@ public:
   /// @brief Vertex XYZT.
   const LorentzVectorF& vertex() const { return vertex_; }
 
+  /// @brief Calorimeter boundary XYZT
+  LorentzVectorF calo_xyzt() const ;
+
   /// @brief spatial momentum vector
   VectorF momentum() const { return p4().Vect(); }
 
