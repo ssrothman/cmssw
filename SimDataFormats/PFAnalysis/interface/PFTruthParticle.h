@@ -78,6 +78,14 @@ public:
   /// @brief Calorimeter boundary XYZT
   LorentzVectorF calo_xyzt() const ;
 
+  float calo_x() const { return calo_xyzt().x(); }
+
+  float calo_y() const { return calo_xyzt().y(); }
+
+  float calo_z() const { return calo_xyzt().z(); }
+
+  float calo_t() const { return calo_xyzt().t(); }
+
   /// @brief spatial momentum vector
   VectorF momentum() const { return p4().Vect(); }
 

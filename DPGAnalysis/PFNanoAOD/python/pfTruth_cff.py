@@ -28,6 +28,11 @@ pfTruthTable = cms.EDProducer("SimplePFTruthParticleFlatTableProducer",
     variables = cms.PSet(CandVars,
         nSimCluster = Var("nSimCluster", 'int', precision=-1, doc='Number of associated SimClusters'),
         nTrackingPart = Var("nTrackingParticle", 'int', precision=-1, doc='Number of associated SimClusters'),
+        calo_x  = Var("calo_x",  float, precision=-1),
+        calo_y  = Var("calo_y",  float, precision=-1),
+        calo_z  = Var("calo_z",  float, precision=-1),
+        calo_t  = Var("calo_t",  float, precision=-1),
+        p = Var("p",  float, precision=-1),
     )
 )
 
