@@ -51,6 +51,7 @@ public:
             const std::vector<std::size_t>& p)const;
 
     bool isHGCal(const SimCluster& cluster)const;
+    float recEnergy(const SimCluster& cluster)const;
 
   private:
     HGCalSimClusterMerger(){}

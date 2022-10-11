@@ -47,6 +47,8 @@ public:
     void addSimCluster(const SimClusterRef sc);
     void addTrackingParticle(const TrackingParticleRef tp);
 
+    void setCaloRecEnergy(const float en){ calo_rec_energy_ = en; }
+
     void clearSimClusters() { simClusters_.clear(); }
     void clearTrackingParticles() { trackingParticles_.clear(); }
     const SimClusterRefVector& simClusters() const { return simClusters_; }
@@ -85,6 +87,8 @@ public:
   float calo_z() const { return calo_xyzt().z(); }
 
   float calo_t() const { return calo_xyzt().t(); }
+
+  float calo_rec_energy() const { return calo_rec_energy_; }
 
   /// @brief spatial momentum vector
   VectorF momentum() const { return p4().Vect(); }
@@ -141,6 +145,7 @@ private:
   /// references to G4 and reco::GenParticle tracks
   int charge_;
   int pdgId_;
+  float calo_rec_energy_;
   LorentzVectorF p4_, vertex_;
   std::vector<SimTrack> g4Tracks_;
   reco::GenParticleRefVector genParticles_;
