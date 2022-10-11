@@ -33,6 +33,7 @@ pfTruthTable = cms.EDProducer("SimplePFTruthParticleFlatTableProducer",
         calo_z  = Var("calo_z",  float, precision=-1),
         calo_t  = Var("calo_t",  float, precision=-1),
         p = Var("p",  float, precision=-1),
+        calo_rec_energy = Var("calo_rec_energy", float, precision=-1)
     )
 )
 

@@ -413,16 +413,18 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
       tprefs.push_back(TrackingParticleRef(tpCollection,trackToTpIdxAsso.at(i_t)));
       tpToPFpartIdx.at(trackToTpIdxAsso.at(i_t)) = PFTIdx;
 
+      float rec_calo_en = 0;
       for(const auto i_sc: trackToSCIdxAsso.at(i_t)){
-          screfs.push_back(SimClusterRef(scCollection,i_sc));
+          SimClusterRef scref(scCollection,i_sc);
+          screfs.push_back(scref);
           scToPFpartIdx.at(i_sc) = PFTIdx;
+          rec_calo_en += chargedSCMerger.recEnergy(*scref);
       }
 
+      std::cout << "charged rec_calo_en " << rec_calo_en << std::endl;
       PFTruthParticle pftp(tprefs,screfs);
 
-      std::cout << "calo_xyzt " << pftp.calo_xyzt() << std::endl;
-
-
+      pftp.setCaloRecEnergy(rec_calo_en);
       pftp.setCharge(tp.charge());
       pftp.setPdgId(tp.pdgId());
       //this needs to be refined
@@ -464,14 +466,19 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
       SimClusterRefVector screfs;
       TrackingParticleRefVector tprefs;
 
+      float rec_calo_en = 0;
       for(const auto ii_sc: mscs){
           size_t i_sc = orig_indices.at(ii_sc);
-          screfs.push_back(SimClusterRef(scCollection, i_sc));
+          SimClusterRef scref(scCollection,i_sc);
+          screfs.push_back(scref);
+          rec_calo_en += neutralSCMerger.recEnergy(*scref);
           scToPFpartIdx.at(i_sc)=PFTIdx;
       }
 
+      std::cout << "neutral rec_calo_en " << rec_calo_en << std::endl;
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setCharge(0);
+      pftp.setCaloRecEnergy(rec_calo_en);
       //ID etc
       pftp.setPdgId(msc.pdgId());//to be determined in same way as for SCs
       pftp.setP4(msc.impactMomentum());

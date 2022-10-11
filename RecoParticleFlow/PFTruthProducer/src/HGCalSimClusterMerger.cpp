@@ -305,7 +305,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 
         std::vector<std::pair<uint32_t,float>> hafs;
         for(const auto& hf: hafs_in){
-            if(rechittools_->getLayer(hf.first) > cNLayers_ )
+            if(rechittools_->getLayer(hf.first) > (size_t)cNLayers_ )
                 continue; //not within layer constraints
 
             auto pos = getHitPosVec(hf.first);
@@ -651,6 +651,16 @@ bool HGCalSimClusterMerger::isHGCal(const SimCluster& cluster)const{
             return true;
     }
     return false;
+}
+
+float HGCalSimClusterMerger::recEnergy(const SimCluster& cluster)const{
+    float en=0;
+    for (const auto& haf : cluster.hits_and_fractions()) {
+        auto hit = getHit(haf.first);
+        if(hit)
+            en += hit->energy() * haf.second;
+    }
+    return en;
 }
 
 bool HGCalSimClusterMerger::isHGCal(DetId id)const{
