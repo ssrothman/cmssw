@@ -1,6 +1,9 @@
 import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import CandVars,Var
 
+boundaryPos = 'g4Tracks().at(0).getPositionAtBoundary()'
+boundaryMom = 'g4Tracks().at(0).getMomentumAtBoundary()'
+
 simClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
     src = cms.InputTag("mix:MergedCaloTruth"),
     cut = cms.string(""),
@@ -22,22 +25,26 @@ simClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
         trackId = Var('g4Tracks().at(0).trackId()', 'int', precision=-1, doc='Geant track id'),
         trackIdAtBoundary = Var('g4Tracks().at(0).getIDAtBoundary()', 'int', precision=-1, doc='Track ID at boundary'),
         crossedBoundary = Var('g4Tracks().at(0).crossedBoundary()', 'bool', doc='Crossed the HGCAL boundary'),
-		impactPoint_x = Var('impactPoint().x()', 'float', precision=14, doc='x position'),
-        impactPoint_y = Var('impactPoint().y()', 'float', precision=14, doc='y position'),
-        impactPoint_z = Var('impactPoint().z()', 'float', precision=14, doc='z position'),
-        impactPoint_t = Var('impactPoint().t()', 'float', precision=14, doc='Impact time'),
-        impactPoint_eta = Var('impactPoint().eta()', 'float', precision=14, doc='eta at boundary'),
-        impactPoint_phi = Var('impactPoint().phi()', 'float', precision=14, doc='phi at boundary'),
-        boundaryPmag = Var('impactMomentum.P()', 'float', precision=14, doc='magnitude of the boundary 3-momentum vector'),
-        boundaryP4 = Var('impactMomentum.mag()', 'float', precision=14, doc='magnitude of four vector'),
-        boundaryEnergy = Var('impactMomentum.energy()', 'float', precision=14, doc='magnitude of four vector'),
-        boundaryEnergyNoMu = Var('impactMomentumNoMu.energy()', 'float', precision=14, doc='magnitude of four vector'),
-        boundaryPt = Var('impactMomentum.pt()', 'float', precision=14, doc='magnitude of four vector'),
-        hasHGCALHit = Var('hasHGCALHit', 'bool', doc='Has at least 1 simHit in HGCAL'),
-        allHitsHGCAL = Var('allHitsHGCAL', 'bool', doc='all simHits are in HGCAL'),
-        onHGCFrontFace = Var('abs(impactPoint().z()) - 322 < 1', 'bool', doc='SimCluster position is consistent with the front of the HGCAL'),
-        isTrainable = Var('numberOfRecHits > 5 && allHitsHGCAL', 'bool', doc='Should be used for training'),
+		impactPoint_x = Var(f'{boundaryPos}.x()', 'float', precision=14, doc='x position'),
+        impactPoint_y = Var(f'{boundaryPos}.y()', 'float', precision=14, doc='y position'),
+        impactPoint_z = Var(f'{boundaryPos}.z()', 'float', precision=14, doc='z position'),
+        impactPoint_t = Var(f'{boundaryPos}.t()', 'float', precision=14, doc='Impact time'),
+        impactPoint_eta = Var(f'{boundaryMom}.eta()', 'float', precision=14, doc='eta at boundary'),
+        impactPoint_phi = Var(f'{boundaryMom}.phi()', 'float', precision=14, doc='phi at boundary'),
+        boundaryPmag = Var(f'{boundaryMom}.P()', 'float', precision=14, doc='magnitude of the boundary 3-momentum vector'),
+        boundaryP4 = Var(f'{boundaryMom}.mag()', 'float', precision=14, doc='magnitude of four vector'),
+        boundaryEnergy = Var(f'{boundaryMom}.energy()', 'float', precision=14, doc='magnitude of four vector'),
+        boundaryPt = Var(f'{boundaryMom}.pt()', 'float', precision=14, doc='magnitude of four vector'),
     )
+)
+
+# pepr-specific modification
+simClusterTable.variables = cms.PSet(simClusterTable.variables,
+    hasHGCALHit = Var('hasHGCALHit', 'bool', doc='Has at least 1 simHit in HGCAL'),
+    allHitsHGCAL = Var('allHitsHGCAL', 'bool', doc='all simHits are in HGCAL'),
+    onHGCFrontFace = Var('abs(impactPoint().z()) - 322 < 1', 'bool', doc='SimCluster position is consistent with the front of the HGCAL'),
+    isTrainable = Var('numberOfRecHits > 5 && allHitsHGCAL', 'bool', doc='Should be used for training'),
+    boundaryEnergyNoMu = Var('impactMomentumNoMu.energy()', 'float', precision=14, doc='magnitude of four vector'),
 )
 
 simClusterToCaloPart = cms.EDProducer("SimClusterToCaloParticleAssociationProducer",

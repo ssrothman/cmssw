@@ -13,7 +13,7 @@
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
-#include "FWCore/Framework/interface/global/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -52,19 +52,26 @@ typedef edm::AssociationMap<edm::OneToManyWithQualityGeneric<
 
 
 
-class SimClusterMerger : public edm::global::EDProducer<> {
+class SimClusterMerger : public edm::stream::EDProducer<> {
     public:
         explicit SimClusterMerger(const edm::ParameterSet&);
         ~SimClusterMerger() {}
 
+        void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
+          auto& geom = iSetup.getData(caloGeoToken_);
+          hgcalRecHitToolInstance_.setGeometry(geom);//OPT
+        }
+
+
     private:
-        void produce(edm::StreamID, edm::Event &, const edm::EventSetup &) const override;
+        void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override;
         mutable hgcal::RecHitTools hgcalRecHitToolInstance_ ;
 
         edm::EDGetTokenT<SimClusterCollection> scCollectionToken_;
         edm::EDGetTokenT<std::vector<SimVertex> > svCollectionToken_;
         edm::EDGetTokenT<std::vector<SimTrack> > stCollectionToken_;
         edm::EDGetTokenT<HGCRecHitCollection> caloRecHitToken_;
+        edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
 
         //merge config
         int cNLayers_;
@@ -84,7 +91,8 @@ SimClusterMerger::SimClusterMerger(const edm::ParameterSet &pset) :
         scCollectionToken_(consumes<SimClusterCollection>(pset.getParameter<edm::InputTag>("simClusters"))),
         svCollectionToken_(consumes<std::vector<SimVertex> >(pset.getParameter<edm::InputTag>("simVertices"))),
         stCollectionToken_(consumes<std::vector<SimTrack> >(pset.getParameter<edm::InputTag>("simTracks"))),
-        caloRecHitToken_(consumes<HGCRecHitCollection>(pset.getParameter<edm::InputTag>("caloRecHits")))
+        caloRecHitToken_(consumes<HGCRecHitCollection>(pset.getParameter<edm::InputTag>("caloRecHits"))),
+        caloGeoToken_(esConsumes<edm::Transition::BeginRun>())
     {
     produces<SimClusterCollection>();
     produces<edm::Association<SimClusterCollection>>();
@@ -104,8 +112,7 @@ SimClusterMerger::SimClusterMerger(const edm::ParameterSet &pset) :
 
     }
 
-
-void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup)const {
+void SimClusterMerger::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
     /*
      *
@@ -113,11 +120,6 @@ void SimClusterMerger::produce(edm::StreamID, edm::Event& iEvent, const edm::Eve
      *
      *
      */
-
-    //set tools
-    edm::ESHandle<CaloGeometry> geom;
-    iSetup.get<CaloGeometryRecord>().get(geom);
-    hgcalRecHitToolInstance_.setGeometry(*geom);
 
     //get collections
     edm::Handle<SimClusterCollection> scCollection;

@@ -8,6 +8,7 @@ from DPGAnalysis.HGCalNanoAOD.hgcSimTracks_cff import *
 from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import *
 from DPGAnalysis.HGCalNanoAOD.hgcRecHitSimAssociations_cff import *
 from DPGAnalysis.CaloNanoAOD.simClusters_cff import *
+from DPGAnalysis.CaloNanoAOD.mergedSimClusters_cff import *
 from DPGAnalysis.CaloNanoAOD.caloParticles_cff import *
 from DPGAnalysis.HGCalNanoAOD.layerClusters_cff import *
 from DPGAnalysis.TrackNanoAOD.trackSimHits_cff import *
@@ -45,6 +46,7 @@ nanoHGCMLRecoSequence = cms.Sequence(
     cms.Sequence(hgcRecHitSimAssociationTask)+
     cms.Sequence(trackTables)+
     trackingParticleTables+
+    mergedSimClusterTables+
     pfCandTable+pfTruth+
     pfTICLCandTable
 )
