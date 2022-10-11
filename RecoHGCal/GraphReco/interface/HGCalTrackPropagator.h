@@ -84,8 +84,8 @@ void HGCalObjectPropagator<T>::setupRun(const edm::EventSetup& iSetup) {
     propagator_ = &iSetup.getData(propagatorToken_);
     const HGCalDDDConstants* hgdc = &iSetup.getData(hgcEEToken_);
 
-    //FIXME after geometry change, this is not the first layer anymore
-    frontz_ = 293.5; //hgdc->waferZ(1, true);
+    //This needs to be adapted if the boundary is ever moved
+    frontz_ = hgdc->waferZ(1, true);
     backz_ = - frontz_;
     auto frontradii = hgdc->rangeR(frontz_, true);
 
