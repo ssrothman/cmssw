@@ -208,10 +208,13 @@ HGCalSimClusterMerger::HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
     ):rechits_(&rechits),rechittools_(rechittools),histtool_(hist){
         createHitMap();
 
-        cNLayers_=3;
-        cSearchRadius_=3.;
+        //whatever is smaller
+        cNLayers_=5;
+        cSearchRadius_=10.;
+
+        //these have no meaning anymore
         cClusterRadiusScale_=1.2;
-        cMergeRadiusScale_=1.;
+        cMergeRadiusScale_=6.;
         cEContainment_=0.68;
 
 }
@@ -237,6 +240,10 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 
     size_t idx=0;
     for(const auto& sc: scs){
+
+        // all this is just for debugging.
+        // in the end the only thing needed is to wrap each SC
+
         float e=0;//fraction weighted energy in hits
         float etot=0;
         // for isolated shower, both are (almost) the same
@@ -249,6 +256,7 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
             etot=1e-6;
         }
 
+        // here for the hit merger only sc and idx are used, the other stuff is for other merging algos
         scwappers.push_back(SCWrapper(sc,e,etot,firsthitr,idx));
 
         debugradii.push_back(r);
@@ -259,6 +267,8 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 
     //since we're using a gaussian approx here, also total energies need to be adapted
     //N^2 loop, but rather straight forwards, could be binned
+    //not necessary ! in the last implementation that is hit based
+    //just for comparison with other methods
     for(auto& scw : scwappers){
         float otherenergy=0;
         for(const auto& rhscw: scwappers){
@@ -284,8 +294,28 @@ std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const Sim
 
     auto start = std::chrono::high_resolution_clock::now();//DEBUG
 
+    // restrict the hits that are actually used for the merging
     for(const auto& scw: scwappers){
-        auto hafs = scw.SC()->hits_and_fractions();
+        auto hafs_in = scw.SC()->hits_and_fractions();
+
+        //filter the hafs here to include only the first layers and/or closest hits to boundary
+
+        auto bpos4v= scw.SC()->g4Tracks().at(0).getPositionAtBoundary();
+        LocalVector boundaryPos(bpos4v.x(),bpos4v.y(),bpos4v.z());
+
+        std::vector<std::pair<uint32_t,float>> hafs;
+        for(const auto& hf: hafs_in){
+            if(rechittools_->getLayer(hf.first) > cNLayers_ )
+                continue; //not within layer constraints
+
+            auto pos = getHitPosVec(hf.first);
+            float dist = (pos-boundaryPos).mag();
+            if(dist > cSearchRadius_)
+                continue;
+
+            hafs.push_back(hf);
+        }
+
         graph.addVertex( SCVertex(&scw, allhits, hafs) );
     }
 

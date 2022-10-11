@@ -300,7 +300,7 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
   HGCalSimClusterMerger chargedSCMerger(*caloRecHitCollection.product(),
           &hgcrechittools_,&histtool);
 
-  chargedSCMerger.setCNLayers(20);//go deeper
+  chargedSCMerger.setCNLayers(10);//go deeper, also that shouldn't do anything..
   //configure more here FIXME
 
 
@@ -419,6 +419,10 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
       }
 
       PFTruthParticle pftp(tprefs,screfs);
+
+      std::cout << "calo_xyzt " << pftp.calo_xyzt() << std::endl;
+
+
       pftp.setCharge(tp.charge());
       pftp.setPdgId(tp.pdgId());
       //this needs to be refined
@@ -437,6 +441,8 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
   std::vector<size_t> orig_indices;
   for(size_t i_sc=0;i_sc<scCollection->size();i_sc++){
       if(scUsed.at(i_sc)) continue;
+      if(!neutralSCMerger.isHGCal(scCollection->at(i_sc)))
+          continue;
       tomergehgcsc.push_back(&scCollection->at(i_sc));
       orig_indices.push_back(i_sc);
   }
