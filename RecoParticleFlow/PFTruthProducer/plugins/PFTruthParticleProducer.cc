@@ -32,6 +32,7 @@
 
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include <set>
+#include "DataFormats/Math/interface/deltaR.h"
 
 //this is now just for HGCAL
 #include "RecoHGCal/GraphReco/interface/HGCalTrackPropagator.h"
@@ -118,7 +119,7 @@ private:
   edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
   hgcal::RecHitTools hgcrechittools_;
 
-  float pfMatchThreshold_;
+  float pfMatchThreshold_,pfMatchDRThreshold_;
 
 };
 
@@ -141,7 +142,8 @@ PFTruthParticleProducer::PFTruthParticleProducer(const edm::ParameterSet &pset)
   produces<edm::Association<PFTruthParticleCollection>>("caloRecHitToPFTruth");
   produces<edm::Association<PFTruthParticleCollection>>("trackToPFTruth");
 
-  pfMatchThreshold_=0.95;//to be configured
+  pfMatchThreshold_=0.9;//to be configured
+  pfMatchDRThreshold_=0.04;
 }
 
 PFTruthParticleProducer::~PFTruthParticleProducer() {}
@@ -173,6 +175,28 @@ std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClust
         return out;
 
     //check which G4 track is most likely to be representing the reco track
+    auto proptrack = trackprop_.propagateObject(track,track.charge());
+
+    //proptrack.momentum;
+    //proptrack.pos;
+
+    //now do a simple matching at front face (truth assisted since the SC refs are anyway by primary)
+    double totmom = 0 ;
+    for(const auto& scref: simClusters){
+        auto bpos4v= scref->g4Tracks().at(0).getPositionAtBoundary();
+        LocalVector boundaryPos(bpos4v.x(),bpos4v.y(),bpos4v.z());
+
+        double drsq = reco::deltaR2(boundaryPos.eta(), boundaryPos.phi(), proptrack.pos.eta(), proptrack.pos.phi());
+        if(drsq > pfMatchDRThreshold_*pfMatchDRThreshold_)
+            continue;
+        out.push_back(scref.key());
+        totmom += scref->impactMomentum().P();
+    }
+    if(totmom < tp.p4().P()*pfMatchThreshold_)
+        return std::vector<size_t>(); //discard
+    return out;
+
+    //old ----------------------------------------------------------------------
 
     std::vector<std::vector<size_t> > mergeIdxs;
     std::vector<const SimCluster* > tomerge;
