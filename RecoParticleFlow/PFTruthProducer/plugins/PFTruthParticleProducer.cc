@@ -143,7 +143,7 @@ PFTruthParticleProducer::PFTruthParticleProducer(const edm::ParameterSet &pset)
   produces<edm::Association<PFTruthParticleCollection>>("trackToPFTruth");
 
   pfMatchThreshold_=0.9;//to be configured
-  pfMatchDRThreshold_=0.04;
+  pfMatchDRThreshold_=0.03;
 }
 
 PFTruthParticleProducer::~PFTruthParticleProducer() {}
@@ -181,20 +181,34 @@ std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClust
     //proptrack.pos;
 
     //now do a simple matching at front face (truth assisted since the SC refs are anyway by primary)
-    double totmom = 0 ;
-    for(const auto& scref: simClusters){
-        auto bpos4v= scref->g4Tracks().at(0).getPositionAtBoundary();
-        LocalVector boundaryPos(bpos4v.x(),bpos4v.y(),bpos4v.z());
+    double totmom = 0;
+    for (const auto& scref : simClusters) {
+      auto bpos4v = scref->g4Tracks().at(0).getPositionAtBoundary();
+      LocalVector boundaryPos(bpos4v.x(), bpos4v.y(), bpos4v.z());
 
-        double drsq = reco::deltaR2(boundaryPos.eta(), boundaryPos.phi(), proptrack.pos.eta(), proptrack.pos.phi());
-        if(drsq > pfMatchDRThreshold_*pfMatchDRThreshold_)
-            continue;
-        out.push_back(scref.key());
-        totmom += scref->impactMomentum().P();
+      double drsq = reco::deltaR2(boundaryPos.eta(), boundaryPos.phi(), proptrack.pos.eta(), proptrack.pos.phi());
+      double drcut = pfMatchDRThreshold_;
+      if (track.pt() < 100.) {
+        drcut = (100. - track.pt()) * 0.03 / 100. + drcut;
+      }
+      drcut *= drcut;
+
+      if (drsq > drcut)
+        continue;
+      out.push_back(scref.key());
+      totmom += scref->impactMomentum().P();
     }
-    if(totmom < tp.p4().P()*pfMatchThreshold_)
-        return std::vector<size_t>(); //discard
+    double effective_match_threshold = 1. - pfMatchThreshold_;
+
+    //open up for low energy
+    effective_match_threshold += .3/sqrt(tp.p4().P());
+    if(effective_match_threshold>0.5)
+        effective_match_threshold=0.5;
+
+    if (fabs(totmom - tp.p4().P()) / tp.p4().P() > effective_match_threshold)
+      return std::vector<size_t>();  //discard
     return out;
+
 
     //old ----------------------------------------------------------------------
 
