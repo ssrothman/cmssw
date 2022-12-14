@@ -14,21 +14,10 @@
 
 class SimClusterMergeWrapper{
 public:
-    SimClusterMergeWrapper(const SimCluster* sc,
-            float e, float etot, float r,size_t idx):sc_(sc),r_(r), e_(e), etot_(etot),idx_(idx){
+    SimClusterMergeWrapper(const SimCluster* sc,size_t idx):sc_(sc), etot_(0), idx_(idx){
         pos_ = calcBoundaryPos(sc);
     };
 
-    // TBI
-    inline float gaus(const math::XYZTLorentzVectorF& rhs)const{
-        float distsq = LVDistSq(pos_,rhs);
-        return e_ * exp(-distsq/(2.*r_*r_));
-    }
-
-    //for validation mostly
-    inline float gaus(float x, float y)const{
-        return gaus(math::XYZTLorentzVectorF(x,y,pos_.z(),0));
-    }
 
     const math::XYZTLorentzVectorF& pos()const{return pos_;}
     float x()const{return pos_.x();}
@@ -37,8 +26,6 @@ public:
 
     const SimCluster* SC()const{return sc_;}
 
-    const float& r()const{return r_;}
-    const float& e()const{return e_;}
     const float& etot()const{return etot_;}
     const size_t& idx()const{return idx_;}
 
@@ -59,75 +46,11 @@ private:
 
     const SimCluster * sc_;
     //additional information for merging
-    float r_,e_,etot_;
+    float etot_;
     size_t idx_;
     math::XYZTLorentzVectorF pos_;//cached for simplicity
 };
 
-
-
-class SCGausMergeVertex: public MergeVertex<SimClusterMergeWrapper>{
-public:
-
-    SCGausMergeVertex(const SimClusterMergeWrapper* t,
-            float isHighEfracThreshold, float connectThreshold);
-
-    bool shouldConnect(const SCGausMergeVertex* rhs)const;
-
-    void updateIsLow();
-
-    float energy(const math::XYZTLorentzVectorF& pos)const;
-    float energy(float x, float y)const;
-
-    inline float z()const{
-        if(valid())
-            return objects().at(0)->z();//DEBUG
-        return 0;
-    }
-
-    float calcScore(const SCGausMergeVertex* rhs)const;
-
-protected:
-    float isHighEfracThreshold_;
-    float connectThreshold_;
-
-};
-
-
-
-class OldRadiusMergeVertex: public MergeVertex<SimClusterMergeWrapper>{
-public:
-    OldRadiusMergeVertex(const SimClusterMergeWrapper* t,
-            float isHighEfracThreshold, float connectThreshold):MergeVertex<SimClusterMergeWrapper>(t),connectThreshold_(connectThreshold){
-        updateIsLow();
-    }
-
-    void updateIsLow(){
-        isLow_ = true;
-    }
-    float energy(const math::XYZTLorentzVectorF& pos)const;
-    float energy(float x, float y)const;
-
-    float calcScore(const OldRadiusMergeVertex* rhs)const;
-
-    bool shouldConnect(const OldRadiusMergeVertex* rhs)const;
-
-private:
-    float connectThreshold_;
-};
-
-class RadiusMergeVertex: public SCGausMergeVertex{
-public:
-    RadiusMergeVertex(const SimClusterMergeWrapper* t,
-            float isHighEfracThreshold, float connectThreshold):SCGausMergeVertex(t,isHighEfracThreshold,connectThreshold){
-        updateIsLow();
-    }
-
-    float calcScore(const RadiusMergeVertex* rhs)const;
-
-    bool shouldConnect(const RadiusMergeVertex* rhs)const;
-
-};
 
 
 class HitMergeVertex: public MergeVertex<SimClusterMergeWrapper>{

@@ -75,14 +75,6 @@ class SimClusterMerger : public edm::stream::EDProducer<> {
 
         //merge config
         int cNLayers_;
-        float cEContainment_;
-        float cSearchRadius_;
-        float cClusterRadiusScale_;
-        float cMergeRadiusScale_;
-
-        float cMergeThreshold_;
-
-        float cSmear_;
         float cIsHighEfracThreshold_;
         float cConnectThreshold_;
     };
@@ -100,13 +92,6 @@ SimClusterMerger::SimClusterMerger(const edm::ParameterSet &pset) :
 
     //move to initialisers
     cNLayers_ = pset.getParameter<int32_t> ( "useNLayers" );
-    cSearchRadius_ = pset.getParameter<double> ( "searchRadiusScale" );
-    cClusterRadiusScale_ = pset.getParameter<double> ( "clusterRadiusScale" );
-    cMergeRadiusScale_ = pset.getParameter<double> ( "mergeRadiusScale" );
-    cEContainment_ = pset.getParameter<double> ( "energyContainment" );
-    cMergeThreshold_ = pset.getParameter<double> ( "relOverlapDistance" );
-
-    cSmear_ = pset.getParameter<double> ( "smear" );
     cIsHighEfracThreshold_ = pset.getParameter<double> ( "highEfracThreshold" );
     cConnectThreshold_ = pset.getParameter<double> ( "connectThreshold" );
 
@@ -140,11 +125,10 @@ void SimClusterMerger::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     HGCalSimClusterMerger merger(*caloRecHitCollection.product(),
             &hgcalRecHitToolInstance_, &histtool);
 
-    merger.setCClusterRadiusScale(cClusterRadiusScale_);
-    merger.setCEContainment(cEContainment_);
-    merger.setCMergeRadiusScale(cMergeRadiusScale_);
+
     merger.setCNLayers(cNLayers_);
-    merger.setCSearchRadius(cSearchRadius_);
+    merger.setHighEfracThreshold(cIsHighEfracThreshold_);
+    merger.setConnectThreshold(cConnectThreshold_);
 
     std::vector<const SimCluster*> tobemerged;
     for(size_t i = 0; i < scCollection->size(); i++)
@@ -153,7 +137,7 @@ void SimClusterMerger::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     //cMergeThreshold_
     //FIXME remove hard coded
     std::vector<std::vector<size_t> > idxs; //// <--- @Shah Rukh: that's the one to check if something is merged
-    auto mergedSC = merger.merge(tobemerged, cIsHighEfracThreshold_, cConnectThreshold_, cSmear_, idxs,true); //now idxs is filled
+    auto mergedSC = merger.merge(tobemerged, idxs); //now idxs is filled
 
     std::cout << "SCmerger initial: " << scCollection->size() << " merged: " << idxs.size() << std::endl;//DEBUG
     size_t largestgroup=0;

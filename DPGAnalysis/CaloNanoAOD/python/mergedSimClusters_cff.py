@@ -5,18 +5,13 @@ from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import *
 
 hgcSimTruth = cms.EDProducer("SimClusterMerger",
                              
-    useNLayers = cms.int32(2),
-    searchRadiusScale = cms.double(2.),
-    clusterRadiusScale = cms.double(1.),
+    ## only these three actually matter atm
     
-    mergeRadiusScale = cms.double(7.),#13 is about 10 layers in CE
-    energyContainment = cms.double(1.1),
+    useNLayers = cms.int32(10),
+    highEfracThreshold = cms.double(0.99), 
+    connectThreshold = cms.double(.05),
     
-    smear = cms.double(-0.0),
-    highEfracThreshold = cms.double(0.85), 
-    connectThreshold = cms.double(.3),
-    
-    relOverlapDistance = cms.double(.9),# dist/(merged radius + sensor radius)
+    ###
     
     simClusters= cms.InputTag("mix:MergedCaloTruth"),
     simVertices= cms.InputTag("g4SimHits"),
