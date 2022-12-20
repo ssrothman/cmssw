@@ -8,11 +8,11 @@ hgcSimTruth = cms.EDProducer("SimClusterMerger",
     ## only these three actually matter atm
     
     useNLayers = cms.int32(10),
-    highEfracThreshold = cms.double(0.99), 
-    connectThreshold = cms.double(.05),
+    highEfracThreshold = cms.double(0.95), 
+    connectThreshold = cms.double(.1),
     
     ###
-    
+
     simClusters= cms.InputTag("mix:MergedCaloTruth"),
     simVertices= cms.InputTag("g4SimHits"),
     simTracks= cms.InputTag("g4SimHits"),
