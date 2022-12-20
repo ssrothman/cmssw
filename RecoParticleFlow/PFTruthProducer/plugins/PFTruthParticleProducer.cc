@@ -429,7 +429,12 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
       orig_indices.push_back(i_sc);
   }
 
-  //configure the merger here
+  // reset muon momenta of muons without tracks to their reconstructed energies
+  // the indices are not affected by this
+  auto sc_tobemerged = neutralSCMerger.downScaleMuons(tomergehgcsc);
+  tomergehgcsc.clear();
+  for(const auto & sc: sc_tobemerged)
+      tomergehgcsc.push_back(&sc);
 
   std::vector<std::vector<size_t> > mergeIdxs;
 

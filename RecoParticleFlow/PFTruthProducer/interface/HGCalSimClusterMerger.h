@@ -23,6 +23,7 @@ public:
            const hgcal::RecHitTools * rechittools,
            const SimHistoryTool * hist);
 
+    std::vector<SimCluster> downScaleMuons(const std::vector<const SimCluster*>& scs) const;
 
     std::vector<SimCluster> merge(const std::vector<const SimCluster*>& scs,
             std::vector<std::vector<size_t> >& idxs) const;
@@ -31,6 +32,8 @@ public:
     void setCNLayers(int cNLayers) { cNLayers_ = cNLayers; }
     void setHighEfracThreshold(float thresh) { isHighEfracThreshold_ = thresh; }
     void setConnectThreshold(float thresh) { connectThreshold_ = thresh; }
+
+
 
     //helper
     //credit to Thomas

@@ -16,6 +16,31 @@ HGCalSimClusterMerger::HGCalSimClusterMerger(const HGCRecHitCollection& rechits,
         connectThreshold_ = 0.3;
 }
 
+std::vector<SimCluster> HGCalSimClusterMerger::downScaleMuons(const std::vector<const SimCluster*>& scs) const{
+
+    std::vector<SimCluster> out;
+    for(const auto& sc: scs){
+        if(abs(sc->pdgId()) == 13 && isHGCal(*sc)){
+            auto sc2 = *sc;
+            float recenergy = recEnergy(sc2);
+            auto sc2mom = sc2.impactMomentum();
+            float momMag = sc2mom.P();
+            sc2.setImpactMomentum(math::XYZTLorentzVectorF(
+                    sc2mom.x() / momMag * recenergy,
+                    sc2mom.y() / momMag * recenergy,
+                    sc2mom.z() / momMag * recenergy,
+                    sc2mom.t()
+            ));
+            out.push_back(sc2);
+        }
+        else{
+            out.push_back(*sc);
+        }
+    }
+    return out;
+}
+
+
 std::vector<SimCluster> HGCalSimClusterMerger::merge(const std::vector<const SimCluster*>& scs,
         std::vector<std::vector<size_t> >& idxs) const{
 

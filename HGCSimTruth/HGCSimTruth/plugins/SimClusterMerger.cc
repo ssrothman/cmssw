@@ -134,6 +134,12 @@ void SimClusterMerger::produce(edm::Event& iEvent, const edm::EventSetup& iSetup
     for(size_t i = 0; i < scCollection->size(); i++)
         tobemerged.push_back(&scCollection->at(i));
 
+    //reduce muon impact momenta
+    auto sc_tobemerged = merger.downScaleMuons(tobemerged);
+    tobemerged.clear();
+    for(size_t i = 0; i < scCollection->size(); i++)
+        tobemerged.push_back(&sc_tobemerged.at(i));
+
     //cMergeThreshold_
     //FIXME remove hard coded
     std::vector<std::vector<size_t> > idxs; //// <--- @Shah Rukh: that's the one to check if something is merged
