@@ -70,7 +70,7 @@ public:
 
   // Setters for G4 and reco::GenParticle,2
   void addGenParticle(const reco::GenParticleRef &ref) { genParticles_.push_back(ref); }
-  void addG4Track(const SimTrack &t) { g4Tracks_.push_back(t); }
+  void addG4Track(const SimTrack &t) ;
   /// iterators
   genp_iterator genParticle_begin() const { return genParticles_.begin(); }
   genp_iterator genParticle_end() const { return genParticles_.end(); }
