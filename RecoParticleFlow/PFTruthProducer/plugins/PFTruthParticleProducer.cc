@@ -460,7 +460,7 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
           scToPFpartIdx.at(i_sc)=PFTIdx;
       }
 
-      std::cout << "neutral rec_calo_en " << rec_calo_en << std::endl;
+      //std::cout << "neutral rec_calo_en " << rec_calo_en << std::endl;
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setCharge(0);
       pftp.setCaloRecEnergy(rec_calo_en);

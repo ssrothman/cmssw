@@ -13,7 +13,7 @@
 #include "HepMC/GenEvent.h"
 #include "HepPDT/ParticleDataTable.hh"
 
-#include "RecoHGCal/GraphReco/interface/HGCalParticlePropagator.h"
+#include "RecoHGCal/GraphReco/interface/HGCalTrackPropagator.h"
 
 
 namespace edm {
@@ -60,14 +60,8 @@ namespace edm {
     // debug flag
     bool debug_;
 
-    // pointer to the current event
-    HepMC::GenEvent* genEvent_;
 
-    // pdg table
-    ESHandle<HepPDT::ParticleDataTable> pdgTable_;
 
-    //propagator
-    HGCalParticlePropagator prop_;
 
     //smear vertex
     double timeSmear_;
@@ -75,6 +69,14 @@ namespace edm {
     //smear momentum direction a bit, to have a less stringent BS constraint
     double momSmear_;
     double minDistDR_;
+
+    // pdg table
+    const ESGetToken<HepPDT::ParticleDataTable, edm::DefaultRecord> pdgTableToken_;
+    ESHandle<HepPDT::ParticleDataTable> pdgTable_;
+    // pointer to the current event
+    HepMC::GenEvent* genEvent_;
+    //propagator
+    HGCalObjectPropagator<int> prop_; //just dummy template argument - not used
 
   };
 

@@ -57,8 +57,10 @@ public:
       if (rhtools_.isSilicon(id)) {
         return rhtools_.getRadiusToSide(id);
       } else if (rhtools_.isScintillator(id)) {
-        auto detadphi = rhtools_.getScintDEtaDPhi(id);
-        float dphi = detadphi.second;  //same in both
+          //return r * sin(dphi) / 2.;
+       // auto detadphi = rhtools_.getScintDEtaDPhi(id);
+       // float dphi = detadphi.second;  //same in both
+        float dphi = 0.0211809f; //DEBUG FIXME; the geometry access segfaults for some hits probably close to side
         auto pos = rhtools_.getPosition(id);
         float r = pos.transverse();
         return r * sin(dphi) / 2.;  //this is anyway approximate

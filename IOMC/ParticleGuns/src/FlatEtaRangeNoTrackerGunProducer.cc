@@ -61,10 +61,12 @@ edm::FlatEtaRangeNoTrackerGunProducer::FlatEtaRangeNoTrackerGunProducer(const ed
       phiMin_(params.getParameter<double>("phiMin")),
       phiMax_(params.getParameter<double>("phiMax")),
       debug_(params.getUntrackedParameter<bool>("debug")),
-      genEvent_(nullptr),
       timeSmear_(params.getParameter<double>("timeSmearInPs")*1e-12),
       momSmear_(params.getParameter<double>("momSmear")),
-      minDistDR_(params.getParameter<double>("minDistDR")){
+      minDistDR_(params.getParameter<double>("minDistDR")),
+      pdgTableToken_(esConsumes<Transition::BeginRun>()),
+      genEvent_(nullptr),
+      prop_(consumesCollector()){
   produces<edm::HepMCProduct>("unsmeared");
   produces<GenEventInfoProduct>();
   produces<GenRunInfoProduct, edm::Transition::EndRun>();
@@ -73,8 +75,8 @@ edm::FlatEtaRangeNoTrackerGunProducer::FlatEtaRangeNoTrackerGunProducer(const ed
 edm::FlatEtaRangeNoTrackerGunProducer::~FlatEtaRangeNoTrackerGunProducer() {}
 
 void edm::FlatEtaRangeNoTrackerGunProducer::beginRun(const edm::Run& run, const edm::EventSetup& setup) {
-  setup.getData(pdgTable_);
-  prop_.setEventSetup(setup);
+  pdgTable_ = setup.getHandle(pdgTableToken_);
+  prop_.setupRun(setup);
 }
 
 void edm::FlatEtaRangeNoTrackerGunProducer::endRun(const edm::Run& run, const edm::EventSetup& setup) {}
@@ -143,13 +145,11 @@ void edm::FlatEtaRangeNoTrackerGunProducer::produce(edm::Event& event, const edm
         if(debug_)
             LogDebug("FlatEtaRangeNoTrackerGunProducer") << " : Initial vertex position " << vertexPos << std::endl;
         //propagate
-        prop_.propagate(vertexPos,momentum,(pData->charge() > 0) ? 1 : ((pData->charge() < 0) ? -1 : 0));
+        prop_.propagateVectors(vertexPos,momentum,(pData->charge() > 0) ? 1 : ((pData->charge() < 0) ? -1 : 0));
 
-        //just move a tad (1mm) towards beamspot
-        if(vertexPos.z()>0)
-            vertexPos.SetXYZT(vertexPos.x(),vertexPos.y(),vertexPos.z()-0.1,vertexPos.t());
-        else
-            vertexPos.SetXYZT(vertexPos.x(),vertexPos.y(),vertexPos.z()+0.1,vertexPos.t());
+        if(debug_)
+            std::cout << "FlatEtaRangeNoTrackerGunProducer" << " : final vertex position " << vertexPos << std::endl;
+
 
         if(minDistDR_>0){
             bool next=false;

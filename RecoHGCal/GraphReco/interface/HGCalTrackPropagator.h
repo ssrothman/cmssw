@@ -55,6 +55,8 @@ public:
     void setupRun(const edm::EventSetup& iSetup);
 
     ObjectWithPos<T> propagateObject(const T&, int charge=-200)const;
+    ObjectWithPos<T> propagateVectors( math::XYZTLorentzVectorF& point,
+             math::XYZTLorentzVectorF& momentum, int charge=-200, const T* obj = 0)const;
 
 private:
     edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> bFieldToken_;
@@ -105,22 +107,14 @@ void HGCalObjectPropagator<T>::setupRun(const edm::EventSetup& iSetup) {
 }
 
 template<class T>
-ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int charge)const{
-    // TODO: Check that bfield and geom are defined
-    //if(!setup_)
-    //    throw cms::Exception("HGCalTrackPropagator")
+ObjectWithPos<T> HGCalObjectPropagator<T>::propagateVectors( math::XYZTLorentzVectorF& point,
+         math::XYZTLorentzVectorF& momentum, int charge, const T* obj)const{
 
     typedef TrajectoryStateOnSurface TSOS;
-
-    math::XYZTLorentzVectorF point(part.vertex().x(),part.vertex().y(),part.vertex().z(),part.vertex().t());
-    math::XYZTLorentzVectorF momentum(part.momentum().x(),part.momentum().y(),part.momentum().z(),part.momentum().T());
-
 
     zpos trackz = posZ;
     if(momentum.z()<0) trackz = negZ;
     const double caloz = trackz == posZ ? frontz_ : backz_;
-
-    bool failed=true;
 
 
     const double c = 2.99792458e10; //cm/s
@@ -142,7 +136,6 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
                 normmom.z()+point.z(),
                 timeprop+point.T());
 
-        failed=false;
     }
     else{
         GlobalPoint gpoint(point.x(),point.y(),point.z());
@@ -171,7 +164,6 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
                     propmomentum.z(),
                     momentum.T());
 
-            failed=false;
         }
     }
     /*
@@ -180,9 +172,17 @@ ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& part, int ch
     const GlobalVector momentum;//momentum at position
      */
 
-    return ObjectWithPos<T>{&part, GlobalPoint(point.x(),point.y(),point.z()),
+    return ObjectWithPos<T>{obj, GlobalPoint(point.x(),point.y(),point.z()),
         GlobalVector(momentum.x(),momentum.y(),momentum.z())};
 
+}
+template<class T>
+ObjectWithPos<T> HGCalObjectPropagator<T>::propagateObject(const T& o, int charge)const{
+
+    math::XYZTLorentzVectorF point(o.vertex.x(), o.vertex().y(),o.vertex.z(),o.vertex().t());
+    math::XYZTLorentzVectorF mom(o.p4().x(), o.p4().y(),o.p4().z(),o.p4().t());
+
+    return propagateVectors(point, mom, charge, &o);
 }
 
 template<>

@@ -3,6 +3,12 @@ from PhysicsTools.NanoAOD.common_cff import CandVars,Var
 from DPGAnalysis.CaloNanoAOD.simClusters_cff import *
 from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import *
 
+
+closeBySimClusters = cms.EDProducer("CPtoSimClusters",
+                                    caloParticles = cms.InputTag("mix:MergedCaloTruth"),
+                                    simVertices = cms.InputTag("g4SimHits")
+                                    )
+
 hgcSimTruth = cms.EDProducer("SimClusterMerger",
                              
     ## only these three actually matter atm
@@ -13,7 +19,7 @@ hgcSimTruth = cms.EDProducer("SimClusterMerger",
     
     ###
 
-    simClusters= cms.InputTag("mix:MergedCaloTruth"),
+    simClusters= cms.InputTag("closeBySimClusters"), #mix:MergedCaloTruth"),
     simVertices= cms.InputTag("g4SimHits"),
     simTracks= cms.InputTag("g4SimHits"),
     caloRecHits = cms.InputTag("hgcRecHits")
@@ -70,7 +76,8 @@ mergedSimClusterRecEnergyTable = cms.EDProducer("SimClusterRecEnergyTableProduce
     docString = cms.string("SimCluster deposited reconstructed energy associated to SimCluster")
 )
 
-mergedSimClusterTables = cms.Sequence(hgcSimTruth+
+mergedSimClusterTables = cms.Sequence(closeBySimClusters+
+    hgcSimTruth+
 	mergedSimClusterTable+
 	mergedToUnmergedSCTable+
 	hgcRecHitsToMergedSimClusters+
