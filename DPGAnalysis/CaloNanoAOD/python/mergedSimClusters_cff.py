@@ -19,7 +19,7 @@ hgcSimTruth = cms.EDProducer("SimClusterMerger",
     
     ###
 
-    simClusters= cms.InputTag("closeBySimClusters"), #mix:MergedCaloTruth"),
+    simClusters= cms.InputTag("mix:MergedCaloTruth"),
     simVertices= cms.InputTag("g4SimHits"),
     simTracks= cms.InputTag("g4SimHits"),
     caloRecHits = cms.InputTag("hgcRecHits")
