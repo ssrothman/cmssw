@@ -38,6 +38,14 @@ SimCluster::SimCluster(EncodedEventId eventID, uint32_t particleID) {
   particleId_ = particleID;
 }
 
+void SimCluster::addG4Track(const SimTrack &t) {
+      g4Tracks_.push_back(t);
+      if(g4Tracks_.size() == 1)
+          pdgId_ = t.type();
+      else
+          pdgId_ = 0; //undefined just from simtracks
+  }
+
 math::XYZTLorentzVectorF SimCluster::impactMomentumMuOnly() const {
 	math::XYZTLorentzVectorF mom;
 	for (auto& t : g4Tracks_) {

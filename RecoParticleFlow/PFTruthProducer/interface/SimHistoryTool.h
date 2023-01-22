@@ -25,8 +25,6 @@ public:
     /// high-level functions
 
     SimCluster createMergedSimCluster(std::vector<const SimCluster* >)const;
-
-
     // low level functions
 
     const SimTrack* getRoot(const SimTrack * st)const;

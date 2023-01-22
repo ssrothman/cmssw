@@ -23,22 +23,17 @@ public:
            const hgcal::RecHitTools * rechittools,
            const SimHistoryTool * hist);
 
+    std::vector<SimCluster> downScaleMuons(const std::vector<const SimCluster*>& scs) const;
 
     std::vector<SimCluster> merge(const std::vector<const SimCluster*>& scs,
-            float isHighEfracThreshold, float connectThreshold, float expandWidth,
-            std::vector<std::vector<size_t> >& idxs, bool debugplots=false) const;
-
-    //setters for circle parameters here
-    void setCClusterRadiusScale(float cClusterRadiusScale) { cClusterRadiusScale_ = cClusterRadiusScale; }
-
-    void setCEContainment(float cEContainment) { cEContainment_ = cEContainment; }
-
-    void setCMergeRadiusScale(float cMergeRadiusScale) { cMergeRadiusScale_ = cMergeRadiusScale; }
+            std::vector<std::vector<size_t> >& idxs) const;
 
     //with the current algorithm, this is the only one that matters!
     void setCNLayers(int cNLayers) { cNLayers_ = cNLayers; }
+    void setHighEfracThreshold(float thresh) { isHighEfracThreshold_ = thresh; }
+    void setConnectThreshold(float thresh) { connectThreshold_ = thresh; }
 
-    void setCSearchRadius(float cSearchRadius) { cSearchRadius_ = cSearchRadius; }
+
 
     //helper
     //credit to Thomas
@@ -90,12 +85,11 @@ public:
         inline float energy()const{return rechit->energy()*fraction;}
     };
 
-    //circle parameters
+    //merge parameters
     int cNLayers_;
-    float cEContainment_;
-    float cSearchRadius_;
-    float cClusterRadiusScale_;
-    float cMergeRadiusScale_;
+    float isHighEfracThreshold_;
+    float connectThreshold_;
+
 
 };
 

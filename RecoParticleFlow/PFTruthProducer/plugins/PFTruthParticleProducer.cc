@@ -99,7 +99,7 @@ public:
 private:
 
   std::vector<size_t> matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
-          const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger) const;
+          const TrackingParticle& tp, const reco::Track& track) const;
 
   std::vector<SimClusterRefVector> splitCPToTP(const SimClusterRefVector& allCPSimClusters,
           TrackingParticleRefVector assoTPs, const SimHistoryTool& histtool) const;
@@ -143,7 +143,7 @@ PFTruthParticleProducer::PFTruthParticleProducer(const edm::ParameterSet &pset)
   produces<edm::Association<PFTruthParticleCollection>>("trackToPFTruth");
 
   pfMatchThreshold_=0.9;//to be configured
-  pfMatchDRThreshold_=0.04;
+  pfMatchDRThreshold_=0.03;
 }
 
 PFTruthParticleProducer::~PFTruthParticleProducer() {}
@@ -156,8 +156,7 @@ PFTruthParticleProducer::~PFTruthParticleProducer() {}
 
 
 std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClusterRefVector &simClusters,
-        const TrackingParticle& tp, const reco::Track& track, const HGCalSimClusterMerger& scmerger
-        ) const {
+        const TrackingParticle& tp, const reco::Track& track) const {
 
     std::vector<size_t>  out;
     // the SCs are from the same CP the TP was matched to.
@@ -175,58 +174,21 @@ std::vector<size_t> PFTruthParticleProducer::matchedSCtoTrackIdxs(const SimClust
         return out;
 
     //check which G4 track is most likely to be representing the reco track
-    auto proptrack = trackprop_.propagateObject(track,track.charge());
+    //auto proptrack = trackprop_.propagateObject(track,track.charge());
 
     //proptrack.momentum;
     //proptrack.pos;
 
-    //now do a simple matching at front face (truth assisted since the SC refs are anyway by primary)
-    double totmom = 0 ;
-    for(const auto& scref: simClusters){
-        auto bpos4v= scref->g4Tracks().at(0).getPositionAtBoundary();
-        LocalVector boundaryPos(bpos4v.x(),bpos4v.y(),bpos4v.z());
-
-        double drsq = reco::deltaR2(boundaryPos.eta(), boundaryPos.phi(), proptrack.pos.eta(), proptrack.pos.phi());
-        if(drsq > pfMatchDRThreshold_*pfMatchDRThreshold_)
-            continue;
+    //make this simple
+    float decz = track.outerPosition().z();
+    bool takeall = fabs(decz) > 250.;
+    if(!takeall)
+        return std::vector<size_t>();
+    for (const auto& scref : simClusters) {
         out.push_back(scref.key());
-        totmom += scref->impactMomentum().P();
     }
-    if(totmom < tp.p4().P()*pfMatchThreshold_)
-        return std::vector<size_t>(); //discard
     return out;
 
-    //old ----------------------------------------------------------------------
-
-    std::vector<std::vector<size_t> > mergeIdxs;
-    std::vector<const SimCluster* > tomerge;
-    for(const auto& scref: simClusters){
-        tomerge.push_back(&(*scref));
-    }
-    //FIXME hard coded number
-    auto merged = scmerger.merge(tomerge,0.95, 0.3,0.,mergeIdxs);//a bit more generous here
-
-    std::vector<float> scmom;
-    for(const auto& sc: merged)
-        scmom.push_back(-sc.impactMomentum().P());
-
-    auto momsorting = scmerger.argsort(scmom);
-    scmerger.apply_argsort_in_place(mergeIdxs,momsorting);
-    scmerger.apply_argsort_in_place(merged,momsorting);
-
-    auto sc0 = merged.at(0);//now if this is close to tp.momentum take it
-
-    //the generously merged cluster does not carry most of the track momentum
-    if(sc0.impactMomentum().P() < tp.p4().P()*pfMatchThreshold_)
-        return out;
-
-    std::cout << "merged for TP ";
-    for(const auto& sc_i: mergeIdxs.at(0)){
-        out.push_back(simClusters.at(sc_i).key());
-        std::cout << simClusters.at(sc_i).key() << " ";
-    }
-    std::cout << std::endl;
-    return out;
 }
 
 std::vector<SimClusterRefVector> PFTruthParticleProducer::splitCPToTP(const SimClusterRefVector& allCPSimClusters,
@@ -320,13 +282,9 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
   HGCalSimClusterMerger neutralSCMerger(*caloRecHitCollection.product(),
           &hgcrechittools_,&histtool);
   //configure
-
-  HGCalSimClusterMerger chargedSCMerger(*caloRecHitCollection.product(),
-          &hgcrechittools_,&histtool);
-
-  chargedSCMerger.setCNLayers(10);//go deeper, also that shouldn't do anything..
-  //configure more here FIXME
-
+  neutralSCMerger.setCNLayers(10);
+  neutralSCMerger.setHighEfracThreshold(0.85);
+  neutralSCMerger.setConnectThreshold(0.3);
 
   //index helpers
   std::map<int,int>  trackIdToTrackIdxAsso;
@@ -399,7 +357,7 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
           int i_track = trackidx.at(i_tt);
 
           auto matchedsc = matchedSCtoTrackIdxs(scgroups.at(i_tt),*cptps.at(i_tt),
-                  trackCollection->at(i_track),chargedSCMerger);
+                  trackCollection->at(i_track));
           trackToSCIdxAsso.at(i_track)=matchedsc;
 
           for(const auto msc: matchedsc){
@@ -442,10 +400,8 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
           SimClusterRef scref(scCollection,i_sc);
           screfs.push_back(scref);
           scToPFpartIdx.at(i_sc) = PFTIdx;
-          rec_calo_en += chargedSCMerger.recEnergy(*scref);
       }
 
-      std::cout << "charged rec_calo_en " << rec_calo_en << std::endl;
       PFTruthParticle pftp(tprefs,screfs);
 
       pftp.setCaloRecEnergy(rec_calo_en);
@@ -473,11 +429,16 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
       orig_indices.push_back(i_sc);
   }
 
-  //configure the merger here
+  // reset muon momenta of muons without tracks to their reconstructed energies
+  // the indices are not affected by this
+  auto sc_tobemerged = neutralSCMerger.downScaleMuons(tomergehgcsc);
+  tomergehgcsc.clear();
+  for(const auto & sc: sc_tobemerged)
+      tomergehgcsc.push_back(&sc);
 
   std::vector<std::vector<size_t> > mergeIdxs;
 
-  auto merged = neutralSCMerger.merge(tomergehgcsc,.85,0.3,0.,mergeIdxs);
+  auto merged = neutralSCMerger.merge(tomergehgcsc,mergeIdxs);
   //merged not used for now, needs to  output new collection in the end
   //but indices can help check basic functions for now
 
@@ -499,7 +460,7 @@ void PFTruthParticleProducer::produce(edm::Event &iEvent, const edm::EventSetup 
           scToPFpartIdx.at(i_sc)=PFTIdx;
       }
 
-      std::cout << "neutral rec_calo_en " << rec_calo_en << std::endl;
+      //std::cout << "neutral rec_calo_en " << rec_calo_en << std::endl;
       PFTruthParticle pftp(tprefs,screfs);
       pftp.setCharge(0);
       pftp.setCaloRecEnergy(rec_calo_en);

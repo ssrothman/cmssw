@@ -18,8 +18,8 @@ class HGCalHitPositionTableProducer : public HitPositionTableProducer<edm::View<
 //class HGCalHitPositionTableProducer : public HitPositionTableProducer<edm::View<CaloRecHit>> {
 public:
   HGCalHitPositionTableProducer(edm::ParameterSet const& params)
-      : HitPositionTableProducer<edm::View<T>>(params), 
-        caloGeoToken_(edm::stream::EDProducer<>::esConsumes<edm::Transition::BeginRun>()) {}
+      : HitPositionTableProducer<edm::View<T>>(params),
+        caloGeoToken_(edm::stream::EDProducer<>::esConsumes<edm::Transition::BeginRun>()) { }
 
   ~HGCalHitPositionTableProducer() override {}
 
@@ -33,6 +33,10 @@ public:
     return positionFromDetId(detId); 
   }
 
+  float radiusFromHit(const CaloRecHit& hit) { return radiusFromDetId(hit.detid()); }
+
+  float radiusFromHit(const PCaloHit& hit) { return radiusFromDetId(hit.id()); }
+
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
     auto& geom = iSetup.getData(caloGeoToken_);
     rhtools_.setGeometry(geom);
@@ -44,6 +48,28 @@ public:
       return rhtools_.getPosition(id);
     } else {
       throw cms::Exception("HGCalHitPositionTableProducer") << "Unsupported DetId type";
+    }
+  }
+
+  float radiusFromDetId(DetId id) {
+    DetId::Detector det = id.det();
+    if (det == DetId::HGCalEE || det == DetId::HGCalHSi || det == DetId::HGCalHSc) {
+      if (rhtools_.isSilicon(id)) {
+        return rhtools_.getRadiusToSide(id);
+      } else if (rhtools_.isScintillator(id)) {
+          //return r * sin(dphi) / 2.;
+       // auto detadphi = rhtools_.getScintDEtaDPhi(id);
+       // float dphi = detadphi.second;  //same in both
+        float dphi = 0.0211809f; //DEBUG FIXME; the geometry access segfaults for some hits probably close to side
+        auto pos = rhtools_.getPosition(id);
+        float r = pos.transverse();
+        return r * sin(dphi) / 2.;  //this is anyway approximate
+      } else {
+        return 0.;
+      }
+
+    } else {
+      return 0;  //no except here
     }
   }
 

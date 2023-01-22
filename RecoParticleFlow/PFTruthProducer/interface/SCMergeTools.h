@@ -407,7 +407,7 @@ private:
     /**
      * also sorts them again
      */
-    void updateEdges( U* hasabs,  U* wasabs);
+    bool updateEdges( U* hasabs,  U* wasabs);
 
     std::vector<U> vs_;
     std::vector<edge<U> > es_;
@@ -418,6 +418,7 @@ int MergeGraph<U>::merge(){
     if(es_.size()<1)
         return 0;
     int nmerged=0;
+    //size_t esize = es_.size();
     sortEdges();
     while(true){
 
@@ -432,7 +433,11 @@ int MergeGraph<U>::merge(){
 
         es_.at(0).from()->absorb(es_.at(0).to());
 
-        updateEdges(es_.at(0).from(),es_.at(0).to());
+        bool changes = updateEdges(es_.at(0).from(),es_.at(0).to());
+
+        if(!changes)
+            break; //nothing done
+        //esize = es_.size();
 
         nmerged++;
     }
@@ -440,7 +445,7 @@ int MergeGraph<U>::merge(){
 }
 
 template<class U>
-void MergeGraph<U>::updateEdges( U* hasabs,  U* wasabs){
+bool MergeGraph<U>::updateEdges( U* hasabs,  U* wasabs){
 
         //for unit test
 #ifdef DEBUGCHECKS
@@ -461,8 +466,6 @@ void MergeGraph<U>::updateEdges( U* hasabs,  U* wasabs){
                 oldedges.push_back(e);
         }
 
-
-        // this does not quite work yet
         for(const auto& vi:{hasabs,wasabs}){
             //vi participated
             if(vi->valid()){
@@ -506,8 +509,11 @@ void MergeGraph<U>::updateEdges( U* hasabs,  U* wasabs){
             es_.push_back(newedges.at(newedgecounter));
             newedgecounter++;
         }
+
+        return newedges.size() > 0;
+
 #ifndef DEBUGCHECKS
-        return;
+        return newedges.size() > 0;
 #else
         if(refedges != es_){
 

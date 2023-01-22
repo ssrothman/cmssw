@@ -28,6 +28,10 @@ public:
     throw cms::Exception("HitPositionTableProducer") << "Virtual function positionFromHist is not implemented!"; 
   }
 
+  float virtual radiusFromHit(const typename T::value_type& hit) {
+    throw cms::Exception("HitPositionTableProducer") << "Virtual function radiusFromHit is not implemented!";
+  }
+
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override {
     edm::Handle<T> objs;
     iEvent.getByToken(src_, objs);
@@ -42,7 +46,7 @@ public:
         xvals.emplace_back(position.x());
         yvals.emplace_back(position.y());
         zvals.emplace_back(position.z());
-        //hitrvals.emplace_back(radiusFromHit(obj));
+        hitrvals.emplace_back(radiusFromHit(obj));
       }
     }
 
@@ -51,7 +55,7 @@ public:
     tab->addColumn<float>("y", yvals, "y position");
     tab->addColumn<float>("z", zvals, "z position");
     //addExtraColumns(tab);
-    //tab->addColumn<float>("hitr", hitrvals, "radius");
+    tab->addColumn<float>("hitr", hitrvals, "radius");
 
     iEvent.put(std::move(tab));
   }
