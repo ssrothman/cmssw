@@ -18,12 +18,12 @@ caloParticles = cms.PSet(
                 cms.InputTag('g4SimHits','HGCHitsHEfront'),
                 cms.InputTag('g4SimHits','HGCHitsHEback')
             ),
-#            hcal = cms.VInputTag(cms.InputTag('g4SimHits','HcalHits')),
-#            ecal = cms.VInputTag(
-#                cms.InputTag('g4SimHits','EcalHitsEE'),
-#                cms.InputTag('g4SimHits','EcalHitsEB'),
-#                cms.InputTag('g4SimHits','EcalHitsES')
-#            )
+            hcal = cms.VInputTag(cms.InputTag('g4SimHits','HcalHits')),
+            ecal = cms.VInputTag(
+                cms.InputTag('g4SimHits','EcalHitsEE'),
+                cms.InputTag('g4SimHits','EcalHitsEB'),
+                cms.InputTag('g4SimHits','EcalHitsES')
+            )
 	),
 	simTrackCollection = cms.InputTag('g4SimHits'),
 	simVertexCollection = cms.InputTag('g4SimHits'),
