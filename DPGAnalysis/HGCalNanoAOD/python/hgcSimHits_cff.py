@@ -42,6 +42,24 @@ hgcHEbackHitsToSimClusterTable.src = hgcHEbackSimHitsTable.src
 hgcHEbackHitsToSimClusterTable.objName = hgcHEbackSimHitsTable.name
 hgcHEbackHitsToSimClusterTable.objMap = "mix:simHitHGCHEbackToSimCluster"
 
+HcalSimHitsTable = hgcEESimHitsTable.clone()
+HcalSimHitsTable.src = "g4SimHits:HcalHits"
+HcalSimHitsTable.name = "SimHitHCAL"
+
+HcalHitsToSimClusterTable = hgcEEHitsToSimClusterTable.clone()
+HcalHitsToSimClusterTable.src = HcalSimHitsTable.src
+HcalHitsToSimClusterTable.objName = HcalSimHitsTable.name
+HcalHitsToSimClusterTable.objMap = "mix:simHitHcalToSimCluster"
+
+EcalEBSimHitsTable = hgcEESimHitsTable.clone()
+EcalEBSimHitsTable.src = "g4SimHits:EcalHitsEB"
+EcalEBSimHitsTable.name = "SimHitEcalEB"
+
+EcalEBHitsToSimClusterTable = hgcEEHitsToSimClusterTable.clone()
+EcalEBHitsToSimClusterTable.src = EcalEBSimHitsTable.src
+EcalEBHitsToSimClusterTable.objName = EcalEBSimHitsTable.name
+EcalEBHitsToSimClusterTable.objMap = "mix:simHitEcalToSimCluster"
+
 hgcEESimHitsPositionTable = cms.EDProducer("HGCalSimHitPositionTableProducer",
     src = hgcEESimHitsTable.src,
     cut = hgcEESimHitsTable.cut, 
@@ -57,12 +75,30 @@ hgcHEbackSimHitsPositionTable = hgcEESimHitsPositionTable.clone()
 hgcHEbackSimHitsPositionTable.name = hgcHEbackSimHitsTable.name
 hgcHEbackSimHitsPositionTable.src = hgcHEbackSimHitsTable.src
 
-hgcSimHitsSequence = cms.Sequence(hgcEESimHitsTable+hgcHEbackSimHitsTable+hgcHEfrontSimHitsTable
+HcalSimHitsPositionTable = hgcEESimHitsPositionTable.clone()
+HcalSimHitsPositionTable.name = HcalSimHitsTable.name
+HcalSimHitsPositionTable.src = HcalSimHitsTable.src
+
+EcalEBSimHitsPositionTable = hgcEESimHitsPositionTable.clone()
+EcalEBSimHitsPositionTable.name = EcalEBSimHitsTable.name
+EcalEBSimHitsPositionTable.src = EcalEBSimHitsTable.src
+
+hgcSimHitsSequence = cms.Sequence(
+                hgcEESimHitsTable
+                +hgcHEbackSimHitsTable
+                +hgcHEfrontSimHitsTable
+                +HcalSimHitsTable
+                +EcalEBSimHitsTable
+                
                 +hgcEESimHitsPositionTable
                 +hgcHEfrontSimHitsPositionTable
                 +hgcHEbackSimHitsPositionTable
+                +HcalSimHitsPositionTable
+                +EcalEBSimHitsPositionTable
+
                 #+hgcEEHitsToSimClusterTable
                 #+hgcHEfrontHitsToSimClusterTable
                 #+hgcHEbackHitsToSimClusterTable
-                +hgcHEfrontSimHitsTable+hgcHEbackSimHitsTable)
+                +hgcHEfrontSimHitsTable
+                +hgcHEbackSimHitsTable)
 
