@@ -969,6 +969,7 @@ class ConfigBuilder(object):
         self.PATDefaultCFF="Configuration/StandardSequences/PAT_cff"
         self.NANODefaultCFF="PhysicsTools/NanoAOD/nano_cff"
         self.NANOGENDefaultCFF="PhysicsTools/NanoAOD/nanogen_cff"
+        self.PFNANODefaultCFF="DPGAnalysis/PFNanoAOD/pfNano_cff"
         self.SKIMDefaultCFF="Configuration/StandardSequences/Skims_cff"
         self.POSTRECODefaultCFF="Configuration/StandardSequences/PostRecoGenerator_cff"
         self.VALIDATIONDefaultCFF="Configuration/StandardSequences/Validation_cff"
@@ -1018,6 +1019,7 @@ class ConfigBuilder(object):
         self.PATGENDefaultSeq='miniGEN'
         #TODO: Check based of file input
         self.NANOGENDefaultSeq='nanogenSequence'
+        self.PFNANODefaultSeq='pfNanoSequence'
         self.NANODefaultSeq='nanoSequence'
 
         self.EVTCONTDefaultCFF="Configuration/EventContent/EventContent_cff"
