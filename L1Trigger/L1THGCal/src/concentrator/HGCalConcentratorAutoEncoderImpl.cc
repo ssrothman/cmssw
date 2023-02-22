@@ -182,7 +182,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
   }
 
   double normalization = modSum;
-  if (modSum > -1) {
+  if (modSum > 0) {
     //Use a bit shift normalization like will be implemented in ECON, rather than floating point sum
     //Normalizes to the MSB value of the module sum
     if (bitShiftNormalization_) {
@@ -255,7 +255,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
   }
 
   // Add data back into trigger cells
-  if (modSum > -1) {
+  if (modSum > 0) {
     //get detID for everything but cell, take first entry detID and subtract off cellU and cellV contribution
     HGCalTriggerDetId id(trigCellVecInput.at(0).detId());
     int subdet = id.subdet();

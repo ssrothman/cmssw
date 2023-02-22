@@ -13,7 +13,19 @@
 
 class ECONTritonProducer : public TritonEDProducer<> {
 public:
-  explicit ECONTritonProducer(edm::ParameterSet const& cfg)
+  ECONTritonProducer(edm::ParameterSet const& cfg);
+  void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override;
+  void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override;
+  ~ECONTritonProducer() override = default;
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+private:
+  void findTopN(const TritonOutputData& scores, unsigned n = 5) const;
+  unsigned batchSize_;
+  unsigned topN_;
+  std::vector<std::string> imageList_;
+};
+
+ECONTritonProducer::ECONTritonProducer(const edm::ParameterSet& cfg)
       : TritonEDProducer<>(cfg, "ECONTritonProducer"),
         batchSize_(cfg.getParameter<unsigned>("batchSize")),
         topN_(cfg.getParameter<unsigned>("topN")) {
@@ -27,64 +39,59 @@ public:
       }
     } else {
       throw cms::Exception("MissingFile") << "Could not open image list file: " << imageListFile;
-    }
   }
-  void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override {
-    client_->setBatchSize(batchSize_);
-    // create an npix x npix x ncol image w/ arbitrary color value
-    // model only has one input, so just pick begin()
-    auto& input1 = iInput.begin()->second;
-    auto data1 = std::make_shared<TritonInput<float>>();
-    data1->reserve(batchSize_);
-    for (unsigned i = 0; i < batchSize_; ++i) {
-      data1->emplace_back(input1.sizeDims(), 0.5f);
-    }
-    // convert to server format
-    input1.toServer(data1);
-  }
-  void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override {
-    // check the results
-    findTopN(iOutput.begin()->second);
-  }
-  ~ECONTritonProducer() override = default;
+}
 
-  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-    edm::ParameterSetDescription desc;
-    TritonClient::fillPSetDescription(desc);
-    desc.add<unsigned>("batchSize", 1);
-    desc.add<unsigned>("topN", 5);
-    desc.add<edm::FileInPath>("imageList");
-    //to ensure distinct cfi names
-    descriptions.addWithDefaultLabel(desc);
+void ECONTritonProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
+  client_->setBatchSize(batchSize_);
+  // create an npix x npix x ncol image w/ arbitrary color value
+  // model only has one input, so just pick begin()
+  auto& input1 = iInput.begin()->second;
+  auto data1 = std::make_shared<TritonInput<float>>();
+  data1->reserve(batchSize_);
+  for (unsigned i = 0; i < batchSize_; ++i) {
+    data1->emplace_back(input1.sizeDims(), 0.5f);
   }
+  // convert to server format
+  input1.toServer(data1);
+}
 
-private:
-  void findTopN(const TritonOutputData& scores, unsigned n = 5) const {
-    const auto& tmp = scores.fromServer<float>();
-    auto dim = scores.sizeDims();
-    for (unsigned i0 = 0; i0 < scores.batchSize(); i0++) {
-      //match score to type by index, then put in largest-first map
-      std::map<float, std::string, std::greater<float>> score_map;
-      for (unsigned i = 0; i < std::min((unsigned)dim, (unsigned)imageList_.size()); ++i) {
-        score_map.emplace(tmp[i0][i], imageList_[i]);
-      }
-      //get top n
-      std::stringstream msg;
-      msg << "Scores for image " << i0 << ":\n";
-      unsigned counter = 0;
-      for (const auto& item : score_map) {
-        msg << item.second << " : " << item.first << "\n";
-        ++counter;
-        if (counter >= topN_)
-          break;
-      }
-      edm::LogInfo(debugName_) << msg.str();
+void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
+  // check the results
+  findTopN(iOutput.begin()->second);
+}
+
+void ECONTritonProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+  edm::ParameterSetDescription desc;
+  TritonClient::fillPSetDescription(desc);
+  desc.add<unsigned>("batchSize", 1);
+  desc.add<unsigned>("topN", 5);
+  desc.add<edm::FileInPath>("imageList");
+  //to ensure distinct cfi names
+  descriptions.addWithDefaultLabel(desc);
+}
+
+void ECONTritonProducer::findTopN(const TritonOutputData& scores, unsigned n) const {
+  const auto& tmp = scores.fromServer<float>();
+  auto dim = scores.sizeDims();
+  for (unsigned i0 = 0; i0 < scores.batchSize(); i0++) {
+    //match score to type by index, then put in largest-first map
+    std::map<float, std::string, std::greater<float>> score_map;
+    for (unsigned i = 0; i < std::min((unsigned)dim, (unsigned)imageList_.size()); ++i) {
+      score_map.emplace(tmp[i0][i], imageList_[i]);
     }
+    //get top n
+    std::stringstream msg;
+    msg << "Scores for image " << i0 << ":\n";
+    unsigned counter = 0;
+    for (const auto& item : score_map) {
+      msg << item.second << " : " << item.first << "\n";
+      ++counter;
+      if (counter >= topN_)
+        break;
+    }
+    edm::LogInfo(debugName_) << msg.str();
   }
-
-  unsigned batchSize_;
-  unsigned topN_;
-  std::vector<std::string> imageList_;
-};
+}
 
 DEFINE_FWK_MODULE(ECONTritonProducer);
