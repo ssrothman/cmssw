@@ -118,7 +118,7 @@ void HGCalTriggerNtupleHGCTriggerCells::initialize(TTree& tree,
   tree.Branch(withPrefix("subdet"), &tc_subdet_);
   tree.Branch(withPrefix("zside"), &tc_side_);
   tree.Branch(withPrefix("layer"), &tc_layer_);
-  tree.Branch(withPrefix("waferu"), &tc_waferu_);
+  tree.Branch(withPrefix("waferu") , &tc_waferu_);
   tree.Branch(withPrefix("waferv"), &tc_waferv_);
   tree.Branch(withPrefix("wafertype"), &tc_wafertype_);
   tree.Branch(withPrefix("cellu"), &tc_cellu_);
