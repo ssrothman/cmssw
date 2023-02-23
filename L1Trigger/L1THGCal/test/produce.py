@@ -1,7 +1,8 @@
 import FWCore.ParameterSet.Config as cms 
+from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
 
 from Configuration.Eras.Era_Phase2C9_cff import Phase2C9
-process = cms.Process('DIGI',Phase2C9)
+process = cms.Process('DIGI',Phase2C9, enableSonicTriton)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -200,8 +201,21 @@ process.TCTable = cms.EDProducer("TCTableProducer",
 
 process.table_step = cms.Path(process.TCTable) 
 process.NANOAODSIMoutput_step = cms.EndPath(process.NANOAODSIMoutput)
+
+process.AEProducer = cms.EDProducer("ECONTritonProducer",
+    Client = cms.PSet(
+        mode = cms.string("Async"),
+        modelName = cms.string("decode"),
+        modelConfigPath = cms.FileInPath("L1Trigger/L1THGCal/data/models/decode/config.pbtxt"),
+        allowedTries = cms.untracked.uint32(1),
+        timeout = cms.untracked.uint32(1)
+    ),
+    TriggerCells = cms.InputTag("Floatingpoint","HGCalVFEProcessorSums"),
+)
+process.AE_step = cms.Path(process.AEProducer)
+
 # Schedule definition
-process.schedule = cms.Schedule(process.hgcl1tpg_step, process.selector_step, process.ntuple_step, process.table_step, process.NANOAODSIMoutput_step)
+process.schedule = cms.Schedule(process.hgcl1tpg_step, process.selector_step, process.ntuple_step, process.table_step, process.AE_step, process.NANOAODSIMoutput_step)
 
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete

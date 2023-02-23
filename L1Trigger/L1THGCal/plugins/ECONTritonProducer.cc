@@ -4,6 +4,14 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Utilities/interface/ESGetToken.h"
+
+#include "DataFormats/L1THGCal/interface/HGCalTriggerCell.h"
+#include "L1Trigger/L1THGCal/interface/HGCalTriggerTools.h"
+#include "L1Trigger/L1THGCal/interface/HGCalTriggerGeometryBase.h"
+#include "DataFormats/L1THGCal/interface/HGCalTriggerSums.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "DataFormats/ForwardDetId/interface/HGCalTriggerDetId.h"
 
 #include <sstream>
 #include <fstream>
@@ -12,86 +20,95 @@
 #include <map>
 
 class ECONTritonProducer : public TritonEDProducer<> {
-public:
-  ECONTritonProducer(edm::ParameterSet const& cfg);
-  void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override;
-  void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override;
-  ~ECONTritonProducer() override = default;
-  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-private:
-  void findTopN(const TritonOutputData& scores, unsigned n = 5) const;
-  unsigned batchSize_;
-  unsigned topN_;
-  std::vector<std::string> imageList_;
+  public:
+    ECONTritonProducer(edm::ParameterSet const& cfg);
+
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+
+    void acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) override;
+    void produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) override;
+
+    void beginRun(const edm::Run&, const edm::EventSetup&) override;
+    ~ECONTritonProducer() override = default;
+  private:
+    edm::EDGetToken inputTCToken_;
+    edm::ESHandle<HGCalTriggerGeometryBase> triggerGeometry_;
+    edm::ESGetToken<HGCalTriggerGeometryBase, CaloGeometryRecord> triggerGeomToken_;
+
+    HGCalTriggerTools triggerTools_;
 };
 
 ECONTritonProducer::ECONTritonProducer(const edm::ParameterSet& cfg)
       : TritonEDProducer<>(cfg, "ECONTritonProducer"),
-        batchSize_(cfg.getParameter<unsigned>("batchSize")),
-        topN_(cfg.getParameter<unsigned>("topN")) {
-    //load score list
-    std::string imageListFile(cfg.getParameter<edm::FileInPath>("imageList").fullPath());
-    std::ifstream ifile(imageListFile);
-    if (ifile.is_open()) {
-      std::string line;
-      while (std::getline(ifile, line)) {
-        imageList_.push_back(line);
-      }
-    } else {
-      throw cms::Exception("MissingFile") << "Could not open image list file: " << imageListFile;
-  }
+        inputTCToken_(consumes<l1t::HGCalTriggerCellBxCollection>(cfg.getParameter<edm::InputTag>("TriggerCells"))),
+        triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>())
+{
 }
 
-void ECONTritonProducer::acquire(edm::Event const& iEvent, edm::EventSetup const& iSetup, Input& iInput) {
-  client_->setBatchSize(batchSize_);
-  // create an npix x npix x ncol image w/ arbitrary color value
-  // model only has one input, so just pick begin()
-  auto& input1 = iInput.begin()->second;
-  auto data1 = std::make_shared<TritonInput<float>>();
-  data1->reserve(batchSize_);
-  for (unsigned i = 0; i < batchSize_; ++i) {
-    data1->emplace_back(input1.sizeDims(), 0.5f);
-  }
-  // convert to server format
-  input1.toServer(data1);
+void ECONTritonProducer::beginRun(const edm::Run& run, const edm::EventSetup& es){
+  triggerGeometry_ = es.getHandle(triggerGeomToken_);
 }
+
+void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es, Input& iInput) {
+  printf("acquiring\n");
+  triggerTools_.eventSetup(es);
+
+  edm::Handle<l1t::HGCalTriggerCellBxCollection> tcs;
+  e.getByToken(inputTCToken_, tcs);
+
+  std::unordered_map<uint32_t, std::vector<l1t::HGCalTriggerCell>> tc_modules;
+  for (const auto& tc : *tcs){
+    uint32_t module = triggerGeometry_->getModuleFromTriggerCell(tc.detId());
+    tc_modules[module].push_back(tc);
+  }
+
+  for (const auto& tc_module : tc_modules){
+    const auto& detId = tc_module.second.at(0).detId();
+    
+    //skip scintillator modules
+    if (triggerTools_.isScintillator(detId)){ 
+      continue;
+    }
+
+    int thickness = triggerTools_.thicknessIndex(detId);
+    HGCalTriggerTools::SubDetectorType subdet = triggerTools_.getSubDetectorType(detId);
+
+    std::vector<uint> adc(48, 0);
+    std::vector<double> AEinput(48, 0.0);
+
+    for (const auto& tc: tc_module.second){
+      HGCalTriggerDetId id(tc.detId());
+      uint cellu = id.triggerCellU();
+      uint cellv = id.triggerCellV();
+      //int inputIndex = cellUVreman_[cellu][cellv];
+      int inputIndex = 0;
+      if (inputIndex < 0){
+        throw cms::Exception("BadInitialization")
+          << "Invalid index provided for trigger cell u=" 
+          << cellu 
+          << " v=" 
+          << cellv 
+          << " in cellUVRemap[" 
+          << cellu
+          << "][" << cellv << "]";
+      }//end if uv lookup error
+
+      AEinput[inputIndex] = tc.hwPt()/cosh(tc.eta());
+
+    }//end for each trigger cell in module
+  }//end for each module
+  client_->setBatchSize(0);
+}//end acquire
 
 void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
-  // check the results
-  findTopN(iOutput.begin()->second);
+  printf("producing...\n");
 }
 
 void ECONTritonProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   TritonClient::fillPSetDescription(desc);
-  desc.add<unsigned>("batchSize", 1);
-  desc.add<unsigned>("topN", 5);
-  desc.add<edm::FileInPath>("imageList");
-  //to ensure distinct cfi names
+  desc.add<edm::InputTag>("TriggerCells");
   descriptions.addWithDefaultLabel(desc);
-}
-
-void ECONTritonProducer::findTopN(const TritonOutputData& scores, unsigned n) const {
-  const auto& tmp = scores.fromServer<float>();
-  auto dim = scores.sizeDims();
-  for (unsigned i0 = 0; i0 < scores.batchSize(); i0++) {
-    //match score to type by index, then put in largest-first map
-    std::map<float, std::string, std::greater<float>> score_map;
-    for (unsigned i = 0; i < std::min((unsigned)dim, (unsigned)imageList_.size()); ++i) {
-      score_map.emplace(tmp[i0][i], imageList_[i]);
-    }
-    //get top n
-    std::stringstream msg;
-    msg << "Scores for image " << i0 << ":\n";
-    unsigned counter = 0;
-    for (const auto& item : score_map) {
-      msg << item.second << " : " << item.first << "\n";
-      ++counter;
-      if (counter >= topN_)
-        break;
-    }
-    edm::LogInfo(debugName_) << msg.str();
-  }
 }
 
 DEFINE_FWK_MODULE(ECONTritonProducer);

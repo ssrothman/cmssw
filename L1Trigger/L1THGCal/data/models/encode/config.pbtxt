@@ -1,0 +1,15 @@
+name: "encode"
+platform: "pytorch_libtorch"
+max_batch_size: 0
+input [
+{
+  name: "CALQ__0"
+  data_type: TYPE_FP32
+  dims: [-1, 48]
+}]
+output [
+{
+  name: "ECON__0"
+  data_type: TYPE_FP32
+  dims: [-1, 16]
+}]
