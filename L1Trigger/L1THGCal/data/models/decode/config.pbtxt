@@ -1,6 +1,6 @@
 name: "decode"
 platform: "pytorch_libtorch"
-max_batch_size: 0
+max_batch_size: 10000000
 input [
 {
   name: "ECON__0"

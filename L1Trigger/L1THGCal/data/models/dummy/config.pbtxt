@@ -1,4 +1,4 @@
-name: "encode"
+name: "dummy"
 platform: "pytorch_libtorch"
 max_batch_size: 100000000
 input [
@@ -12,4 +12,9 @@ output [
   name: "ECON__0"
   data_type: TYPE_FP32
   dims: [-1, 16]
+},
+{
+  name: "rCALQ__1"
+  data_type: TYPE_FP32
+  dims: [-1, 48]
 }]

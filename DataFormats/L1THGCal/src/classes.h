@@ -12,3 +12,6 @@
 #include "DataFormats/L1THGCal/interface/HGCalConcentratorData.h"
 
 #include "DataFormats/L1THGCal/interface/ClusterShapes.h"
+#include <map>
+
+//#include "DataFormats/L1THGCal/interface/AEMap.h"

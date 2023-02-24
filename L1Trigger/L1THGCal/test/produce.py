@@ -202,11 +202,12 @@ process.TCTable = cms.EDProducer("TCTableProducer",
 process.table_step = cms.Path(process.TCTable) 
 process.NANOAODSIMoutput_step = cms.EndPath(process.NANOAODSIMoutput)
 
+model='encode_decode'
 process.AEProducer = cms.EDProducer("ECONTritonProducer",
     Client = cms.PSet(
         mode = cms.string("Async"),
-        modelName = cms.string("decode"),
-        modelConfigPath = cms.FileInPath("L1Trigger/L1THGCal/data/models/decode/config.pbtxt"),
+        modelName = cms.string(model),
+        modelConfigPath = cms.FileInPath("L1Trigger/L1THGCal/data/models/%s/config.pbtxt"%model),
         allowedTries = cms.untracked.uint32(1),
         timeout = cms.untracked.uint32(1)
     ),

@@ -28,6 +28,9 @@
   <class name="l1t::HGCalTowerMapBxCollection"/>
   <class name="edm::Wrapper<l1t::HGCalTowerMapBxCollection>"/>
 
+  <class name="std::unordered_map<unsigned int,float,std::hash<unsigned int>,std::equal_to<unsigned int>>"/>
+  <class name="edm::Wrapper<std::unordered_map<unsigned int,float,std::hash<unsigned int>,std::equal_to<unsigned int>>>"/>
+
   <class name="l1t::HGCalClusterT<l1t::HGCalTriggerCell>" />
   <class name="l1t::HGCalClusterT<l1t::HGCalTriggerSums>" />
   <class name="l1t::HGCalCluster" ClassVersion="18">
