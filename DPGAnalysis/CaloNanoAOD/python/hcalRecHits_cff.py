@@ -7,7 +7,7 @@ hbheRecHitTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     name = cms.string("RecHitHBHE"),
     doc  = cms.string("HCAL barrel and endcap rec hits"),
     singleton = cms.bool(False), # the number of entries is variable
-    extension = cms.bool(False), # this is the main table for the muons
+    extension = cms.bool(False), # this is the main table 
     variables = cms.PSet(
         detId = Var('detid().rawId()', 'int', precision=-1, doc='detId'),
         energy = Var('energy', 'float', precision=14, doc='energy'),
@@ -15,7 +15,7 @@ hbheRecHitTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     )
 )
 
-hbheRecHitPositionTable = cms.EDProducer("HCALRecHitPositionTableProducer",
+hbheRecHitPositionTable = cms.EDProducer("CaloRecHitPositionTableProducer",
     src = hbheRecHitTable.src,
     cut = hbheRecHitTable.cut, 
     name = hbheRecHitTable.name,
@@ -47,8 +47,8 @@ hoRecHitPositionTable.doc  = hoRecHitsTable.doc
 hcalRecHitTables = cms.Sequence(
 	hbheRecHitTable
 	+hbheRecHitPositionTable 
-    +hfRecHitsTable
-    +hfRecHitPositionTable
-    +hoRecHitsTable
-    +hoRecHitPositionTable
+  +hfRecHitsTable
+  +hfRecHitPositionTable
+  +hoRecHitsTable
+  +hoRecHitPositionTable
 )
