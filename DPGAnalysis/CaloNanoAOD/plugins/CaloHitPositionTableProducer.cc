@@ -40,27 +40,22 @@ class CaloHitPositionTableProducer : public HitPositionTableProducer<edm::View<T
       return positionFromDetId(detId); 
     }
 
-    float radiusFromHit(const CaloRecHit& hit) { 
-      return radiusFromDetId(hit.detid()); 
-    }
-
-    float radiusFromHit(const PCaloHit& hit) { 
-      return radiusFromDetId(hit.id()); 
-    }
-
     void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
       caloGeom_ = &iSetup.getData(caloGeoToken_);
-      rhtools_.setGeometry(*caloGeom_);
 
       ecalEBGeom = caloGeom_->getSubdetectorGeometry(DetId::Ecal, EcalBarrel);
       ecalEEGeom = caloGeom_->getSubdetectorGeometry(DetId::Ecal, EcalEndcap);
     }
 
     GlobalPoint positionFromDetId(DetId id) {
+      printf("top of positionFromDetId()\n");
       DetId::Detector det = id.det();
+      printf("got det\n");
       if (det == DetId::HGCalEE || det == DetId::HGCalHSi || det == DetId::HGCalHSc) {
-        return rhtools_.getPosition(id);
+        printf("HGCAL\n");
+        throw cms::Exception("CaloHitPositionTableProducer") << "HGCAL not supported";
       } else if(det == DetId::Ecal){
+        printf("ECAL\n");
         if(id.subdetId() == EcalBarrel){
           return ecalEBGeom->getGeometry(id)->getPosition();
         } else if(id.subdetId() == EcalEndcap){
@@ -69,11 +64,18 @@ class CaloHitPositionTableProducer : public HitPositionTableProducer<edm::View<T
           throw cms::Exception("CaloHitPositionTableProducer") << "Unsupported ECAL subdet " << id.subdetId();
         }
       } else if(det == DetId::Hcal){
-        GlobalPoint position;
+        printf("HCAL\n");
         HcalSubdetector esd = (HcalSubdetector)id.subdetId();
-        const auto* gTmp = caloGeom_->getSubdetectorGeometry(DetId::Hcal, esd);
-        return gTmp->getGeometry(id)->getPosition();
+        printf("esd = %d \n", esd);
+        const CaloSubdetectorGeometry* gTmp = caloGeom_->getSubdetectorGeometry(DetId::Hcal, esd);
+        printf("gTMP\n");
+        auto geo = gTmp->getGeometry(id);
+        printf("geo\n");
+        GlobalPoint pos = geo->getPosition();
+        printf("pos\n");
+        return pos;
       }else {
+        printf("uh oh\n");
         std::ostringstream message;
         message << "Unsupported DetId: ";
         if (det == DetId::Tracker){
@@ -93,31 +95,8 @@ class CaloHitPositionTableProducer : public HitPositionTableProducer<edm::View<T
       }
     }
 
-    float radiusFromDetId(DetId id) {
-      DetId::Detector det = id.det();
-      if (det == DetId::HGCalEE || det == DetId::HGCalHSi || det == DetId::HGCalHSc) {
-        if (rhtools_.isSilicon(id)) {
-          return rhtools_.getRadiusToSide(id);
-        } else if (rhtools_.isScintillator(id)) {
-            //return r * sin(dphi) / 2.;
-         // auto detadphi = rhtools_.getScintDEtaDPhi(id);
-         // float dphi = detadphi.second;  //same in both
-          float dphi = 0.0211809f; //DEBUG FIXME; the geometry access segfaults for some hits probably close to side
-          auto pos = rhtools_.getPosition(id);
-          float r = pos.transverse();
-          return r * sin(dphi) / 2.;  //this is anyway approximate
-        } else {
-          return 0.;
-        }
-
-      } else {
-        return 0;  //no except here
-      }
-    }
-
   protected:
     edm::ESGetToken<CaloGeometry, CaloGeometryRecord> caloGeoToken_;
-    hgcal::RecHitTools rhtools_;
     const CaloGeometry* caloGeom_;
 
     const CaloSubdetectorGeometry* ecalEBGeom;

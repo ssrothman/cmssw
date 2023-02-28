@@ -39,14 +39,14 @@ public:
     std::vector<float> xvals;
     std::vector<float> yvals;
     std::vector<float> zvals;
-    std::vector<float> hitrvals;
+    //std::vector<float> hitrvals;
     for (const auto& obj : *objs) {
       if (cut_(obj)) {
         auto position = positionFromHit(obj);
         xvals.emplace_back(position.x());
         yvals.emplace_back(position.y());
         zvals.emplace_back(position.z());
-        hitrvals.emplace_back(radiusFromHit(obj));
+        //hitrvals.emplace_back(radiusFromHit(obj));
       }
     }
 
@@ -55,7 +55,7 @@ public:
     tab->addColumn<float>("y", yvals, "y position");
     tab->addColumn<float>("z", zvals, "z position");
     //addExtraColumns(tab);
-    tab->addColumn<float>("hitr", hitrvals, "radius");
+    //tab->addColumn<float>("hitr", hitrvals, "radius");
 
     iEvent.put(std::move(tab));
   }
