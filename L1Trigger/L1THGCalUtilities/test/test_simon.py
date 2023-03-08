@@ -1,8 +1,10 @@
 import FWCore.ParameterSet.Config as cms 
 
 from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
-from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
-process = cms.Process('DIGI',Phase2C17I13M9, enableSonicTriton)
+#from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
+#process = cms.Process('DIGI',Phase2C17I13M9, enableSonicTriton)
+from Configuration.Eras.Era_Phase2C9_cff import Phase2C9
+process = cms.Process('DIGI',Phase2C9, enableSonicTriton)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -10,8 +12,10 @@ process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
-process.load('Configuration.Geometry.GeometryExtendedRun4D110Reco_cff')
-process.load('Configuration.Geometry.GeometryExtendedRun4D110_cff')
+# process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
+# process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.Generator_cff')
 process.load('IOMC.EventVertexGenerators.VtxSmearedHLLHC14TeV_cfi')
@@ -30,9 +34,10 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("PoolSource",
-       fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_125X_mcRun4_realistic_v2_ext1-v1/30000/000c5e5f-78f7-44ee-95fe-7b2f2c2e2312.root'),
+       fileNames = cms.untracked.vstring('/store/relval/CMSSW_12_5_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU_125X_mcRun4_realistic_v2_2026D88PU200-v1/2580000/4e50b5fd-494b-4e43-acf3-35b6c302763a.root'),
        inputCommands=cms.untracked.vstring(
            'keep *',
+           'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
            )
        )
 
@@ -55,7 +60,8 @@ process.TFileService = cms.Service(
 
 # Other statements
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T21', '')
+#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T21', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T15', '')
 
 # load HGCAL TPG simulation
 process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
@@ -65,7 +71,6 @@ from L1Trigger.L1THGCalUtilities.hgcalTriggerChains import HGCalTriggerChains
 import L1Trigger.L1THGCalUtilities.vfe as vfe
 import L1Trigger.L1THGCalUtilities.concentrator as concentrator
 import L1Trigger.L1THGCalUtilities.clustering2d as clustering2d
-import L1Trigger.L1THGCalUtilities.layer1 as layer1
 import L1Trigger.L1THGCalUtilities.clustering3d as clustering3d
 import L1Trigger.L1THGCalUtilities.selectors as selectors
 import L1Trigger.L1THGCalUtilities.customNtuples as ntuple
@@ -77,8 +82,6 @@ chains = HGCalTriggerChains()
 ## VFE
 chains.register_vfe("Floatingpoint", vfe.CreateVfe())
 ## ECON
-chains.register_concentrator("Threshold", concentrator.CreateThreshold())
-chains.register_concentrator("Bcstc", concentrator.CreateMixedFeOptions())
 chains.register_concentrator("Supertriggercell", concentrator.CreateSuperTriggerCell())
 chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
   threshold_scintillator=cms.double(-1),
@@ -89,7 +92,6 @@ chains.register_concentrator("AutoEncoder", concentrator.CreateAutoencoder())
 chains.register_concentrator("TritonAE", concentrator.CreateTritonAE())
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
-chains.register_backend1("Truncationfw", layer1.RozBinTruncationFw())
 ## BE2
 chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
 # Register selector
@@ -106,8 +108,8 @@ concentrator_algos = ['TritonAE', 'Threshold0']
 backend_algos = ['Histomax']
 ## Make cross product fo ECON and BE algos
 import itertools
-for cc,s1 in itertools.product(concentrator_algos,layer1_algos):
-    chains.register_chain('Floatingpoint', cc, s1, 'Histomax', 'Genmatch', 'Genclustersntuple')
+for cc,be in itertools.product(concentrator_algos,backend_algos):
+    chains.register_chain('Floatingpoint', cc, 'Dummy', be, 'Genmatch', 'Genclustersntuple')
 
 process = chains.create_sequences(process)
 

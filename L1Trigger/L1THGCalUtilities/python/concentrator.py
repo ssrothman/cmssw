@@ -1,7 +1,7 @@
 
 import FWCore.ParameterSet.Config as cms
 import SimCalorimetry.HGCalSimProducers.hgcalDigitizer_cfi as digiparam
-from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import threshold_conc_proc, best_conc_proc, supertc_conc_proc, coarsetc_onebitfraction_proc, custom_conc_proc, autoEncoder_conc_proc
+from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import threshold_conc_proc, best_conc_proc, supertc_conc_proc, coarsetc_onebitfraction_proc, custom_conc_proc, autoEncoder_conc_proc, triton_ae_params
 
 
 class CreateSuperTriggerCell(object):
@@ -68,6 +68,18 @@ class CreateBestChoice(object):
                 )
         return producer
 
+
+class CreateTritonAE(object):
+    def __init__(self):
+        self.processor = triton_ae_params.clone()
+    def __call__(self, process, inputs):
+        producer = process.l1tHGCalConcentratorProducer.clone(
+            InputTriggerCells = cms.InputTag(inputs),
+            InputTriggerSums = cms.InputTag(inputs),
+            ProcessorParameters = self.processor,
+            InputAE = cms.InputTag("AEProducer"),
+        )
+        return producer
 
 class CreateAutoencoder(object):
     def __init__(self,
