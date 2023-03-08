@@ -199,7 +199,8 @@ autoEncoder_training_5eLinks = cms.PSet(encoderModelFile = cms.FileInPath('L1Tri
 
 linkToGraphMapping = [0,0,0,1,2,3,3,3,3,3,3,3,3,3,3]
 
-autoEncoder_conc_proc = cms.PSet(ProcessorName  = cms.string('HGCalConcentratorProcessorSelection'),
+autoEncoder_conc_proc = cms.PSet(
+    ProcessorName  = cms.string('HGCalConcentratorProcessorSelection'),
                                  Method = cms.vstring(['autoEncoder','autoEncoder','thresholdSelect']),
                                  cellRemap = cms.vint32(autoencoder_triggerCellRemap),
                                  cellRemapNoDuplicates = cms.vint32(autoencoder_triggerCellRemap),
@@ -227,8 +228,24 @@ autoEncoder_conc_proc = cms.PSet(ProcessorName  = cms.string('HGCalConcentratorP
                                  superTCCalibration = vfe_proc.clone(),
 )
 
-
-
+triton_ae_params = cms.PSet(
+    ProcessorName  = cms.string('HGCalConcentratorProcessorSelection'),
+    Method = cms.vstring(['AEFromTriton','AEFromTriton','thresholdSelect']),
+    threshold_silicon = cms.double(-1.), # MipT
+    threshold_scintillator = cms.double(-1.), # MipT
+    coarsenTriggerCells = supertc_conc_proc.coarsenTriggerCells,
+    superTCCompression = superTCCompression_proc.clone(),
+    coarseTCCompression = coarseTCCompression_proc.clone(),
+    superTCCalibration = vfe_proc.clone(),
+    calibrationCfg_ee = vfe_proc.calibrationCfg_ee,
+    calibrationCfg_hesi = vfe_proc.calibrationCfg_hesi,
+    calibrationCfg_hesc = vfe_proc.calibrationCfg_hesc,
+    calibrationCfg_nose = vfe_proc.calibrationCfg_nose,
+    fixedDataSizePerHGCROC = supertc_conc_proc.fixedDataSizePerHGCROC,
+    allTrigCellsInTrigSums = supertc_conc_proc.allTrigCellsInTrigSums,
+    #cellRemap = cms.vint32(autoencoder_triggerCellRemap),
+    #cellRemapNoDuplicates = cms.vint32(autoencoder_triggerCellRemap),
+)
 
 from Configuration.Eras.Modifier_phase2_hgcalV10_cff import phase2_hgcalV10
 # >= V9 samples have a different definition of the dEdx calibrations. To account for it
@@ -245,7 +262,8 @@ l1tHGCalConcentratorProducer = cms.EDProducer(
     "HGCalConcentratorProducer",
     InputTriggerCells = cms.InputTag('l1tHGCalVFEProducer:HGCalVFEProcessorSums'),
     InputTriggerSums = cms.InputTag('l1tHGCalVFEProducer:HGCalVFEProcessorSums'),
-    ProcessorParameters = threshold_conc_proc.clone()
+    ProcessorParameters = threshold_conc_proc.clone(),
+    InputAE = cms.InputTag(''),
     )
 
 

@@ -50,7 +50,7 @@ class CreateNtuple(object):
             'gen', 'genjet', 'gentau',
             'digis',
             'triggercells',
-            'clusters', 'multiclusters'
+            'clusters', 'multiclusters','econdata',
             ]
             ):
         self.ntuple_list = ntuple_list
@@ -67,6 +67,8 @@ class CreateNtuple(object):
                 pset.Multiclusters = cms.InputTag(inputs[2])
             elif ntuple=='multiclusters':
                 pset.Multiclusters = cms.InputTag(inputs[2])
+            elif ntuple=='econdata':
+                pset.ConcentratorData = cms.InputTag(inputs[0])
             vpset.append(pset)
         ntuplizer = process.l1tHGCalTriggerNtuplizer.clone()
         ntuplizer.Ntuples = cms.VPSet(vpset)
