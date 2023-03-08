@@ -34,12 +34,12 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("PoolSource",
-       fileNames = cms.untracked.vstring('/store/relval/CMSSW_12_5_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU_125X_mcRun4_realistic_v2_2026D88PU200-v1/2580000/4e50b5fd-494b-4e43-acf3-35b6c302763a.root'),
-       inputCommands=cms.untracked.vstring(
-           'keep *',
-           'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
-           )
-       )
+    fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100_NoPU.root'),
+    inputCommands=cms.untracked.vstring(
+        'keep *',
+        'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
+    )
+)
 
 process.options = cms.untracked.PSet(
 
@@ -65,7 +65,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T15', ''
 
 # load HGCAL TPG simulation
 process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
-process.load('L1Trigger.L1THGCalUtilities.HGC3DClusterGenMatchSelector_cff')
+process.load('L1Trigger.L1THGCalUtilities.HGC3DClusterSelectors_cff')
 process.load('L1Trigger.L1THGCalUtilities.hgcalTriggerNtuples_cff')
 from L1Trigger.L1THGCalUtilities.hgcalTriggerChains import HGCalTriggerChains
 import L1Trigger.L1THGCalUtilities.vfe as vfe
@@ -95,12 +95,12 @@ chains.register_backend1("Dummy", clustering2d.CreateDummy())
 ## BE2
 chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
 # Register selector
-chains.register_selector("Genmatch", selectors.CreateGenMatch())
+chains.register_selector("Dummy", selectors.CreateDummy())
 
 
 # Register ntuples
 ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells', 'econdata']
-chains.register_ntuple("Genclustersntuple", ntuple.CreateNtuple(ntuple_list))
+chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
 
 # Register trigger chains
 #concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
@@ -109,7 +109,7 @@ backend_algos = ['Histomax']
 ## Make cross product fo ECON and BE algos
 import itertools
 for cc,be in itertools.product(concentrator_algos,backend_algos):
-    chains.register_chain('Floatingpoint', cc, 'Dummy', be, 'Genmatch', 'Genclustersntuple')
+    chains.register_chain('Floatingpoint', cc, 'Dummy', be, 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
 
