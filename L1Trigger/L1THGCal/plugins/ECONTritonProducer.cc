@@ -59,7 +59,6 @@ void ECONTritonProducer::beginRun(const edm::Run& run, const edm::EventSetup& es
 }
 
 void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es, Input& iInput) {
-  printf("acquiring\n");
   tc_modules_.clear();
 
   edm::Handle<l1t::HGCalTriggerCellBxCollection> tcs;
@@ -69,7 +68,6 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
     uint32_t module = triggerGeometry_->getModuleFromTriggerCell(tc.detId());
     tc_modules_[module].push_back(tc);
   }
-  printf("tc modules map filled\n");
 
   nModule_ = 0;
   for (const auto& tc_module: tc_modules_){
@@ -79,7 +77,6 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
   }
 
   client_->setBatchSize(nModule_);
-  printf("batch size was set\n");
 
   auto& inputCALQ = iInput.begin()->second;;
   auto dataCALQ = std::make_shared<TritonInput<float>>();
@@ -103,9 +100,7 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
       unsigned cellu = id.triggerCellU();
       unsigned cellv = id.triggerCellV();
       int inputIndex = cellUVremap[cellu][cellv];
-      if(!printed){
-        printf("theres a nonzero trigger cell (%u, %u)[%d] = %d\n", cellu, cellv, inputIndex, tc.hwPt());
-      }
+      
       //int inputIndex = 0;
       if (inputIndex < 0){
         throw cms::Exception("BadInitialization")
@@ -121,23 +116,11 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
       AEinput_module[inputIndex] = tc.hwPt()/cosh(tc.eta());
     }//end for each trigger cell in module
 
-    if(!printed){
-      printf("input for module %u is:\n\t%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, ...\n",
-          tc_module.first,
-          AEinput_module[0],
-          AEinput_module[1],
-          AEinput_module[2],
-          AEinput_module[3],
-          AEinput_module[4]);
-      printed=true;
-    }
     dataCALQ->push_back(AEinput_module);
     ++nModule_;
   }//end for each module
-  printf("filled inputs\n");
-
-  printf("input dims = %lu, %lu\n", dataCALQ->size(), dataCALQ->at(0).size());
-  printf("I stg the inputs are:\n\t%0.1f, %0.1f, %0.1f, %0.1f, %0.1f %0.1f\n",
+  //printf("input dims = %lu, %lu\n", dataCALQ->size(), dataCALQ->at(0).size());
+  /*printf("I stg the inputs are:\n\t%0.1f, %0.1f, %0.1f, %0.1f, %0.1f %0.1f\n",
           dataCALQ->at(0)[0],
           dataCALQ->at(0)[1],
           dataCALQ->at(0)[2],
@@ -192,22 +175,15 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
           dataCALQ->at(0)[44],
           dataCALQ->at(0)[45],
           dataCALQ->at(0)[46],
-          dataCALQ->at(0)[47]);
+          dataCALQ->at(0)[47]);*/
   inputCALQ.toServer(dataCALQ);
-  printf("end acquire()\n");
 
 }//end acquire
 
 void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
-  for (const auto& iter: iOutput){
-    std::cout << iter.first << std::endl;
-  }
-  printf("producing...\n");
   const auto& ECONout = iOutput.at("ECON__0").fromServer<float>();
-  printf("got ECONout\n");
   const auto& CALQout = iOutput.at("rCALQ__1").fromServer<float>();
-  printf("got CALQout\n");
-  printf("output dims = %lu, %lu\n", CALQout.size(), CALQout.at(0).size());
+  //printf("output dims = %lu, %lu\n", CALQout.size(), CALQout.at(0).size());
 
   auto ADCmap = std::make_unique<AEMap>();
   auto latentMap = std::make_unique<ECONMap>();
@@ -248,7 +224,7 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
     }
     if(!printed){
       printed=true;
-      printf("output for module %u is:\n\t%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f\n",
+      /*printf("output for module %u is:\n\t%0.1f, %0.1f, %0.1f, %0.1f, %0.1f, %0.1f\n",
           tc_module.first,
           AE_wafer[0],
           AE_wafer[1],
@@ -304,7 +280,7 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
           AE_wafer[44],
           AE_wafer[45],
           AE_wafer[46],
-          AE_wafer[47]);
+          AE_wafer[47]);*/
     }
 
     (*ADCmap)[tc_module.first] = AE_wafer;

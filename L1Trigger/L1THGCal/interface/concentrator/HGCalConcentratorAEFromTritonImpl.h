@@ -47,7 +47,6 @@ public:
   void setGeometry(const HGCalTriggerGeometryBase* const geom);
 
   void setAE(const AEMap* AEout, const ECONMap* ECONout) {
-    printf("setting AE inside AEFromTritonImpl\n");
     AEout_ = AEout;
     ECONout_ = ECONout;
   }

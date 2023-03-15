@@ -34,9 +34,7 @@ public:
 
 
   void setAE(const AEMap *AEout, const ECONMap *ECONout) override {
-    printf("setting AE from concentrator processor selection\n");
     if(AEFromTritonImpl_){
-      printf("\tactually doing it...\n");
       AEFromTritonImpl_->setAE(AEout, ECONout);
     }
   }
