@@ -73,22 +73,16 @@ void HGCalConcentratorProducer::produce(edm::Event& e, const edm::EventSetup& es
 
   e.getByToken(input_cell_, trigCellBxColl);
 
-  printf("Considering pushing AE quantities\n");
   if(concentratorProcess_->wantsAE()){
-    printf("concentratorProcess wants AE\n");
     edm::Handle<AEMap> AEhandle;
     edm::Handle<ECONMap> ECONhandle;
   
     e.getByToken(AEtoken_, AEhandle);
     e.getByToken(ECONtoken_, ECONhandle);
 
-    printf("setting AE from concentrator producer\n");
     concentratorProcess_->setAE(AEhandle.product(), ECONhandle.product());
-  } else {
-    printf("concentrator process does not want AE\n");
   }
 
-  printf("in either case, running...\n");
   concentratorProcess_->run(trigCellBxColl, cc_output);
   // Put in the event
   e.put(std::make_unique<l1t::HGCalTriggerCellBxCollection>(std::move(std::get<0>(cc_output))),
