@@ -68,16 +68,40 @@ class CreateBestChoice(object):
                 )
         return producer
 
+from L1Trigger.L1THGCal.ECONTritonProducer_cfi import AEProducer
 
 class CreateTritonAE(object):
-    def __init__(self):
-        self.processor = triton_ae_params.clone()
+    def __init__(self, inputType='ADC', 
+                       normType='None',
+                       AEProducerName="AEProducer",
+                       modelName = 'dummy'):
+        #processor params
+        self.processor = triton_ae_params.clone(
+            inputType = inputType
+        )
+
+        #AE producer params
+        self.modelName = modelName
+        self.AEProducerName = AEProducerName
+        self.inputType = inputType
+        self.normType = normType
+
     def __call__(self, process, inputs):
+        setattr(process, self.AEProducerName, AEProducer.clone(
+            inputType = self.inputType,
+            normType = self.normType,
+            Client = AEProducer.Client.clone(
+                modelName = self.modelName,
+                modelConfigPath = "L1Trigger/L1THGCal/data/models/%s/config.pbtxt"%self.modelName
+            )
+        ))
+        setattr(process, self.AEProducerName+"Task", cms.Task(getattr(process, self.AEProducerName)))
+        process.L1THGCalTriggerPrimitives.associate(getattr(process, self.AEProducerName+"Task"))
         producer = process.l1tHGCalConcentratorProducer.clone(
             InputTriggerCells = cms.InputTag(inputs),
             InputTriggerSums = cms.InputTag(inputs),
             ProcessorParameters = self.processor,
-            InputAE = cms.InputTag("AEProducer"),
+            InputAE = self.AEProducerName,
         )
         return producer
 
@@ -95,6 +119,8 @@ class CreateAutoencoder(object):
             zeroSuppresionThreshold = autoEncoder_conc_proc.zeroSuppresionThreshold,
             saveEncodedValues = autoEncoder_conc_proc.saveEncodedValues,
             preserveModuleSum = autoEncoder_conc_proc.preserveModuleSum,
+            threshold_scintillator = autoEncoder_conc_proc.threshold_scintillator,
+            threshold_silicon = autoEncoder_conc_proc.threshold_silicon,
             scintillatorMethod = 'thresholdSelect',
             ):
          self.processor = autoEncoder_conc_proc.clone(
@@ -110,6 +136,8 @@ class CreateAutoencoder(object):
                 zeroSuppresionThreshold = zeroSuppresionThreshold,
                 saveEncodedValues = saveEncodedValues,
                 preserveModuleSum = preserveModuleSum,
+                threshold_scintillator = threshold_scintillator,
+                threshold_silicon = threshold_silicon,
                 Method = cms.vstring(['autoEncoder','autoEncoder', scintillatorMethod]),
                 )
 

@@ -81,6 +81,8 @@ private:
   HGCalTriggerTools triggerTools_;
 
   const HGCalTriggerGeometryBase* geometry_;
+
+  InputType inType_;
 };
 
 #endif

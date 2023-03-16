@@ -1,10 +1,8 @@
 import FWCore.ParameterSet.Config as cms 
 
 from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
-#from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
-#process = cms.Process('DIGI',Phase2C17I13M9, enableSonicTriton)
-from Configuration.Eras.Era_Phase2C9_cff import Phase2C9
-process = cms.Process('DIGI',Phase2C9, enableSonicTriton)
+from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
+process = cms.Process('DIGI',Phase2C17I13M9, enableSonicTriton)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -12,10 +10,8 @@ process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
-# process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
-# process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.Generator_cff')
 process.load('IOMC.EventVertexGenerators.VtxSmearedHLLHC14TeV_cfi')
@@ -29,12 +25,12 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(-1)
+    input = cms.untracked.int32(5)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100_NoPU.root'),
+    fileNames = cms.untracked.vstring('/store/relval/CMSSW_12_5_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU_125X_mcRun4_realistic_v2_2026D88PU200-v1/2580000/4e50b5fd-494b-4e43-acf3-35b6c302763a.root'),
     inputCommands=cms.untracked.vstring(
         'keep *',
         'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
@@ -60,8 +56,7 @@ process.TFileService = cms.Service(
 
 # Other statements
 from Configuration.AlCa.GlobalTag import GlobalTag
-#process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T21', '')
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T15', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T21', '')
 
 # load HGCAL TPG simulation
 process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
@@ -89,7 +84,26 @@ chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
 ))
 chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
 chains.register_concentrator("AutoEncoder", concentrator.CreateAutoencoder())
-chains.register_concentrator("TritonAE", concentrator.CreateTritonAE())
+chains.register_concentrator("AENone", concentrator.CreateTritonAE(
+  inputType = "ADCT",
+  modelName = 'dummy',
+  AEProducerName = 'AEProducerNone',
+  normType='None',
+))
+chains.register_concentrator("NateAE", concentrator.CreateTritonAE(
+  inputType = "ADCT",
+  modelName = "model_48_250_100_16_ensemble",
+  AEProducerName = "AEProducerNate",
+  normType='None',
+))
+chains.register_concentrator("RohanAE", concentrator.CreateAutoencoder(
+  threshold_scintillator=-1,
+  threshold_silicon=-1,
+  zeroSuppresionThreshold=-1,
+  saveEncodedValues=True,
+  preserveModuleSum=True
+))
+
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
 ## BE2
@@ -104,7 +118,8 @@ chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
 
 # Register trigger chains
 #concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
-concentrator_algos = ['TritonAE', 'Threshold0']
+concentrator_algos = ['Threshold0', "RohanAE", "NateAE", "AENone"]
+
 backend_algos = ['Histomax']
 ## Make cross product fo ECON and BE algos
 import itertools
@@ -121,23 +136,8 @@ process.hgcl1tpg_step = cms.Path(process.L1THGCalTriggerPrimitives)
 process.selector_step = cms.Path(process.L1THGCalTriggerSelector)
 process.ntuple_step = cms.Path(process.L1THGCalTriggerNtuples)
 
-model='dummy'
-process.AEProducer = cms.EDProducer("ECONTritonProducer",
-    Client = cms.PSet(
-        mode = cms.string("Async"),
-        modelName = cms.string(model),
-        modelConfigPath = cms.FileInPath("L1Trigger/L1THGCal/data/models/%s/config.pbtxt"%model),
-        allowedTries = cms.untracked.uint32(1),
-        timeout = cms.untracked.uint32(10),
-        useSharedMemory=cms.untracked.bool(False)
-    ),
-    TriggerCells = cms.InputTag("Floatingpoint","HGCalVFEProcessorSums"),
-)
-process.AE_step = cms.Path(process.AEProducer)
-
-
 # Schedule definition
-process.schedule = cms.Schedule(process.hgcl1tpg_step, process.selector_step, process.ntuple_step, process.AE_step)
+process.schedule = cms.Schedule(process.hgcl1tpg_step, process.selector_step, process.ntuple_step)
 
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
