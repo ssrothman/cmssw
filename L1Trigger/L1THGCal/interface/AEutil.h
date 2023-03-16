@@ -23,4 +23,68 @@ static constexpr int ae_outputCellV[nTriggerCells] = {4, 4, 4, 4, 5, 5, 5, 5, 6,
 using AEMap=std::unordered_map<unsigned int, std::array<float, nTriggerCells>>;
 using ECONMap=std::unordered_map<unsigned int, std::array<float, latentSize>>;
 
+enum InputType {
+  ADC, //hwpt
+  ADCT, //hwpt/cosh(eta)
+  MIP, //mipT * cosh(eta)
+  MIPT, //mipT
+  E, //energy
+  ET //energy/cosh(eta)
+};
+
+inline std::string inputTypeEnumToStr(InputType en){
+  switch (en){
+    case ADC:
+      return "ADC";
+    case ADCT:
+      return "ADCT";
+    case MIP:
+      return "MIP";
+    case MIPT:
+      return "MIPT";
+    case E:
+      return "E";
+    case ET:
+      return "ET";
+    default:
+      throw cms::Exception("InputTypeEnumToStr") << "Invalid InputType";
+  }
+}
+
+inline InputType inputTypeStrToEnum(std::string inputTypeStr){
+  if(inputTypeStr == "ADC"){
+    return InputType::ADC;
+  } else if(inputTypeStr == "ADCT"){
+    return InputType::ADCT;
+  } else if(inputTypeStr == "MIP"){
+    return InputType::MIP;
+  } else if(inputTypeStr == "MIPT"){
+    return InputType::MIPT;
+  } else if(inputTypeStr == "E"){
+    return InputType::E;
+  } else if(inputTypeStr == "ET"){
+    return InputType::ET;
+  } else{
+    throw cms::Exception("InputTypeStrToEnum") << "Invalid InputType in constructor";
+  }
+}
+
+enum NormType{
+  None,
+  Floating,
+  BitShift
+};
+
+inline NormType normTypeStrToEnum(std::string str){
+  if(str == "None"){
+    return NormType::None;
+  } else if(str == "Floating"){
+    return NormType::Floating;
+  } else if(str == "BitShift"){
+    return NormType::BitShift;
+  } else {
+    throw cms::Exception("NormTypeStrToEnum") << "Invalid NormType string";
+  }
+}
+
 #endif
