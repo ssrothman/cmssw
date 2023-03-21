@@ -97,10 +97,22 @@ void HGCalConcentratorAEFromTritonImpl::select(unsigned moduleID,
         throw cms::Exception("HGCalConcentratorAEFromTritonImpl") << "Invalid InputType";
     }
 
-    //round to int, and clip to >= 1
-    int AEQ = std::max(static_cast<int>(std::round(AEQ_f)), 1);
+    //we could do smarter rounding here (eg Largest Remainder Method)
+    int AEQ = static_cast<int>(std::round(AEQ_f));
+    
+    //if hwpt isn't being set, set to 1 so that we pass any future hwpt()>0 checks
+    //in principle what we actually should be doing is back-calculating the ADC value
+    //actually we can probably just do the whole calibration BS in floating point anyway
+    //on account of it's not like the circuits to do this even exist atm
+    if(AEQ < 0){
+      AEQ = 1;
+    }
     //int AEQ = std::max(static_cast<int>(AEQ_f), 1);
-     
+    
+    if(AEQ==0){
+      continue;
+    }
+
     //build 4-vector
     math::PtEtaPhiMLorentzVector p4(AEQ/cosh(point.eta()), point.eta(), point.phi(), 0.);
 

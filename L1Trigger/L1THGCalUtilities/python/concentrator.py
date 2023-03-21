@@ -121,6 +121,8 @@ class CreateAutoencoder(object):
             preserveModuleSum = autoEncoder_conc_proc.preserveModuleSum,
             threshold_scintillator = autoEncoder_conc_proc.threshold_scintillator,
             threshold_silicon = autoEncoder_conc_proc.threshold_silicon,
+            useTransverseADC = autoEncoder_conc_proc.useTransverseADC,
+            clipTransverseADC = autoEncoder_conc_proc.clipTransverseADC,
             scintillatorMethod = 'thresholdSelect',
             ):
          self.processor = autoEncoder_conc_proc.clone(
@@ -138,6 +140,8 @@ class CreateAutoencoder(object):
                 preserveModuleSum = preserveModuleSum,
                 threshold_scintillator = threshold_scintillator,
                 threshold_silicon = threshold_silicon,
+                useTransverseADC = useTransverseADC,
+                clipTransverseADC = clipTransverseADC,
                 Method = cms.vstring(['autoEncoder','autoEncoder', scintillatorMethod]),
                 )
 
