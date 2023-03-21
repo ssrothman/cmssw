@@ -77,6 +77,8 @@ private:
 
   double zeroSuppresionThreshold_;
   bool bitShiftNormalization_;
+  bool useTransverseADC_;
+  bool clipTransverseADC_;
   bool saveEncodedValues_;
   bool preserveModuleSum_;
 

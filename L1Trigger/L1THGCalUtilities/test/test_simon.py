@@ -30,7 +30,7 @@ process.maxEvents = cms.untracked.PSet(
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('/store/relval/CMSSW_12_5_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU_125X_mcRun4_realistic_v2_2026D88PU200-v1/2580000/4e50b5fd-494b-4e43-acf3-35b6c302763a.root'),
+    fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100-gun_noPU.root'),
     inputCommands=cms.untracked.vstring(
         'keep *',
         'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
@@ -84,10 +84,10 @@ chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
 ))
 chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
 chains.register_concentrator("AutoEncoder", concentrator.CreateAutoencoder())
-chains.register_concentrator("AENone", concentrator.CreateTritonAE(
+chains.register_concentrator("DummyAE", concentrator.CreateTritonAE(
   inputType = "ADCT",
   modelName = 'dummy',
-  AEProducerName = 'AEProducerNone',
+  AEProducerName = 'AEProducerDummy',
   normType='None',
 ))
 chains.register_concentrator("NateAE", concentrator.CreateTritonAE(
@@ -96,12 +96,28 @@ chains.register_concentrator("NateAE", concentrator.CreateTritonAE(
   AEProducerName = "AEProducerNate",
   normType='None',
 ))
+chains.register_concentrator("NateAENorm", concentrator.CreateTritonAE(
+  inputType = "ADCT",
+  modelName = "model_48_250_100_16_ensemble",
+  AEProducerName = "AEProducerNateFloating",
+  normType='Floating',
+))
 chains.register_concentrator("RohanAE", concentrator.CreateAutoencoder(
   threshold_scintillator=-1,
   threshold_silicon=-1,
   zeroSuppresionThreshold=-1,
   saveEncodedValues=True,
   preserveModuleSum=True
+))
+chains.register_concentrator("RohanAEFP", concentrator.CreateAutoencoder(
+  threshold_scintillator=-1,
+  threshold_silicon=-1,
+  zeroSuppresionThreshold=-1,
+  saveEncodedValues=True,
+  preserveModuleSum=True,
+  nBitsPerInput=-1,
+  maxBitsPerOutput=-1,
+  clipTransverseADC=False,
 ))
 
 ## BE1
@@ -118,7 +134,7 @@ chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
 
 # Register trigger chains
 #concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
-concentrator_algos = ['Threshold0', "RohanAE", "NateAE", "AENone"]
+concentrator_algos = ['Threshold0', "RohanAE", "RohanAEFP", "NateAE", "NateAENorm", "DummyAE"]
 
 backend_algos = ['Histomax']
 ## Make cross product fo ECON and BE algos

@@ -171,6 +171,7 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
   auto latentMap = std::make_unique<ECONMap>();
 
   size_t iModule=0;
+  bool printed=false;
   for(const auto& tc_module : tc_modules_){
     //skip scintillator modules
     if (triggerTools_.isScintillator(tc_module.second.at(0).detId())){ 
@@ -232,11 +233,24 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
 
       float ans = CALQout[iModule][iTC];
       AE_wafer[iTC] = ans * normalization * renormalization;
+
+      if(!printed){
+        printf("WAFER %d:\n", tc_module.first);
+        printf("\toriginal wafer sum = %0.3lf\n",(modSums_[tc_module.first]));
+        printf("\toriginal normalization = %0.3lf\n",normalization);
+        printf("\toutput sum = %0.3lf\n", AEmodSum);
+        printf("\trenormalization = %0.3lf\n", renormalization);
+        printf("\toutput value = %0.3f\n", ans);
+        printf("\toutput sum * normalization * renormalization = %0.3f\n", AE_wafer[iTC]);
+        printf("\n");
+        printed=true;
+      }
     }
 
     (*ADCmap)[tc_module.first] = AE_wafer;
     ++iModule;
   }
+
 
   iEvent.put(std::move(ADCmap));
   iEvent.put(std::move(latentMap));
