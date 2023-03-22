@@ -200,7 +200,7 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
       if(!triggerTools_.getTriggerGeometry()->validTriggerCell(id)){
         continue;
       }
-      AEmodSum += CALQout[iModule][iTC];
+      AEmodSum += std::max<float>(CALQout[iModule][iTC], 0.f);
     }//end loop to compute AEmodSum
 
     double normalization = 1;
@@ -231,7 +231,7 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
         continue;
       }
 
-      float ans = CALQout[iModule][iTC];
+      float ans = std::max<float>(CALQout[iModule][iTC], 0.f);
       AE_wafer[iTC] = ans * normalization * renormalization;
 
       if(!printed){
