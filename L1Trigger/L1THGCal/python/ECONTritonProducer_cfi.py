@@ -12,5 +12,6 @@ AEProducer = cms.EDProducer("ECONTritonProducer",
     ),
     TriggerCells = cms.InputTag("Floatingpoint","HGCalVFEProcessorSums"),
     inputType = cms.string("ADC"),
-    normType = cms.string("None")
+    normType = cms.string("None"),
+    cut = cms.string("")
 )

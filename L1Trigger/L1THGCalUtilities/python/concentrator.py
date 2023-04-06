@@ -69,39 +69,55 @@ class CreateBestChoice(object):
         return producer
 
 from L1Trigger.L1THGCal.ECONTritonProducer_cfi import AEProducer
+from L1Trigger.L1THGCal.MapMergeProducer_cfi import MapMergeProducer
 
 class CreateTritonAE(object):
     def __init__(self, inputType='ADC', 
                        normType='None',
                        AEProducerName="AEProducer",
-                       modelName = 'dummy'):
+                       cuts = [''],
+                       modelNames = ['dummy']):
         #processor params
         self.processor = triton_ae_params.clone(
             inputType = inputType
         )
 
         #AE producer params
-        self.modelName = modelName
+        self.modelNames = modelNames
+        self.cuts = cuts
         self.AEProducerName = AEProducerName
         self.inputType = inputType
         self.normType = normType
 
     def __call__(self, process, inputs):
-        setattr(process, self.AEProducerName, AEProducer.clone(
-            inputType = self.inputType,
-            normType = self.normType,
-            Client = AEProducer.Client.clone(
-                modelName = self.modelName,
-                modelConfigPath = "L1Trigger/L1THGCal/data/models/%s/config.pbtxt"%self.modelName
-            )
+        mergeinputs = []
+        for i in range(len(self.cuts)):
+            name = self.AEProducerName+"%d"%i
+            mergeinputs.append(name)
+            setattr(process, name, AEProducer.clone(
+                inputType = self.inputType,
+                normType = self.normType,
+                cut = self.cuts[i],
+                Client = AEProducer.Client.clone(
+                    modelName = self.modelNames[i]+"_ensemble",
+                    modelConfigPath = "L1Trigger/L1THGCal/data/models/%s/config.pbtxt"%(self.modelNames[i]+"_ensemble")
+                )
+            ))
+
+        setattr(process, self.AEProducerName+"Merge", MapMergeProducer.clone(
+          inputs = mergeinputs
         ))
-        setattr(process, self.AEProducerName+"Task", cms.Task(getattr(process, self.AEProducerName)))
+
+        setattr(process, self.AEProducerName+"Task", cms.Task(
+            *[getattr(process, name) for name in mergeinputs],
+            getattr(process, self.AEProducerName+"Merge")
+        ))
         process.L1THGCalTriggerPrimitives.associate(getattr(process, self.AEProducerName+"Task"))
         producer = process.l1tHGCalConcentratorProducer.clone(
             InputTriggerCells = cms.InputTag(inputs),
             InputTriggerSums = cms.InputTag(inputs),
             ProcessorParameters = self.processor,
-            InputAE = self.AEProducerName,
+            InputAE = self.AEProducerName+"Merge",
         )
         return producer
 
