@@ -1,4 +1,4 @@
-name: "dummy"
+name: "dummy_ensemble"
 platform: "ensemble"
 max_batch_size: 1000000
 input [
