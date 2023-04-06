@@ -104,6 +104,15 @@ chains.register_concentrator("NateAENorm", concentrator.CreateTritonAE(
   cuts = [''],
   AEProducerName = "AEProducerNateFloating",
   normType='Floating',
+  preNorm=False,
+))
+chains.register_concentrator("NateAEPreNorm", concentrator.CreateTritonAE(
+  inputType = "ADCT",
+  modelNames = ["model_48_250_100_16"],
+  cuts = [''],
+  AEProducerName = "AEProducerNatePreFloating",
+  normType='Floating',
+  preNorm=True,
 ))
 chains.register_concentrator("NateAESplitWafer", concentrator.CreateTritonAE(
   inputType = "ADCT",
@@ -114,8 +123,6 @@ chains.register_concentrator("NateAESplitWafer", concentrator.CreateTritonAE(
   AEProducerName = "AEProducerNateSplitWafer",
   normType='None',
 ))
-
-
 chains.register_concentrator("RohanAE", concentrator.CreateAutoencoder(
   threshold_scintillator=-1,
   threshold_silicon=-1,
@@ -153,7 +160,7 @@ chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
 
 # Register trigger chains
 #concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
-concentrator_algos = ['Threshold0', "NateAESplitWafer"]
+concentrator_algos = ['Threshold0', "NateAEPreNorm"]
 
 backend1_algos = ['Dummy']# 'Distance'] #'Topological']#, 'ConstrTopological']
 backend2_algos = ['Histomax']#, 'Distance', 'Dbscan']

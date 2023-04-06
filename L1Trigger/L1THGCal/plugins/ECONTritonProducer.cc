@@ -48,15 +48,20 @@ class ECONTritonProducer : public TritonEDProducer<> {
     //what variable to use as AE input
     InputType inType_;
     NormType normType_;
+    bool preNorm_;
 
     TCSelector selector_;
+
+    unsigned verbose_;
 };
 
 ECONTritonProducer::ECONTritonProducer(const edm::ParameterSet& cfg)
       : TritonEDProducer<>(cfg),
         inputTCToken_(consumes<l1t::HGCalTriggerCellBxCollection>(cfg.getParameter<edm::InputTag>("TriggerCells"))),
         triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>()),
-        selector_(cfg.getParameter<std::string>("cut"))
+        preNorm_(cfg.getParameter<bool>("preNorm")),
+        selector_(cfg.getParameter<std::string>("cut")),
+        verbose_(cfg.getParameter<unsigned>("verbose"))
 {
   inType_ = inputTypeStrToEnum(cfg.getParameter<std::string>("inputType"));
   normType_ = normTypeStrToEnum(cfg.getParameter<std::string>("normType"));
@@ -89,7 +94,6 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
     }
   }
 
-  std::cout << "Working on " << nModule_ << " modules" << std::endl;
   client_->setBatchSize(nModule_);
 
   auto& inputCALQ = iInput.begin()->second;;
@@ -149,7 +153,7 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
       modSums_[tc_module.first] += AEinput_module[inputIndex];
     }//end for each trigger cell in module
 
-    if(normType_ != NormType::None){
+    if(normType_ != NormType::None && preNorm_){
       double normalization = 1;
       if(normType_ == NormType::Floating){
         normalization = modSums_[tc_module.first];
@@ -184,7 +188,9 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
   auto latentMap = std::make_unique<ECONMap>();
 
   size_t iModule=0;
-  bool printed=false;
+
+  bool printed=(verbose_==0);
+  unsigned iPR=0;
   for(const auto& tc_module : tc_modules_){
     //skip scintillator modules
     if (triggerTools_.isScintillator(tc_module.second.at(0).detId())){ 
@@ -221,7 +227,7 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
     }//end loop to compute AEmodSum
 
     double normalization = 1;
-    if(normType_ != NormType::None){
+    if(normType_ != NormType::None && preNorm_){
       if(normType_ == NormType::Floating){
         normalization = modSums_[tc_module.first];
       } else{
@@ -238,6 +244,10 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
         renormalization = modSums_[tc_module.first]/(AEmodSum*normalization);
       }
     }
+    
+    if(!preNorm_){
+      renormalization *= modSums_[tc_module.first];
+    }
 
     std::array<float, nTriggerCells> AE_wafer;
     for (int iTC=0; iTC<nTriggerCells; ++iTC){//loop to fill computed AE values
@@ -251,16 +261,16 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
       float ans = std::max<float>(CALQout[iModule][iTC], 0.f);
       AE_wafer[iTC] = ans * normalization * renormalization;
 
-      if(!printed){
-        printf("WAFER %d:\n", tc_module.first);
-        printf("\tTYPE = %d\n", id.type());
-        printf("\toriginal wafer sum = %0.3lf\n",(modSums_[tc_module.first]));
-        printf("\toriginal normalization = %0.3lf\n",normalization);
-        printf("\toutput sum = %0.3lf\n", AEmodSum);
-        printf("\trenormalization = %0.3lf\n", renormalization);
-        printf("\toutput value = %0.3f\n", ans);
-        printf("\toutput sum * normalization * renormalization = %0.3f\n", AEmodSum*normalization * renormalization);
-        printf("\n");
+    }
+    if(!printed){
+      printf("WAFER %d:\n", tc_module.first);
+      printf("\toriginal wafer sum = %0.3lf\n",(modSums_[tc_module.first]));
+      printf("\toriginal normalization = %0.3lf\n",normalization);
+      printf("\toutput sum = %0.3lf\n", AEmodSum);
+      printf("\trenormalization = %0.3lf\n", renormalization);
+      printf("\toutput sum * normalization * renormalization = %0.3f\n", AEmodSum*normalization * renormalization);
+      printf("\n");
+      if(iPR++>verbose_){
         printed=true;
       }
     }
@@ -280,7 +290,9 @@ void ECONTritonProducer::fillDescriptions(edm::ConfigurationDescriptions& descri
   desc.add<edm::InputTag>("TriggerCells");
   desc.add<std::string>("inputType");
   desc.add<std::string>("normType");
+  desc.add<bool>("preNorm");
   desc.add<std::string>("cut");
+  desc.add<unsigned>("verbose");
   descriptions.addWithDefaultLabel(desc);
 }
 
