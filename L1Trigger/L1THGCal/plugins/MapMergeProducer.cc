@@ -29,7 +29,7 @@ DEFINE_FWK_MODULE(MapMergeProducer);
 MapMergeProducer::MapMergeProducer(const edm::ParameterSet& cfg){
   const auto inputs = cfg.getParameter<std::vector<std::string>>("inputs");
   for(const auto& input : inputs){
-    std::cout << "A MapMergeProducer input is: " << input << std::endl;
+    //std::cout << "A MapMergeProducer input is: " << input << std::endl;
     inputAETokens_.emplace_back(consumes<AEMap>(input));
     inputECONTokens_.emplace_back(consumes<ECONMap>(input));
   }
@@ -48,7 +48,7 @@ void MapMergeProducer::produce(edm::Event& evt, const edm::EventSetup& es){
     evt.getByToken(inputAETokens_.at(i), AEHandle);
     evt.getByToken(inputECONTokens_.at(i), ECONHandle);
 
-    std::cout << "Input " << i << " has " << AEHandle->size() << " entries" << std::endl;
+    //std::cout << "Input " << i << " has " << AEHandle->size() << " entries" << std::endl;
 
     for(const auto& item : *(AEHandle.product())){
       (*AEout)[item.first] = item.second;
@@ -58,7 +58,7 @@ void MapMergeProducer::produce(edm::Event& evt, const edm::EventSetup& es){
       (*ECONout)[item.first] = item.second;
     }
   }
-  std::cout << "Result has " << AEout->size() << " entries" << std::endl;
+  //std::cout << "Result has " << AEout->size() << " entries" << std::endl;
   
   evt.put(std::move(AEout));
   evt.put(std::move(ECONout));

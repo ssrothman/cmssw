@@ -76,7 +76,9 @@ class CreateTritonAE(object):
                        normType='None',
                        AEProducerName="AEProducer",
                        cuts = [''],
-                       modelNames = ['dummy']):
+                       modelNames = ['dummy'],
+                       preNorm=False,
+                       verbose=0):
         #processor params
         self.processor = triton_ae_params.clone(
             inputType = inputType
@@ -88,6 +90,8 @@ class CreateTritonAE(object):
         self.AEProducerName = AEProducerName
         self.inputType = inputType
         self.normType = normType
+        self.preNorm = preNorm
+        self.verbose = verbose
 
     def __call__(self, process, inputs):
         mergeinputs = []
@@ -97,6 +101,8 @@ class CreateTritonAE(object):
             setattr(process, name, AEProducer.clone(
                 inputType = self.inputType,
                 normType = self.normType,
+                preNorm = self.preNorm,
+                verbose = self.verbose,
                 cut = self.cuts[i],
                 Client = AEProducer.Client.clone(
                     modelName = self.modelNames[i]+"_ensemble",
