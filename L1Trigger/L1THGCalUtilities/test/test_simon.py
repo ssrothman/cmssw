@@ -86,22 +86,36 @@ chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
 chains.register_concentrator("AutoEncoder", concentrator.CreateAutoencoder())
 chains.register_concentrator("DummyAE", concentrator.CreateTritonAE(
   inputType = "ADCT",
-  modelName = 'dummy',
+  modelNames = ['dummy'],
+  cuts = [''],
   AEProducerName = 'AEProducerDummy',
   normType='None',
 ))
 chains.register_concentrator("NateAE", concentrator.CreateTritonAE(
   inputType = "ADCT",
-  modelName = "model_48_250_100_16_ensemble",
+  modelNames = ["model_48_250_100_16"],
+  cuts = [''],
   AEProducerName = "AEProducerNate",
   normType='None',
 ))
 chains.register_concentrator("NateAENorm", concentrator.CreateTritonAE(
   inputType = "ADCT",
-  modelName = "model_48_250_100_16_ensemble",
+  modelNames = ["model_48_250_100_16"],
+  cuts = [''],
   AEProducerName = "AEProducerNateFloating",
   normType='Floating',
 ))
+chains.register_concentrator("NateAESplitWafer", concentrator.CreateTritonAE(
+  inputType = "ADCT",
+  modelNames = ['dt_1_greater_0_250_100',
+                'dt_2_greater_0_250_100',
+                'dt_3_greater_0_250_100'],
+  cuts = ['type==0', 'type==1', 'type==2'],
+  AEProducerName = "AEProducerNateSplitWafer",
+  normType='None',
+))
+
+
 chains.register_concentrator("RohanAE", concentrator.CreateAutoencoder(
   threshold_scintillator=-1,
   threshold_silicon=-1,
@@ -122,8 +136,13 @@ chains.register_concentrator("RohanAEFP", concentrator.CreateAutoencoder(
 
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
+chains.register_backend1("Distance", clustering2d.CreateDistance())
+chains.register_backend1("Topological", clustering2d.CreateTopological())
+chains.register_backend1("ConstrTopological", clustering2d.CreateConstrTopological())
 ## BE2
 chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
+chains.register_backend2("Distance", clustering3d.CreateDistance())
+chains.register_backend2("Dbscan", clustering3d.CreateDbscan())
 # Register selector
 chains.register_selector("Dummy", selectors.CreateDummy())
 
@@ -134,13 +153,14 @@ chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
 
 # Register trigger chains
 #concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
-concentrator_algos = ['Threshold0', "RohanAE", "RohanAEFP", "NateAE", "NateAENorm", "DummyAE"]
+concentrator_algos = ['Threshold0', "NateAESplitWafer"]
 
-backend_algos = ['Histomax']
+backend1_algos = ['Dummy']# 'Distance'] #'Topological']#, 'ConstrTopological']
+backend2_algos = ['Histomax']#, 'Distance', 'Dbscan']
 ## Make cross product fo ECON and BE algos
 import itertools
-for cc,be in itertools.product(concentrator_algos,backend_algos):
-    chains.register_chain('Floatingpoint', cc, 'Dummy', be, 'Dummy', 'nTuple')
+for cc,be1,be2 in itertools.product(concentrator_algos,backend1_algos, backend2_algos):
+    chains.register_chain('Floatingpoint', cc, be1, be2, 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
 

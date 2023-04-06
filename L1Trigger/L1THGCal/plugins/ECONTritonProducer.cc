@@ -14,6 +14,7 @@
 #include "DataFormats/ForwardDetId/interface/HGCalTriggerDetId.h"
 
 #include "L1Trigger/L1THGCal/interface/AEutil.h"
+#include "L1Trigger/L1THGCal/interface/TCSelector.h"
 
 #include <sstream>
 #include <fstream>
@@ -47,12 +48,15 @@ class ECONTritonProducer : public TritonEDProducer<> {
     //what variable to use as AE input
     InputType inType_;
     NormType normType_;
+
+    TCSelector selector_;
 };
 
 ECONTritonProducer::ECONTritonProducer(const edm::ParameterSet& cfg)
       : TritonEDProducer<>(cfg),
         inputTCToken_(consumes<l1t::HGCalTriggerCellBxCollection>(cfg.getParameter<edm::InputTag>("TriggerCells"))),
-        triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>())
+        triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>()),
+        selector_(cfg.getParameter<std::string>("cut"))
 {
   inType_ = inputTypeStrToEnum(cfg.getParameter<std::string>("inputType"));
   normType_ = normTypeStrToEnum(cfg.getParameter<std::string>("normType"));
@@ -79,11 +83,13 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
 
   nModule_ = 0;
   for (const auto& tc_module: tc_modules_){
-    if (!triggerTools_.isScintillator(tc_module.second.at(0).detId())){
+    if (!triggerTools_.isScintillator(tc_module.second.at(0).detId())
+        && selector_(tc_module.second.at(0).detId())){
       ++nModule_;
     }
   }
 
+  std::cout << "Working on " << nModule_ << " modules" << std::endl;
   client_->setBatchSize(nModule_);
 
   auto& inputCALQ = iInput.begin()->second;;
@@ -92,7 +98,7 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
   for (const auto& tc_module : tc_modules_){
     //skip scintillator modules
     const auto& detId = tc_module.second.at(0).detId();
-    if (triggerTools_.isScintillator(detId)){ 
+    if (triggerTools_.isScintillator(detId) || !selector_(detId)){ 
       continue;
     }
 
@@ -164,6 +170,13 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
 }//end acquire
 
 void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
+  if(nModule_<=0){//put empty maps and return
+    auto ADCmap = std::make_unique<AEMap>();
+    auto latentMap = std::make_unique<ECONMap>();
+    iEvent.put(std::move(ADCmap));
+    iEvent.put(std::move(latentMap));
+    return;
+  }
   const auto& ECONout = iOutput.at("ECON__0").fromServer<float>();
   const auto& CALQout = iOutput.at("rCALQ__1").fromServer<float>();
 
@@ -179,6 +192,10 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
     }
 
     HGCalTriggerDetId firstid(tc_module.second.at(0).detId());
+    if (!selector_(firstid)){
+      continue;
+    }
+
     int subdet = firstid.subdet();
     int zside = firstid.zside();
     int type = firstid.type();
@@ -236,12 +253,13 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
 
       if(!printed){
         printf("WAFER %d:\n", tc_module.first);
+        printf("\tTYPE = %d\n", id.type());
         printf("\toriginal wafer sum = %0.3lf\n",(modSums_[tc_module.first]));
         printf("\toriginal normalization = %0.3lf\n",normalization);
         printf("\toutput sum = %0.3lf\n", AEmodSum);
         printf("\trenormalization = %0.3lf\n", renormalization);
         printf("\toutput value = %0.3f\n", ans);
-        printf("\toutput sum * normalization * renormalization = %0.3f\n", AE_wafer[iTC]);
+        printf("\toutput sum * normalization * renormalization = %0.3f\n", AEmodSum*normalization * renormalization);
         printf("\n");
         printed=true;
       }
@@ -262,6 +280,7 @@ void ECONTritonProducer::fillDescriptions(edm::ConfigurationDescriptions& descri
   desc.add<edm::InputTag>("TriggerCells");
   desc.add<std::string>("inputType");
   desc.add<std::string>("normType");
+  desc.add<std::string>("cut");
   descriptions.addWithDefaultLabel(desc);
 }
 

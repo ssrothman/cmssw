@@ -40,7 +40,6 @@ def create_dbscan(process, inputs,
             )
     return producer
 
-
 class CreateHistoMax(object):
     def __init__(self,
             distance=histoMax_C3d_clustering_params.dR_multicluster,
@@ -195,4 +194,34 @@ class CreateHistoThreshold(object):
                 )
         producer.ProcessorParameters.C3d_parameters.histoMax_C3d_seeding_parameters = self.seeding_parameters
         producer.ProcessorParameters.C3d_parameters.histoMax_C3d_clustering_parameters = self.clustering_parameters
+        return producer
+
+class CreateDistance(object):
+    def __init__(self, dR_multicluster = distance_C3d_params.dR_multicluster,
+                       minPt_multicluster = distance_C3d_params.minPt_multicluster):
+        self.params = distance_C3d_params.clone(
+              dR_multicluster = dR_multicluster,
+              minPt_multicluster = minPt_multicluster
+        )
+    def __call__(self, process, inputs):
+        producer = process.l1tHGCalBackEndLayer2Producer.clone(
+            InputCluster = cms.InputTag(inputs)
+        )
+        producer.ProcessorParameters.C3d_parameters = self.params
+        return producer
+
+class CreateDbscan(object):
+    def __init__(self, dist_dbscan = dbscan_C3d_params.dist_dbscan_multicluster,
+                       minN_dbscan = dbscan_C3d_params.minN_dbscan_multicluster,
+                       minPt_multicluster = dbscan_C3d_params.minPt_multicluster):
+        self.params = dbscan_C3d_params.clone(
+              minPt_multicluster = minPt_multicluster,
+              minN_dbscan_multicluster = minN_dbscan,
+              dist_dbscan_multicluster = dist_dbscan
+         )
+    def __call__(self, process, inputs):
+        producer = process.l1tHGCalBackEndLayer2Producer.clone(
+            InputCluster = cms.InputTag(inputs)
+        )
+        producer.ProcessorParameters.C3d_parameters = self.params
         return producer

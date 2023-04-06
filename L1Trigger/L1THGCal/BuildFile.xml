@@ -7,6 +7,7 @@
 <use name="SimDataFormats/CaloTest"/>
 <use name="PhysicsTools/TensorFlow" />
 <use name="HeterogeneousCore/SonicTriton"/>
+<use name="CommonTools/Utils"/>
 <use name="json" />
 <export>
   <lib name="1"/>
