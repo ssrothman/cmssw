@@ -243,11 +243,11 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
       } else {
         renormalization = modSums_[tc_module.first]/(AEmodSum*normalization);
       }
+      if(!preNorm_){
+        renormalization *= modSums_[tc_module.first];
+      }
     }
     
-    if(!preNorm_){
-      renormalization *= modSums_[tc_module.first];
-    }
 
     std::array<float, nTriggerCells> AE_wafer;
     for (int iTC=0; iTC<nTriggerCells; ++iTC){//loop to fill computed AE values
