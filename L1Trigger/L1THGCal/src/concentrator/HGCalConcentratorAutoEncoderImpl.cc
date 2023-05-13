@@ -10,17 +10,23 @@ HGCalConcentratorAutoEncoderImpl::HGCalConcentratorAutoEncoderImpl(const edm::Pa
       cellRemapNoDuplicates_(conf.getParameter<std::vector<int>>("cellRemapNoDuplicates")),
       encoderShape_(conf.getParameter<std::vector<uint>>("encoderShape")),
       decoderShape_(conf.getParameter<std::vector<uint>>("decoderShape")),
-      bitsPerInput_(conf.getParameter<int>("nBitsPerInput")),
+      bitsPerADC_(conf.getParameter<unsigned>("bitsPerADC")),
+      bitsPerNorm_(conf.getParameter<unsigned>("bitsPerNorm")),
+      bitsPerCALQ_(conf.getParameter<unsigned>("bitsPerCALQ")),
+      bitsPerInput_(conf.getParameter<unsigned>("nBitsPerInput")),
       maxBitsPerOutput_(conf.getParameter<int>("maxBitsPerOutput")),
       outputBitsPerLink_(conf.getParameter<std::vector<int>>("bitsPerLink")),
       modelFilePaths_(conf.getParameter<std::vector<edm::ParameterSet>>("modelFiles")),
       linkToGraphMap_(conf.getParameter<std::vector<unsigned int>>("linkToGraphMap")),
       zeroSuppresionThreshold_(conf.getParameter<double>("zeroSuppresionThreshold")),
+      useModuleFactor_(conf.getParameter<bool>("useModuleFactor")),
       bitShiftNormalization_(conf.getParameter<bool>("bitShiftNormalization")),
       useTransverseADC_(conf.getParameter<bool>("useTransverseADC")),
-      clipTransverseADC_(conf.getParameter<bool>("clipTransverseADC")),
+      normByMax_(conf.getParameter<bool>("normByMax")),
+      skipAE_(conf.getParameter<bool>("skipAE")),
       saveEncodedValues_(conf.getParameter<bool>("saveEncodedValues")),
-      preserveModuleSum_(conf.getParameter<bool>("preserveModuleSum")) {
+      preserveModuleSum_(conf.getParameter<bool>("preserveModuleSum")),
+      aeInputUtil_(bitsPerADC_, bitsPerNorm_, bitsPerCALQ_, bitsPerInput_, useModuleFactor_, bitShiftNormalization_, useTransverseADC_, normByMax_){
   // find total size of the expected input shape
   // used for checking the maximum size used in cell Remap
   nInputs_ = 1;
@@ -124,16 +130,20 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
                                               const std::vector<l1t::HGCalTriggerCell>& trigCellVecInput,
                                               std::vector<l1t::HGCalTriggerCell>& trigCellVecOutput,
                                               std::vector<l1t::HGCalConcentratorData>& ae_encodedLayer_Output) {
-  std::array<double, nTriggerCells_> mipPt;
-  std::array<double, nTriggerCells_> adc;
+  if(trigCellVecInput.empty()){
+      return;
+  }
+  if(triggerTools_.isScintillator(trigCellVecInput[0].detId())){
+      return;
+  }
+
   std::array<double, nTriggerCells_> uncompressedCharge;
   std::array<double, nTriggerCells_> compressedCharge;
+
   std::array<double, maxAEInputSize_> ae_inputArray;
   std::array<double, nTriggerCells_> ae_outputArray;
 
   //reset inputs to 0 to account for zero suppressed trigger cells
-  mipPt.fill(0);
-  adc.fill(0);
   uncompressedCharge.fill(0);
   compressedCharge.fill(0);
   ae_inputArray.fill(0);
@@ -148,9 +158,6 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
 
   // largest expected input and output values, used for bit truncation
   // values of -1 for the number of bits used to keep full precision, in which case the MaxIntSize variables are not used
-  double inputMaxIntSize = 1;
-  if (bitsPerInput_ > 0)
-    inputMaxIntSize = 1 << bitsPerInput_;
   double outputMaxIntSize = 1;
   if (bitsPerOutput > 0)
     outputMaxIntSize = 1 << nDecimalBits;
@@ -158,10 +165,13 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
   if (maxBitsPerOutput_ > 0)
     outputMaxIntSizeGlobal = 1 << (maxBitsPerOutput_ - nIntegerBits);
 
-  for (const auto& trigCell : trigCellVecInput) {
-    if (triggerTools_.isScintillator(trigCell.detId()))
-      return;  //currently, only silicon modules are setup to work (mapping of scinillators would be different, and needs to be investigated)
+  aeInputUtil_.run(trigCellVecInput);
+  if(aeInputUtil_.getModSum() <=0){
+      return;
+  }
 
+  //legacy loop for uncompressed and compressed charges (don't really know what these are....)
+  for (const auto& trigCell : trigCellVecInput) {
     HGCalTriggerDetId id(trigCell.detId());
     uint cellu = id.triggerCellU();
     uint cellv = id.triggerCellV();
@@ -171,43 +181,14 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
           << "Invalid index provided for trigger cell u=" << cellu << " v=" << cellv << " in cellUVRemap[" << cellu
           << "][" << cellv << "]";
     }
-
-    adc[inputIndex] = double(trigCell.hwPt());
-    if (useTransverseADC_){
-      if(clipTransverseADC_){
-        adc[inputIndex] = double(int(trigCell.hwPt()/cosh(trigCell.eta())));
-      } else {
-        adc[inputIndex] = trigCell.hwPt()/cosh(trigCell.eta());
-      }
-    }
-
+    inputIndex = cellRemap_[inputIndex];
     uncompressedCharge[inputIndex] = trigCell.uncompressedCharge();
     compressedCharge[inputIndex] = trigCell.compressedCharge();
 
-    modSum += adc[inputIndex];
+    ae_inputArray[inputIndex] = aeInputUtil_.getInput(cellu, cellv)/aeInputUtil_.getInputNorm();
+    printf("ae_input: %0.3lf\n", ae_inputArray[inputIndex]);
   }
-
-  double normalization = modSum;
-  if (modSum > 0) {
-    //Use a bit shift normalization like will be implemented in ECON, rather than floating point sum
-    //Normalizes to the MSB value of the module sum
-    if (bitShiftNormalization_) {
-      int msb = int(log2(modSum));
-      normalization = pow(2, msb);
-    }
-
-    //normalize inputs to module sum
-    for (uint i = 0; i < nInputs_; i++) {
-      int remapIndex = cellRemap_[i];
-      if (remapIndex < 0)
-        continue;
-      ae_inputArray[i] = adc[remapIndex] / normalization;
-      //round to precision of input, if bitsPerInput_ is -1 keep full precision
-      if (bitsPerInput_ > 0) {
-        ae_inputArray[i] = std::round(ae_inputArray[i] * inputMaxIntSize) / inputMaxIntSize;
-      }
-    }
-  }
+  modSum = aeInputUtil_.getModSum();
 
   tensorflow::Tensor encoder_input(tensorflow::DT_FLOAT,
                                    {encoderShape_[0], encoderShape_[1], encoderShape_[2], encoderShape_[3]});
@@ -234,7 +215,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     ae_encodedLayer_[i] = *d;
     //truncate the encoded layer bits
     if (bitsPerOutput > 0 && maxBitsPerOutput_ > 0) {
-      ae_encodedLayer_[i] = std::min(std::round(ae_encodedLayer_[i] * outputMaxIntSize) / outputMaxIntSize, outputSaturationValue);
+      ae_encodedLayer_[i] = std::min(std::floor(ae_encodedLayer_[i] * outputMaxIntSize) / outputMaxIntSize, outputSaturationValue);
     }
   }
 
@@ -250,16 +231,15 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
                   {outputTensorName_decoder_},
                   &decoder_outputs);
 
-  double outputSum = 0.;
 
   d = decoder_outputs[0].flat<float>().data();
   for (uint i = 0; i < nInputs_; i++, d++) {
-    int remapIndex = cellRemapNoDuplicates_[i];
-    if (remapIndex < 0)
-      continue;
-    ae_outputArray[remapIndex] = *d;
+    if(skipAE_){
+        ae_outputArray[i] = ae_inputArray[i];
+    } else {
+        ae_outputArray[i] = *d;
+    }
   }
-
   // Add data back into trigger cells
   if (modSum > 0) {
     //get detID for everything but cell, take first entry detID and subtract off cellU and cellV contribution
@@ -273,46 +253,67 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     int cellU = id.triggerCellU();
     int cellV = id.triggerCellV();
 
+
     //use first TC to find mipPt conversions to Et and ADC
     float mipPtToEt_conv = trigCellVecInput[0].et() / trigCellVecInput[0].mipPt();
     float mipToADC_conv = trigCellVecInput[0].hwPt() / (trigCellVecInput[0].mipPt() * cosh(trigCellVecInput[0].eta()));
 
+    double outputSum = 0;
+
     for (int i = 0; i < nTriggerCells_; i++) {
-      HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, ae_outputCellU_[i], ae_outputCellV_[i]);
-      if (triggerTools_.getTriggerGeometry()->validTriggerCell(id) && (ae_outputArray[i] * normalization >= zeroSuppresionThreshold_)) {
-        outputSum += ae_outputArray[i] * normalization;
-      }
+        int remapIndex = cellRemap_[i];
+        cellU = ae_outputCellU_[i];
+        cellV = ae_outputCellV_[i];
+        
+        HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, cellU, cellV);
+
+        if(triggerTools_.getTriggerGeometry()->validTriggerCell(id)){
+            outputSum += ae_outputArray[remapIndex];
+        }
     }
     double renormalizationFactor = 1.;
     if (preserveModuleSum_ && outputSum > 0) {
       renormalizationFactor = modSum / outputSum;
     }
+    //printf("\trenormalization factor = %0.3f\n", renormalizationFactor);
 
+    unsigned aeOutput2d[8][8] = {};
+    unsigned aeOutputCALQ2d[8][8] = {};
+    unsigned aeOutputADC2d[8][8] = {};
     for (int i = 0; i < nTriggerCells_; i++) {
-      if (ae_outputArray[i] > 0) {
+      int remapIndex = cellRemap_[i];
+      if (ae_outputArray[remapIndex] > 0) {
         cellU = ae_outputCellU_[i];
         cellV = ae_outputCellV_[i];
 
         HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, cellU, cellV);
 
-        if (!triggerTools_.getTriggerGeometry()->validTriggerCell(id))
-          continue;
-
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
-        double adc = ae_outputArray[i] * normalization * renormalizationFactor;
-        if (useTransverseADC_)
-          adc = ae_outputArray[i] * normalization * renormalizationFactor * cosh(point.eta());
+        double out = ae_outputArray[remapIndex];
+        double CALQ = ae_outputArray[remapIndex] * renormalizationFactor;
+        double adc = aeInputUtil_.CALQtoADC(CALQ, cellU, cellV);
+
         double mipPt = adc / mipToADC_conv / cosh(point.eta());
         double et = mipPt * mipPtToEt_conv;
 
-        if (ae_outputArray[i] * normalization < zeroSuppresionThreshold_)
+        //round because this doesn't exist on-chip anyway,
+        //so may as well pretend its full-precision
+        aeOutput2d[cellU][cellV] = std::round(out * 256);
+        aeOutputCALQ2d[cellU][cellV] = std::round(CALQ); 
+        aeOutputADC2d[cellU][cellV] = std::round(adc);
+        //printf("\t\tfinal adc = %0.3f\n", adc);
+
+        if (adc < zeroSuppresionThreshold_)
+          continue;
+
+        if (!triggerTools_.getTriggerGeometry()->validTriggerCell(id))
           continue;
 
         l1t::HGCalTriggerCell triggerCell(reco::LeafCandidate::LorentzVector(), adc, 0, 0, 0, id);
         //Keep the pre-autoencoder charge for this cell
-        triggerCell.setUncompressedCharge(uncompressedCharge[i]);
-        triggerCell.setCompressedCharge(compressedCharge[i]);
+        triggerCell.setUncompressedCharge(uncompressedCharge[remapIndex]);
+        triggerCell.setCompressedCharge(compressedCharge[remapIndex]);
         triggerCell.setMipPt(mipPt);
 
         math::PtEtaPhiMLorentzVector p4(et, point.eta(), point.phi(), 0.);
@@ -323,6 +324,12 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
         trigCellVecOutput.push_back(triggerCell);
       }
     }
+    printf("ae output [raw]\n");
+    aeInputUtil_.print2d(aeOutput2d);
+    printf("AE output [renormalized]\n");
+    aeInputUtil_.print2d(aeOutputCALQ2d);
+    printf("AE output [ADC]\n");
+    aeInputUtil_.print2d(aeOutputADC2d);
 
     if (saveEncodedValues_) {
       id = HGCalTriggerDetId(subdet, zp, type, layer, waferU, waferV, 0, 0);
