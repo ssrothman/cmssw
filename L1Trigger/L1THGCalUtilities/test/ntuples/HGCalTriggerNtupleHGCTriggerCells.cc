@@ -191,7 +191,7 @@ void HGCalTriggerNtupleHGCTriggerCells::fill(const edm::Event& e, const HGCalTri
   clear();
   //for each trigger cell
   for (auto tc_itr = trigger_cells.begin(0); tc_itr != trigger_cells.end(0); tc_itr++) {
-    if (tc_itr->hwPt() > 0) {//if nonzero energy
+    if (tc_itr->hwPt() >= 0) {//if nonzero energy
       auto cl_itr = cell2cluster.find(tc_itr->detId());
       auto mcl_itr = cell2multicluster.find(tc_itr->detId());
       uint32_t cl_id = (cl_itr != cell2cluster.end() ? cl_itr->second : 0);

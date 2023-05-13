@@ -25,12 +25,14 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(5)
+    input = cms.untracked.int32(1)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100-gun_noPU.root'),
+    #fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100-gun_noPU.root'),
+    #fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/noPU_125X_mcRun4_realistic_v2-v1/2550000/066944a3-a061-42ac-ba45-9faadb46407a.root'),
+    fileNames = cms.untracked.vstring('file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/65ce4640-c197-4c07-9fa4-cb505ab72738.root'),
     inputCommands=cms.untracked.vstring(
         'keep *',
         'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
@@ -40,6 +42,8 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 
 )
+process.options.numberOfThreads = cms.untracked.uint32(1)
+process.options.numberOfStreams = cms.untracked.uint32(1)
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
@@ -51,6 +55,7 @@ process.configurationMetadata = cms.untracked.PSet(
 # Output definition
 process.TFileService = cms.Service(
     "TFileService",
+    #fileName = cms.string("/home/submit/srothman/cmsdata/hgcal/myntuples/ntuple.root")
     fileName = cms.string("ntuple.root")
     )
 
@@ -123,22 +128,33 @@ chains.register_concentrator("NateAESplitWafer", concentrator.CreateTritonAE(
   AEProducerName = "AEProducerNateSplitWafer",
   normType='None',
 ))
-chains.register_concentrator("RohanAE", concentrator.CreateAutoencoder(
-  threshold_scintillator=-1,
-  threshold_silicon=-1,
-  zeroSuppresionThreshold=-1,
-  saveEncodedValues=True,
-  preserveModuleSum=True
+chains.register_concentrator("NateAESplitWaferNorm", concentrator.CreateTritonAE(
+  inputType = "ADCT",
+  modelNames = ['dt_1_greater_0_250_100',
+                'dt_2_greater_0_250_100',
+                'dt_3_greater_0_250_100'],
+  cuts = ['type==0', 'type==1', 'type==2'],
+  AEProducerName = "AEProducerNateSplitWaferNorm",
+  normType='Floating',
+  preNorm=False
 ))
-chains.register_concentrator("RohanAEFP", concentrator.CreateAutoencoder(
-  threshold_scintillator=-1,
-  threshold_silicon=-1,
-  zeroSuppresionThreshold=-1,
-  saveEncodedValues=True,
-  preserveModuleSum=True,
-  nBitsPerInput=-1,
-  maxBitsPerOutput=-1,
+chains.register_concentrator("RohanAEADC", concentrator.CreateAutoencoder(
   clipTransverseADC=False,
+  useTransverseADC=False,
+  skipAE=False,
+))
+chains.register_concentrator("RohanAEADCT", concentrator.CreateAutoencoder(
+  clipTransverseADC=False,
+  useTransverseADC=False,
+  skipAE=False,
+  useModuleFactor=True,
+  bitShiftNormalization=True,
+  normByMax=True,
+))
+chains.register_concentrator("RohanAEClipADCT", concentrator.CreateAutoencoder(
+  clipTransverseADC=True,
+  useTransverseADC=True,
+  skipAE=False,
 ))
 
 ## BE1
@@ -160,7 +176,8 @@ chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
 
 # Register trigger chains
 #concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
-concentrator_algos = ['Threshold0', "NateAEPreNorm"]
+#concentrator_algos = ['Threshold0', "Bestchoice", "NateAE", "NateAENorm", "RohanAE", "RohanAEFP", "NateAESplitWafer", "NateAESplitWaferNorm"]
+concentrator_algos = ['Threshold0', "RohanAEADCT"]# "RohanAEADCT", "RohanAEClipADCT"]
 
 backend1_algos = ['Dummy']# 'Distance'] #'Topological']#, 'ConstrTopological']
 backend2_algos = ['Histomax']#, 'Distance', 'Dbscan']
@@ -175,12 +192,22 @@ process = chains.create_sequences(process)
 process.L1THGCalTriggerPrimitives.remove(process.L1THGCalTowerMap)
 process.L1THGCalTriggerPrimitives.remove(process.L1THGCalTower)
 
+from CommonTools.CandAlgos.genParticleCustomSelector_cfi import genParticleCustomSelector
+process.filter = genParticleCustomSelector.clone(
+    minRapidity = -1.444,
+    maxRapidity = 1.444,
+    invertRapidityCut = True
+)
+
 process.hgcl1tpg_step = cms.Path(process.L1THGCalTriggerPrimitives)
 process.selector_step = cms.Path(process.L1THGCalTriggerSelector)
 process.ntuple_step = cms.Path(process.L1THGCalTriggerNtuples)
 
+process.fullpath = cms.Path(process.filter + process.L1THGCalTriggerPrimitives + process.L1THGCalTriggerSelector + process.L1THGCalTriggerNtuples)
+
 # Schedule definition
-process.schedule = cms.Schedule(process.hgcl1tpg_step, process.selector_step, process.ntuple_step)
+process.schedule = cms.Schedule(process.fullpath)
+#process.schedule = cms.Schedule(process.hgcl1tpg_step, process.selector_step, process.ntuple_step)
 
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
