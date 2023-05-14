@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from L1Trigger.L1THGCalUtilities.hgcalTriggerNtuples_cfi import ntuple_wafers
 
 def custom_ntuples_layer1_truncation(process):
     ntuples = process.l1tHGCalTriggerNtuplizer.Ntuples
@@ -45,15 +46,23 @@ def custom_ntuples_standalone_tower(process):
 
 class CreateNtuple(object):
     def __init__(self,
-        ntuple_list=[
-            'event',
-            'gen', 'genjet', 'gentau',
-            'digis',
-            'triggercells',
-            'clusters', 'multiclusters','econdata',
-            ]
-            ):
+                 ntuple_list=[
+                     'event',
+                     'gen', 'genjet', 'gentau',
+                     'digis',
+                     'triggercells',
+                     'clusters', 'multiclusters','econdata',
+                 ],
+                 useModuleFactor = ntuple_wafers.useModuleFactor,
+                 useTransverseADC = ntuple_wafers.useTransverseADC,
+                 bitShiftNormalize = ntuple_wafers.bitShiftNormalize,
+                 normByMax = ntuple_wafers.normByMax):
+
         self.ntuple_list = ntuple_list
+        self.useModuleFactor = useModuleFactor
+        self.useTransverseADC = useTransverseADC
+        self.bitShiftNormalize = bitShiftNormalize
+        self.normByMax = normByMax
 
     def __call__(self, process, inputs):
         vpset = []
@@ -62,6 +71,12 @@ class CreateNtuple(object):
             if ntuple=='triggercells':
                 pset.TriggerCells = cms.InputTag(inputs[0])
                 pset.Multiclusters = cms.InputTag(inputs[2])
+            elif ntuple=='wafers':
+                pset.TriggerCells = cms.InputTag(inputs[0])
+                pset.useModuleFactor = self.useModuleFactor
+                pset.useTransverseADC = self.useTransverseADC
+                pset.bitShiftNormalize = self.bitShiftNormalize
+                pset.normByMax = self.normByMax
             elif ntuple=='clusters':
                 pset.Clusters = cms.InputTag(inputs[1])
                 pset.Multiclusters = cms.InputTag(inputs[2])
