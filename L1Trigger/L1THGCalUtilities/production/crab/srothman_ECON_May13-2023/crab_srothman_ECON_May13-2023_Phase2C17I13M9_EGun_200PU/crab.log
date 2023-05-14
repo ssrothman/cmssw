@@ -1,0 +1,141 @@
+DEBUG 2023-05-14 04:32:15.928 UTC: 	 CRAB Client version: v3.230417
+DEBUG 2023-05-14 04:32:15.928 UTC: 	 Running on: Linux submit02.mit.edu 3.10.0-1160.el7.x86_64 #1 SMP Mon Oct 19 16:18:59 UTC 2020 x86_64 x86_64 x86_64 GNU/Linux - CentOS Linux 7 (Core)
+DEBUG 2023-05-14 04:32:15.928 UTC: 	 Executing command: 'submit'
+DEBUG 2023-05-14 04:32:15.930 UTC: 	 Could not find CRAB cache file /home/submit/srothman/.crab3; creating a new one.
+DEBUG 2023-05-14 04:32:15.939 UTC: 	 Will use CRAB Analysis plugin (i.e. will run an analysis job type).
+DEBUG 2023-05-14 04:32:15.951 UTC: 	 Checking credentials
+DEBUG 2023-05-14 04:32:15.954 UTC: 	 Found proxy file /home/submit/srothman/myticket
+DEBUG 2023-05-14 04:32:15.954 UTC: 	 Making sure it has proper VOMS extension
+DEBUG 2023-05-14 04:32:15.954 UTC: 	 Executing command :
+ voms-proxy-info --vo --file /home/submit/srothman/myticket
+DEBUG 2023-05-14 04:32:16.277 UTC: 	 output : cms
+
+ error: 
+ retcode : 0
+DEBUG 2023-05-14 04:32:16.277 UTC: 	 Getting proxy life time left
+DEBUG 2023-05-14 04:32:16.277 UTC: 	 Executing command :
+ voms-proxy-info --actimeleft --timeleft --file /home/submit/srothman/myticket
+DEBUG 2023-05-14 04:32:16.596 UTC: 	 output : 43142
+43142
+
+ error: 
+ retcode : 0
+DEBUG 2023-05-14 04:32:16.596 UTC: 	 Proxy valid for 11:59:02 hours
+DEBUG 2023-05-14 04:32:16.659 UTC: 	 Encoded data for curl request: subresource=delegatedn
+DEBUG 2023-05-14 04:32:16.659 UTC: 	 Executing command :
+ curl -v -X GET -H "User-Agent: CRABClient/v3.230417" -H "Accept: */*" --data @/tmp/crab_curlDatac349otwl --cert "/home/submit/srothman/myticket" --key "/home/submit/srothman/myticket" --capath "/etc/grid-security/certificates/" "https://cmsweb.cern.ch:8443/crabserver/prod/info?subresource=delegatedn" | tee /dev/stderr 
+DEBUG 2023-05-14 04:32:17.142 UTC: 	 output : {"result": [
+ {"services": ["/DC=ch/DC=cern/OU=computers/CN=crab-(preprod|prod|dev)-tw(01|02|03).cern.ch|/DC=ch/DC=cern/OU=computers/CN=stefanov(m|m2).cern.ch|/DC=ch/DC=cern/OU=computers/CN=dciangot-tw.cern.ch"]}
+]}
+
+ error:   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 137.138.154.184:8443...
+* Connected to cmsweb.cern.ch (137.138.154.184) port 8443 (#0)
+* ALPN, offering http/1.1
+* Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH
+* successfully set certificate verify locations:
+*  CAfile: /etc/pki/tls/certs/ca-bundle.crt
+*  CApath: /etc/grid-security/certificates/
+* TLSv1.2 (OUT), TLS header, Certificate Status (22):
+} [5 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+} [512 bytes data]
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+{ [109 bytes data]
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+{ [6240 bytes data]
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+{ [333 bytes data]
+* TLSv1.2 (IN), TLS handshake, Request CERT (13):
+{ [13122 bytes data]
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+{ [4 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Certificate (11):
+} [6768 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+} [70 bytes data]
+* TLSv1.2 (OUT), TLS handshake, CERT verify (15):
+} [264 bytes data]
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+} [1 bytes data]
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+} [16 bytes data]
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+{ [1 bytes data]
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+{ [16 bytes data]
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+* ALPN, server accepted to use http/1.1
+* Server certificate:
+*  subject: DC=ch; DC=cern; OU=computers; CN=cmsweb.cern.ch
+*  start date: Feb 28 02:56:51 2023 GMT
+*  expire date: Apr  3 02:56:51 2024 GMT
+*  subjectAltName: host "cmsweb.cern.ch" matched cert's "cmsweb.cern.ch"
+*  issuer: DC=ch; DC=cern; CN=CERN Grid Certification Authority
+*  SSL certificate verify ok.
+} [5 bytes data]
+> GET /crabserver/prod/info?subresource=delegatedn HTTP/1.1
+> Host: cmsweb.cern.ch:8443
+> User-Agent: CRABClient/v3.230417
+> Accept: */*
+> Content-Length: 22
+> Content-Type: application/x-www-form-urlencoded
+> 
+} [22 bytes data]
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< Date: Sun, 14 May 2023 04:32:17 GMT
+< Server: Apache
+< Content-Type: application/json
+< Content-Length: 216
+< Vary: Accept
+< Cache-Control: max-age=3600
+< X-Rest-Status: 100
+< Etag: "531fb58a933656ea08a7f418b273fdae3c95932a"
+< X-Rest-Time: 2316.952 us
+< CMS-Server-Time: D=9257 t=1684038737087237
+< 
+{ [5 bytes data]
+100   238  100   216  100    22    456     46 --:--:-- --:--:-- --:--:--   504
+* Connection #0 to host cmsweb.cern.ch left intact
+{"result": [
+ {"services": ["/DC=ch/DC=cern/OU=computers/CN=crab-(preprod|prod|dev)-tw(01|02|03).cern.ch|/DC=ch/DC=cern/OU=computers/CN=stefanov(m|m2).cern.ch|/DC=ch/DC=cern/OU=computers/CN=dciangot-tw.cern.ch"]}
+]}
+
+ retcode : 0
+DEBUG 2023-05-14 04:32:17.143 UTC: 	 Registering user credentials on myproxy for /DC=ch/DC=cern/OU=computers/CN=crab-(preprod|prod|dev)-tw(01|02|03).cern.ch|/DC=ch/DC=cern/OU=computers/CN=stefanov(m|m2).cern.ch|/DC=ch/DC=cern/OU=computers/CN=dciangot-tw.cern.ch
+DEBUG 2023-05-14 04:32:17.143 UTC: 	 Executing command :
+ voms-proxy-info --identity --file /home/submit/srothman/myticket
+DEBUG 2023-05-14 04:32:17.461 UTC: 	 output : /DC=ch/DC=cern/OU=Organic Units/OU=Users/CN=srothman/CN=847240/CN=Simon Rothman
+
+ error: 
+ retcode : 0
+DEBUG 2023-05-14 04:32:17.461 UTC: 	 Getting myproxy life time left for e6b5b70d6b1c8853b32104c1fc5d38ecfa6e0a8b
+DEBUG 2023-05-14 04:32:17.461 UTC: 	 Executing command :
+ myproxy-info -s myproxy.cern.ch -l e6b5b70d6b1c8853b32104c1fc5d38ecfa6e0a8b
+DEBUG 2023-05-14 04:32:17.471 UTC: 	 output : 
+ error: /bin/sh: myproxy-info: command not found
+
+ retcode : 127
+ERROR 2023-05-14 04:32:17.471 UTC: 	 
+/bin/sh: myproxy-info: command not found
+
+DEBUG 2023-05-14 04:32:17.471 UTC: 	 Myproxy is valid: 0
+DEBUG 2023-05-14 04:32:17.471 UTC: 	 Executing command :
+ openssl x509 -noout -dates -in ~/.globus/usercert.pem
+DEBUG 2023-05-14 04:32:17.489 UTC: 	 output : notBefore=Sep 26 19:09:48 2022 GMT
+notAfter=Oct 31 19:09:48 2023 GMT
+
+ error: 
+ retcode : 0
+DEBUG 2023-05-14 04:32:17.632 UTC: 	 Delegating a myproxy for 720:00 hours
+DEBUG 2023-05-14 04:32:17.632 UTC: 	 Executing command :
+ export GT_PROXY_MODE=rfc ; myproxy-init -d -n -s myproxy.cern.ch -C ~/.globus/usercert.pem -y ~/.globus/userkey.pem -x -R '/DC=ch/DC=cern/OU=computers/CN=crab-(preprod|prod|dev)-tw(01|02|03).cern.ch|/DC=ch/DC=cern/OU=computers/CN=stefanov(m|m2).cern.ch|/DC=ch/DC=cern/OU=computers/CN=dciangot-tw.cern.ch' -x -Z '/DC=ch/DC=cern/OU=computers/CN=crab-(preprod|prod|dev)-tw(01|02|03).cern.ch|/DC=ch/DC=cern/OU=computers/CN=stefanov(m|m2).cern.ch|/DC=ch/DC=cern/OU=computers/CN=dciangot-tw.cern.ch' -l e6b5b70d6b1c8853b32104c1fc5d38ecfa6e0a8b -t 168 -c 720:00
+DEBUG 2023-05-14 04:32:17.640 UTC: 	 output : 
+ error: /bin/sh: myproxy-init: command not found
+
+ retcode : 127
+ERROR 2023-05-14 04:32:17.640 UTC: 	 
+/bin/sh: myproxy-init: command not found
+

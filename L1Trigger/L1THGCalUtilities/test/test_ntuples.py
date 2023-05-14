@@ -25,7 +25,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(1)
+    input = cms.untracked.int32(10)
 )
 
 # Input source
@@ -82,108 +82,48 @@ chains = HGCalTriggerChains()
 ## VFE
 chains.register_vfe("Floatingpoint", vfe.CreateVfe())
 ## ECON
-chains.register_concentrator("Supertriggercell", concentrator.CreateSuperTriggerCell())
 chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
   threshold_scintillator=cms.double(-1),
   threshold_silicon=cms.double(-1)
 ))
-chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
-chains.register_concentrator("AutoEncoder", concentrator.CreateAutoencoder())
-chains.register_concentrator("DummyAE", concentrator.CreateTritonAE(
-  inputType = "ADCT",
-  modelNames = ['dummy'],
-  cuts = [''],
-  AEProducerName = 'AEProducerDummy',
-  normType='None',
-))
-chains.register_concentrator("NateAE", concentrator.CreateTritonAE(
-  inputType = "ADCT",
-  modelNames = ["model_48_250_100_16"],
-  cuts = [''],
-  AEProducerName = "AEProducerNate",
-  normType='None',
-))
-chains.register_concentrator("NateAENorm", concentrator.CreateTritonAE(
-  inputType = "ADCT",
-  modelNames = ["model_48_250_100_16"],
-  cuts = [''],
-  AEProducerName = "AEProducerNateFloating",
-  normType='Floating',
-  preNorm=False,
-))
-chains.register_concentrator("NateAEPreNorm", concentrator.CreateTritonAE(
-  inputType = "ADCT",
-  modelNames = ["model_48_250_100_16"],
-  cuts = [''],
-  AEProducerName = "AEProducerNatePreFloating",
-  normType='Floating',
-  preNorm=True,
-))
-chains.register_concentrator("NateAESplitWafer", concentrator.CreateTritonAE(
-  inputType = "ADCT",
-  modelNames = ['dt_1_greater_0_250_100',
-                'dt_2_greater_0_250_100',
-                'dt_3_greater_0_250_100'],
-  cuts = ['type==0', 'type==1', 'type==2'],
-  AEProducerName = "AEProducerNateSplitWafer",
-  normType='None',
-))
-chains.register_concentrator("NateAESplitWaferNorm", concentrator.CreateTritonAE(
-  inputType = "ADCT",
-  modelNames = ['dt_1_greater_0_250_100',
-                'dt_2_greater_0_250_100',
-                'dt_3_greater_0_250_100'],
-  cuts = ['type==0', 'type==1', 'type==2'],
-  AEProducerName = "AEProducerNateSplitWaferNorm",
-  normType='Floating',
-  preNorm=False
-))
-chains.register_concentrator("RohanAEADC", concentrator.CreateAutoencoder(
-  clipTransverseADC=False,
-  useTransverseADC=False,
-  skipAE=False,
-))
-chains.register_concentrator("RohanAEADCT", concentrator.CreateAutoencoder(
-  useTransverseADC=False,
-  skipAE=False,
-  useModuleFactor=True,
-  bitShiftNormalization=True,
-  normByMax=True,
-))
-chains.register_concentrator("RohanAEClipADCT", concentrator.CreateAutoencoder(
-  clipTransverseADC=True,
-  useTransverseADC=True,
-  skipAE=False,
-))
 
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
-chains.register_backend1("Distance", clustering2d.CreateDistance())
-chains.register_backend1("Topological", clustering2d.CreateTopological())
-chains.register_backend1("ConstrTopological", clustering2d.CreateConstrTopological())
 ## BE2
 chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
-chains.register_backend2("Distance", clustering3d.CreateDistance())
-chains.register_backend2("Dbscan", clustering3d.CreateDbscan())
 # Register selector
 chains.register_selector("Dummy", selectors.CreateDummy())
 
-
 # Register ntuples
-ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells', 'econdata']
-chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
+ntuple_list = ['event', 'gen', 'triggercells', 'wafers']
+chains.register_ntuple("nTupleADC", ntuple.CreateNtuple(ntuple_list,
+    useModuleFactor = False,
+    useTransverseADC = False,
+    bitShiftNormalize = True,
+    normByMax = False
+))
+chains.register_ntuple("nTupleADCT", ntuple.CreateNtuple(ntuple_list,
+    useModuleFactor = False,
+    useTransverseADC = True,
+    bitShiftNormalize = True,
+    normByMax = False
+))
+chains.register_ntuple("nTupleADCTMF", ntuple.CreateNtuple(ntuple_list,
+    useModuleFactor = True,
+    useTransverseADC = True,
+    bitShiftNormalize = True,
+    normByMax = False
+))
+chains.register_ntuple("nTupleADCTMFMax", ntuple.CreateNtuple(ntuple_list,
+    useModuleFactor = True,
+    useTransverseADC = True,
+    bitShiftNormalize = True,
+    normByMax = True
+))
 
-# Register trigger chains
-#concentrator_algos = ['Supertriggercell', 'Threshold', 'Bestchoice', 'AutoEncoder', "TritonAE"]
-#concentrator_algos = ['Threshold0', "Bestchoice", "NateAE", "NateAENorm", "RohanAE", "RohanAEFP", "NateAESplitWafer", "NateAESplitWaferNorm"]
-concentrator_algos = ['Threshold0', "RohanAEADCT"]# "RohanAEADCT", "RohanAEClipADCT"]
-
-backend1_algos = ['Dummy']# 'Distance'] #'Topological']#, 'ConstrTopological']
-backend2_algos = ['Histomax']#, 'Distance', 'Dbscan']
-## Make cross product fo ECON and BE algos
-import itertools
-for cc,be1,be2 in itertools.product(concentrator_algos,backend1_algos, backend2_algos):
-    chains.register_chain('Floatingpoint', cc, be1, be2, 'Dummy', 'nTuple')
+ntuples = ['nTupleADC', 'nTupleADCT', 'nTupleADCTMF', 'nTupleADCTMFMax']
+for ntuple in ntuples:
+    chains.register_chain('Floatingpoint', 'Threshold0', 'Dummy', 'Histomax', "Dummy", ntuple)
 
 process = chains.create_sequences(process)
 
@@ -195,7 +135,8 @@ from CommonTools.CandAlgos.genParticleCustomSelector_cfi import genParticleCusto
 process.filter = genParticleCustomSelector.clone(
     minRapidity = -1.444,
     maxRapidity = 1.444,
-    invertRapidityCut = True
+    invertRapidityCut = True,
+    filter = cms.bool(True)
 )
 
 process.hgcl1tpg_step = cms.Path(process.L1THGCalTriggerPrimitives)

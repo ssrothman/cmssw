@@ -39,27 +39,50 @@ public:
     }
 
     void run(const std::vector<l1t::HGCalTriggerCell>& trigCellVecInput){
+        printf("top of run\n");
+        fflush(stdout);
         clear();
+        printf("cleared\n");
+        fflush(stdout);
 
         if(trigCellVecInput.empty()){
             return;
         }
+        printf("not empty\n");
+        fflush(stdout);
 
         unsigned module_det_id = geometry()->getModuleFromTriggerCell(trigCellVecInput[0].detId());
         setupNorms(module_det_id);
+        printf("set up norms\n");
+        fflush(stdout);
 
         fillADCs(trigCellVecInput);
+        printf("filled ADCs\n");
+        fflush(stdout);
         fillCALQs();
+        printf("filled CALQs\n");
+        fflush(stdout);
         fillInputs();
+        printf("filled inputs\n");
+        fflush(stdout);
         printf("ADCs\n");
+        fflush(stdout);
         print2d(ADCs_);
+        fflush(stdout);
         printf("norms\n");
+        fflush(stdout);
         print2d(norms_);
+        fflush(stdout);
         printf("CALQs\n");
+        fflush(stdout);
         print2d(CALQs_);
+        fflush(stdout);
         printf("inputs\n");
+        fflush(stdout);
         print2d(inputs_);
+        fflush(stdout);
         printf("\n\n");
+        fflush(stdout);
     }
 
     inline unsigned getNorm(unsigned u, unsigned v) const{
