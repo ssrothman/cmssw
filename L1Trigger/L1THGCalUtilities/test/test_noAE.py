@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
 from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
-process = cms.Process('DIGI',Phase2C17I13M9)#, enableSonicTriton)
+process = cms.Process('DIGI',Phase2C17I13M9)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -25,14 +25,26 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(-1)
+    input = cms.untracked.int32(1)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100-gun_noPU.root'),
     #fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/noPU_125X_mcRun4_realistic_v2-v1/2550000/066944a3-a061-42ac-ba45-9faadb46407a.root'),
-    fileNames = cms.untracked.vstring('file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/65ce4640-c197-4c07-9fa4-cb505ab72738.root'),
+    fileNames = cms.untracked.vstring(
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/0ded0ca9-3a66-405d-bded-83d303a9c799.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/0df00bcc-d3d6-4502-b087-5bf8ad5e5f40.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/0df93a72-3417-467c-b72e-2d4b9e862de5.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/105accd4-e83c-40ae-814c-c2b4735c791f.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/10a2eff8-1514-4273-94c4-448432c8c273.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/11f8cfd2-e5b8-4ced-8d7d-a3d7bd72d151.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/129b02c2-7ba6-459d-80ea-d460ec9b61a1.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/12ca67ca-7592-4d25-9f00-20260e10bcf2.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/12ea965c-8ac8-44f6-889c-7b04b0080deb.root',
+        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/14035d77-8ae3-448b-bea4-8614189e6b30.root',
+),
+
     inputCommands=cms.untracked.vstring(
         'keep *',
         'drop l1tTkPrimaryVertexs_L1TkPrimaryVertex__RECO',
@@ -55,9 +67,9 @@ process.configurationMetadata = cms.untracked.PSet(
 # Output definition
 process.TFileService = cms.Service(
     "TFileService",
-    #fileName = cms.string("/home/submit/srothman/cmsdata/hgcal/myntuples/ntuple.root")
+    #fileName = cms.string("/home/submit/srothman/cmsdata/hgcal/myntuples/ntuple_noAE6.root")
     fileName = cms.string("ntuple.root")
-    )
+)
 
 # Other statements
 from Configuration.AlCa.GlobalTag import GlobalTag
@@ -86,6 +98,48 @@ chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
   threshold_scintillator=cms.double(-1),
   threshold_silicon=cms.double(-1)
 ))
+chains.register_concentrator("NominalTot", concentrator.CreateAutoencoder(
+  useTransverseADC=False,
+  skipAE=True,
+  useModuleFactor=False,
+  bitShiftNormalization=True,
+  normByMax=False,
+))
+chains.register_concentrator("NormByMaxTot", concentrator.CreateAutoencoder(
+  useTransverseADC=False,
+  skipAE=True,
+  useModuleFactor=False,
+  bitShiftNormalization=True,
+  normByMax=True,
+))
+chains.register_concentrator("Nominal", concentrator.CreateAutoencoder(
+  useTransverseADC=True,
+  skipAE=True,
+  useModuleFactor=False,
+  bitShiftNormalization=True,
+  normByMax=False,
+))
+chains.register_concentrator("NormByMax", concentrator.CreateAutoencoder(
+    useTransverseADC=True,
+    skipAE=True,
+    useModuleFactor=False,
+    bitShiftNormalization=True,
+    normByMax=True,
+))
+chains.register_concentrator("NormByMaxModuleFactor", concentrator.CreateAutoencoder(
+    useTransverseADC=True,
+    skipAE=True,
+    useModuleFactor=True,
+    bitShiftNormalization=True,
+    normByMax=True,
+))
+chains.register_concentrator("ModuleFactor", concentrator.CreateAutoencoder(
+    useTransverseADC=True,
+    skipAE=True,
+    useModuleFactor=True,
+    bitShiftNormalization=True,
+    normByMax=False,
+))
 
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
@@ -94,36 +148,20 @@ chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
 # Register selector
 chains.register_selector("Dummy", selectors.CreateDummy())
 
-# Register ntuples
-ntuple_list = ['event', 'gen', 'triggercells', 'wafers']
-chains.register_ntuple("nTupleADC", ntuple.CreateNtuple(ntuple_list,
-    useModuleFactor = False,
-    useTransverseADC = False,
-    bitShiftNormalize = True,
-    normByMax = False
-))
-chains.register_ntuple("nTupleADCT", ntuple.CreateNtuple(ntuple_list,
-    useModuleFactor = False,
-    useTransverseADC = True,
-    bitShiftNormalize = True,
-    normByMax = False
-))
-chains.register_ntuple("nTupleADCTMF", ntuple.CreateNtuple(ntuple_list,
-    useModuleFactor = True,
-    useTransverseADC = True,
-    bitShiftNormalize = True,
-    normByMax = False
-))
-chains.register_ntuple("nTupleADCTMFMax", ntuple.CreateNtuple(ntuple_list,
-    useModuleFactor = True,
-    useTransverseADC = True,
-    bitShiftNormalize = True,
-    normByMax = True
-))
 
-ntuples = ['nTupleADC', 'nTupleADCT', 'nTupleADCTMF', 'nTupleADCTMFMax']
-for ntuple in ntuples:
-    chains.register_chain('Floatingpoint', 'Threshold0', 'Dummy', 'Histomax', "Dummy", ntuple)
+# Register ntuples
+ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells']
+chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
+
+# Register trigger chains
+concentrator_algos = ['Threshold0', "Nominal", "NormByMax", "NormByMaxModuleFactor", "ModuleFactor", "NominalTot", 'NormByMaxTot']
+
+backend1_algos = ['Dummy']# 'Distance'] #'Topological']#, 'ConstrTopological']
+backend2_algos = ['Histomax']#, 'Distance', 'Dbscan']
+## Make cross product fo ECON and BE algos
+import itertools
+for cc,be1,be2 in itertools.product(concentrator_algos,backend1_algos, backend2_algos):
+    chains.register_chain('Floatingpoint', cc, be1, be2, 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
 

@@ -39,50 +39,50 @@ public:
     }
 
     void run(const std::vector<l1t::HGCalTriggerCell>& trigCellVecInput){
-        printf("top of run\n");
-        fflush(stdout);
+        //printf("top of run\n");
+        //fflush(stdout);
         clear();
-        printf("cleared\n");
-        fflush(stdout);
+        //printf("cleared\n");
+        //fflush(stdout);
 
         if(trigCellVecInput.empty()){
             return;
         }
-        printf("not empty\n");
-        fflush(stdout);
+        //printf("not empty\n");
+        //fflush(stdout);
 
         unsigned module_det_id = geometry()->getModuleFromTriggerCell(trigCellVecInput[0].detId());
         setupNorms(module_det_id);
-        printf("set up norms\n");
-        fflush(stdout);
+        //printf("set up norms\n");
+        //fflush(stdout);
 
         fillADCs(trigCellVecInput);
-        printf("filled ADCs\n");
-        fflush(stdout);
+        //printf("filled ADCs\n");
+        //fflush(stdout);
         fillCALQs();
-        printf("filled CALQs\n");
-        fflush(stdout);
+        //printf("filled CALQs\n");
+        //fflush(stdout);
         fillInputs();
-        printf("filled inputs\n");
-        fflush(stdout);
-        printf("ADCs\n");
-        fflush(stdout);
-        print2d(ADCs_);
-        fflush(stdout);
-        printf("norms\n");
-        fflush(stdout);
-        print2d(norms_);
-        fflush(stdout);
-        printf("CALQs\n");
-        fflush(stdout);
-        print2d(CALQs_);
-        fflush(stdout);
-        printf("inputs\n");
-        fflush(stdout);
-        print2d(inputs_);
-        fflush(stdout);
-        printf("\n\n");
-        fflush(stdout);
+        //printf("filled inputs\n");
+        //fflush(stdout);
+        //printf("ADCs\n");
+        //fflush(stdout);
+        //print2d(ADCs_);
+        //fflush(stdout);
+        //printf("norms\n");
+        //fflush(stdout);
+        //print2d(norms_);
+        //fflush(stdout);
+        //printf("CALQs\n");
+        //fflush(stdout);
+        //print2d(CALQs_);
+        //fflush(stdout);
+        //printf("inputs\n");
+        //fflush(stdout);
+        //print2d(inputs_);
+        //fflush(stdout);
+        //printf("\n\n");
+        //fflush(stdout);
     }
 
     inline unsigned getNorm(unsigned u, unsigned v) const{
@@ -118,7 +118,7 @@ public:
     }
 
     inline double CALQtoADC(double CALQ, unsigned u, unsigned v){
-        return (CALQ / norms_[u][v]) * pow(2, bitsPerADC_ + bitsPerNorm_ - bitsPerCALQ_);
+        return (CALQ / double(norms_[u][v])) * std::pow(2, bitsPerADC_ + bitsPerNorm_ - bitsPerCALQ_);
     }
 
 private:
@@ -132,7 +132,7 @@ private:
     }
 
     void fillADCs(const std::vector<l1t::HGCalTriggerCell>& trigCellVecInput){
-        printf("IRL\n");
+        //printf("IRL\n");
         for(const auto& tc : trigCellVecInput){
             auto id = HGCalTriggerDetId(tc.detId());
             unsigned u = id.triggerCellU();
@@ -154,7 +154,7 @@ private:
     }
 
     void fillInputs(){
-        printf("In filling inputs\n");
+        //printf("In filling inputs\n");
         int shift;
         if(normByMax_){
             unsigned q=0;
@@ -163,13 +163,13 @@ private:
                     q |= CALQs_[u][v];
                 }
             }
-            printf("msb(q) = %u\n", msb(q));
+            //printf("msb(q) = %u\n", msb(q));
             shift = msb(q) - bitsPerInput_ + 1; 
-            printf("shift = %d\n", shift);
+            //printf("shift = %d\n", shift);
         } else {
-            printf("msb(modSum_) = %u\n", msb(modSum_));
+            //printf("msb(modSum_) = %u\n", msb(modSum_));
             shift = msb(modSum_) - bitsPerInput_ + 1;
-            printf("shift = %d\n", shift);
+            //printf("shift = %d\n", shift);
         }
         for(unsigned u=0; u<cellUVSize_; u++){
             for(unsigned v=0; v<cellUVSize_; v++){
@@ -197,11 +197,11 @@ private:
             }
         } else {//compute norms
 
-            printf("SETTING UP NORMS\n");
+            //printf("SETTING UP NORMS\n");
             //constituent triger cells
             const auto& trigger_cell_ids = geometry()->getTriggerCellsFromModule(module_det_id);
 
-            double moduleFactor = maxNormInt_-1;
+            moduleFactor_ = maxNormInt_ >> 1;
             if(useModuleFactor_){//if using module factor, find smallest cosh(eta)
                 double minCosh = 1e9;
                 for(const auto& tc_id : trigger_cell_ids){
@@ -211,20 +211,20 @@ private:
                         minCosh = val;
                     }
                 }
-                moduleFactor = minCosh * (maxNormInt_-1);
+                moduleFactor_ = minCosh * moduleFactor_;
             }
 
-            printf("MODULE FACTOR %0.3lf\n", moduleFactor);
+            //printf("MODULE FACTOR %0.3lf\n", moduleFactor);
             for(const auto& tc_id : trigger_cell_ids){
                 const auto& tc = HGCalTriggerDetId(tc_id);
                 const auto& pos = geometry()->getTriggerCellPosition(tc_id);
                 unsigned u = tc.triggerCellU();
                 unsigned v = tc.triggerCellV();
-                double norm = moduleFactor/std::cosh(pos.eta()); //floating point number btw 0 and 1
-                printf("\tnorm %0.3lf\n", norm);
+                double norm = moduleFactor_/std::cosh(pos.eta()); //floating point number btw 0 and 1
+                //printf("\tnorm %0.3lf\n", norm);
                 //can round bc these are precomputed
                 norms_[u][v] = std::round(norm); //12 bit int
-                printf("\tnorm[u][v] %u\n", norms_[u][v]);
+                //printf("\tnorm[u][v] %u\n", norms_[u][v]);
             }
         }
     }
@@ -267,6 +267,7 @@ private:
     
     std::vector<unsigned> us_, vs_;
     size_t modSum_;
+    double moduleFactor_;
 };
 
 #endif
