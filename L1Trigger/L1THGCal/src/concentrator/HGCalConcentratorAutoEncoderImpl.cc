@@ -186,9 +186,20 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     compressedCharge[inputIndex] = trigCell.compressedCharge();
 
     ae_inputArray[inputIndex] = aeInputUtil_.getInput(cellu, cellv)/aeInputUtil_.getInputNorm();
-    printf("ae_input: %0.3lf\n", ae_inputArray[inputIndex]);
   }
   modSum = aeInputUtil_.getModSum();
+
+  double originalADCsum = 0;
+  double originalCALQsum = 0;
+  double originalINPUTsum = 0;
+
+  for(unsigned u=0; u<8; ++u){
+    for(unsigned v=0; v<8; ++v){
+      originalADCsum += aeInputUtil_.getADC(u,v);
+      originalCALQsum += aeInputUtil_.getCALQ(u,v);
+      originalINPUTsum += aeInputUtil_.getInput(u,v)/aeInputUtil_.getInputNorm();
+    }
+  }
 
   tensorflow::Tensor encoder_input(tensorflow::DT_FLOAT,
                                    {encoderShape_[0], encoderShape_[1], encoderShape_[2], encoderShape_[3]});
@@ -275,11 +286,13 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     if (preserveModuleSum_ && outputSum > 0) {
       renormalizationFactor = modSum / outputSum;
     }
-    //printf("\trenormalization factor = %0.3f\n", renormalizationFactor);
 
-    unsigned aeOutput2d[8][8] = {};
-    unsigned aeOutputCALQ2d[8][8] = {};
-    unsigned aeOutputADC2d[8][8] = {};
+    //unsigned aeOutput2d[8][8] = {};
+    //unsigned aeOutputCALQ2d[8][8] = {};
+    //unsigned aeOutputADC2d[8][8] = {};
+    double finalADCsum = 0;
+    double finalCALQsum = 0;
+    double finalINPUTsum = 0;
     for (int i = 0; i < nTriggerCells_; i++) {
       int remapIndex = cellRemap_[i];
       if (ae_outputArray[remapIndex] > 0) {
@@ -290,22 +303,25 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
 
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
-        double out = ae_outputArray[remapIndex];
         double CALQ = ae_outputArray[remapIndex] * renormalizationFactor;
         double adc = aeInputUtil_.CALQtoADC(CALQ, cellU, cellV);
 
         double mipPt = adc / mipToADC_conv / cosh(point.eta());
         double et = mipPt * mipPtToEt_conv;
 
+        finalINPUTsum += ae_outputArray[remapIndex];
+        finalCALQsum += CALQ;
+        finalADCsum += adc;
+
         //round because this doesn't exist on-chip anyway,
         //so may as well pretend its full-precision
-        aeOutput2d[cellU][cellV] = std::round(out * 256);
-        aeOutputCALQ2d[cellU][cellV] = std::round(CALQ); 
-        aeOutputADC2d[cellU][cellV] = std::round(adc);
-        //printf("\t\tfinal adc = %0.3f\n", adc);
+        //double out = ae_outputArray[remapIndex];
+        //aeOutput2d[cellU][cellV] = std::round(out * 256);
+        //aeOutputCALQ2d[cellU][cellV] = std::round(CALQ); 
+        //aeOutputADC2d[cellU][cellV] = std::round(adc);
 
-        if (adc < zeroSuppresionThreshold_)
-          continue;
+        //if (adc < zeroSuppresionThreshold_)
+        //  continue;
 
         if (!triggerTools_.getTriggerGeometry()->validTriggerCell(id))
           continue;
@@ -324,12 +340,17 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
         trigCellVecOutput.push_back(triggerCell);
       }
     }
-    printf("ae output [raw]\n");
-    aeInputUtil_.print2d(aeOutput2d);
-    printf("AE output [renormalized]\n");
-    aeInputUtil_.print2d(aeOutputCALQ2d);
-    printf("AE output [ADC]\n");
-    aeInputUtil_.print2d(aeOutputADC2d);
+    printf("%d %d %d %d\n", useModuleFactor_, bitShiftNormalization_, useTransverseADC_, normByMax_);
+    printf("'input' sum: %0.3f -> %0.3f\n", originalINPUTsum, finalINPUTsum);
+    printf("'CALQ' sum: %0.3f -> %0.3f\n", originalCALQsum, finalCALQsum);
+    printf("'ADC' sum: %0.3f -> %0.3f\n", originalADCsum, finalADCsum);
+    printf("\n");
+    //printf("ae output [raw]\n");
+    //aeInputUtil_.print2d(aeOutput2d);
+    //printf("AE output [renormalized]\n");
+    //aeInputUtil_.print2d(aeOutputCALQ2d);
+    //printf("AE output [ADC]\n");
+    //aeInputUtil_.print2d(aeOutputADC2d);
 
     if (saveEncodedValues_) {
       id = HGCalTriggerDetId(subdet, zp, type, layer, waferU, waferV, 0, 0);
