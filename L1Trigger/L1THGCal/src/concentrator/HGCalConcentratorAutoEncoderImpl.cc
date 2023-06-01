@@ -293,6 +293,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     double finalADCsum = 0;
     double finalCALQsum = 0;
     double finalINPUTsum = 0;
+    //unsigned anID;
     for (int i = 0; i < nTriggerCells_; i++) {
       int remapIndex = cellRemap_[i];
       if (ae_outputArray[remapIndex] > 0) {
@@ -300,6 +301,7 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
         cellV = ae_outputCellV_[i];
 
         HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, cellU, cellV);
+        //anID = id;
 
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
@@ -340,11 +342,12 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
         trigCellVecOutput.push_back(triggerCell);
       }
     }
-    printf("%d %d %d %d\n", useModuleFactor_, bitShiftNormalization_, useTransverseADC_, normByMax_);
-    printf("'input' sum: %0.3f -> %0.3f\n", originalINPUTsum, finalINPUTsum);
-    printf("'CALQ' sum: %0.3f -> %0.3f\n", originalCALQsum, finalCALQsum);
-    printf("'ADC' sum: %0.3f -> %0.3f\n", originalADCsum, finalADCsum);
-    printf("\n");
+    //printf("%d %d %d %d\n", useModuleFactor_, bitShiftNormalization_, useTransverseADC_, normByMax_);
+    //printf("%d\n", triggerTools_.getTriggerGeometry()->getModuleFromTriggerCell(anID));
+    //printf("'input' sum: %0.3f -> %0.3f\n", originalINPUTsum, finalINPUTsum);
+    //printf("'CALQ' sum: %0.3f -> %0.3f\n", originalCALQsum, finalCALQsum);
+    //printf("'ADC' sum: %0.3f -> %0.3f\n", originalADCsum, finalADCsum);
+    //printf("\n");
     //printf("ae output [raw]\n");
     //aeInputUtil_.print2d(aeOutput2d);
     //printf("AE output [renormalized]\n");

@@ -56,13 +56,15 @@ class CreateNtuple(object):
                  useModuleFactor = ntuple_wafers.useModuleFactor,
                  useTransverseADC = ntuple_wafers.useTransverseADC,
                  bitShiftNormalize = ntuple_wafers.bitShiftNormalize,
-                 normByMax = ntuple_wafers.normByMax):
+                 normByMax = ntuple_wafers.normByMax,
+                 bitsPerInput = ntuple_wafers.bitsPerInput):
 
         self.ntuple_list = ntuple_list
         self.useModuleFactor = useModuleFactor
         self.useTransverseADC = useTransverseADC
         self.bitShiftNormalize = bitShiftNormalize
         self.normByMax = normByMax
+        self.bitsPerInput = bitsPerInput
 
     def __call__(self, process, inputs):
         vpset = []
@@ -77,6 +79,7 @@ class CreateNtuple(object):
                 pset.useTransverseADC = self.useTransverseADC
                 pset.bitShiftNormalize = self.bitShiftNormalize
                 pset.normByMax = self.normByMax
+                pset.bitsPerInput = self.bitsPerInput
             elif ntuple=='clusters':
                 pset.Clusters = cms.InputTag(inputs[1])
                 pset.Multiclusters = cms.InputTag(inputs[2])
