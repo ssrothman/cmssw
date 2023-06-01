@@ -11,6 +11,8 @@
 
 #include "PhysicsTools/TensorFlow/interface/TensorFlow.h"
 
+#include "L1Trigger/L1THGCal/interface/concentrator/AEinputUtil.h"
+
 class HGCalConcentratorAutoEncoderImpl {
 public:
   HGCalConcentratorAutoEncoderImpl(const edm::ParameterSet& conf);
@@ -20,7 +22,14 @@ public:
               std::vector<l1t::HGCalTriggerCell>& trigCellVecOutput,
               std::vector<l1t::HGCalConcentratorData>& ae_EncodedOutput);
 
-  void setGeometry(const HGCalTriggerGeometryBase* const geom) { triggerTools_.setGeometry(geom); }
+  void setGeometry(const HGCalTriggerGeometryBase* const geom) { 
+      triggerTools_.setGeometry(geom); 
+      aeInputUtil_.setGeometry(geom);
+  }
+
+  inline const HGCalTriggerGeometryBase* geometry() const {
+      return triggerTools_.getTriggerGeometry();
+  }
 
 private:
   static constexpr int nTriggerCells_ = 48;
@@ -57,8 +66,13 @@ private:
   std::vector<int> cellRemapNoDuplicates_;
   std::vector<uint> encoderShape_;
   std::vector<uint> decoderShape_;
-  int bitsPerInput_;
+
+  unsigned bitsPerADC_;
+  unsigned bitsPerNorm_;
+  unsigned bitsPerCALQ_;
+  unsigned bitsPerInput_;
   int maxBitsPerOutput_;
+
   std::vector<int> outputBitsPerLink_;
 
   std::vector<edm::ParameterSet> modelFilePaths_;
@@ -76,13 +90,21 @@ private:
   std::vector<unsigned int> linkToGraphMap_;
 
   double zeroSuppresionThreshold_;
+
+  bool useModuleFactor_;
   bool bitShiftNormalization_;
+  bool useTransverseADC_;
+  bool normByMax_;
+
+  bool skipAE_;
+
   bool saveEncodedValues_;
   bool preserveModuleSum_;
 
   std::array<double, nEncodedLayerNodes_> ae_encodedLayer_;
 
   HGCalTriggerTools triggerTools_;
+  AEinputUtil aeInputUtil_;
 };
 
 #endif

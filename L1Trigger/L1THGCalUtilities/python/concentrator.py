@@ -1,7 +1,7 @@
 
 import FWCore.ParameterSet.Config as cms
 import SimCalorimetry.HGCalSimProducers.hgcalDigitizer_cfi as digiparam
-from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import threshold_conc_proc, best_conc_proc, supertc_conc_proc, coarsetc_onebitfraction_proc, custom_conc_proc, autoEncoder_conc_proc
+from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import threshold_conc_proc, best_conc_proc, supertc_conc_proc, coarsetc_onebitfraction_proc, custom_conc_proc, autoEncoder_conc_proc, triton_ae_params
 
 
 class CreateSuperTriggerCell(object):
@@ -68,6 +68,64 @@ class CreateBestChoice(object):
                 )
         return producer
 
+from L1Trigger.L1THGCal.ECONTritonProducer_cfi import AEProducer
+from L1Trigger.L1THGCal.MapMergeProducer_cfi import MapMergeProducer
+
+class CreateTritonAE(object):
+    def __init__(self, inputType='ADC', 
+                       normType='None',
+                       AEProducerName="AEProducer",
+                       cuts = [''],
+                       modelNames = ['dummy'],
+                       preNorm=False,
+                       verbose=0):
+        #processor params
+        self.processor = triton_ae_params.clone(
+            inputType = inputType
+        )
+
+        #AE producer params
+        self.modelNames = modelNames
+        self.cuts = cuts
+        self.AEProducerName = AEProducerName
+        self.inputType = inputType
+        self.normType = normType
+        self.preNorm = preNorm
+        self.verbose = verbose
+
+    def __call__(self, process, inputs):
+        mergeinputs = []
+        for i in range(len(self.cuts)):
+            name = self.AEProducerName+"%d"%i
+            mergeinputs.append(name)
+            setattr(process, name, AEProducer.clone(
+                inputType = self.inputType,
+                normType = self.normType,
+                preNorm = self.preNorm,
+                verbose = self.verbose,
+                cut = self.cuts[i],
+                Client = AEProducer.Client.clone(
+                    modelName = self.modelNames[i]+"_ensemble",
+                    modelConfigPath = "L1Trigger/L1THGCal/data/models/%s/config.pbtxt"%(self.modelNames[i]+"_ensemble")
+                )
+            ))
+
+        setattr(process, self.AEProducerName+"Merge", MapMergeProducer.clone(
+          inputs = mergeinputs
+        ))
+
+        setattr(process, self.AEProducerName+"Task", cms.Task(
+            *[getattr(process, name) for name in mergeinputs],
+            getattr(process, self.AEProducerName+"Merge")
+        ))
+        process.L1THGCalTriggerPrimitives.associate(getattr(process, self.AEProducerName+"Task"))
+        producer = process.l1tHGCalConcentratorProducer.clone(
+            InputTriggerCells = cms.InputTag(inputs),
+            InputTriggerSums = cms.InputTag(inputs),
+            ProcessorParameters = self.processor,
+            InputAE = self.AEProducerName+"Merge",
+        )
+        return producer
 
 class CreateAutoencoder(object):
     def __init__(self,
@@ -83,21 +141,42 @@ class CreateAutoencoder(object):
             zeroSuppresionThreshold = autoEncoder_conc_proc.zeroSuppresionThreshold,
             saveEncodedValues = autoEncoder_conc_proc.saveEncodedValues,
             preserveModuleSum = autoEncoder_conc_proc.preserveModuleSum,
+            threshold_scintillator = autoEncoder_conc_proc.threshold_scintillator,
+            threshold_silicon = autoEncoder_conc_proc.threshold_silicon,
+            useTransverseADC = autoEncoder_conc_proc.useTransverseADC,
+            clipTransverseADC = autoEncoder_conc_proc.clipTransverseADC,
+            skipAE = autoEncoder_conc_proc.skipAE,
+            bitsPerADC = autoEncoder_conc_proc.bitsPerADC,
+            bitsPerNorm = autoEncoder_conc_proc.bitsPerNorm,
+            bitsPerCALQ = autoEncoder_conc_proc.bitsPerCALQ,
+            useModuleFactor = autoEncoder_conc_proc.useModuleFactor, 
+            bitShiftNormalization = autoEncoder_conc_proc.bitShiftNormalization,
+            normByMax = autoEncoder_conc_proc.normByMax,
             scintillatorMethod = 'thresholdSelect',
             ):
          self.processor = autoEncoder_conc_proc.clone(
                 cellRemap = cellRemap,
                 cellRemapNoDuplicates = cellRemapNoDuplicates,
+                encoderShape = encoderShape,
+                decoderShape = decoderShape,
+                bitsPerADC = bitsPerADC,
+                bitsPerNorm = bitsPerNorm,
+                bitsPerCALQ = bitsPerCALQ,
                 nBitsPerInput = nBitsPerInput,
                 maxBitsPerOutput = maxBitsPerOutput,
                 bitsPerLink = bitsPerLink,
                 modelFiles = modelFiles,
                 linkToGraphMap = linkToGraphMap,
-                encoderShape = encoderShape,
-                decoderShape = decoderShape,
                 zeroSuppresionThreshold = zeroSuppresionThreshold,
+                useModuleFactor = useModuleFactor,
+                bitShiftNormalization = bitShiftNormalization,
+                useTransverseADC = useTransverseADC,
+                normByMax = normByMax,
+                skipAE = skipAE,
                 saveEncodedValues = saveEncodedValues,
                 preserveModuleSum = preserveModuleSum,
+                threshold_scintillator = threshold_scintillator,
+                threshold_silicon = threshold_silicon,
                 Method = cms.vstring(['autoEncoder','autoEncoder', scintillatorMethod]),
                 )
 

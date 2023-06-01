@@ -13,6 +13,7 @@
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerGeometryBase.h"
 
 #include "L1Trigger/L1THGCal/interface/HGCalProcessorBase.h"
+#include "L1Trigger/L1THGCal/interface/AEutil.h"
 
 #include <memory>
 #include <utility>
@@ -31,6 +32,9 @@ private:
   edm::ESHandle<HGCalTriggerGeometryBase> triggerGeometry_;
   edm::ESGetToken<HGCalTriggerGeometryBase, CaloGeometryRecord> triggerGeomToken_;
 
+  edm::EDGetToken AEtoken_;
+  edm::EDGetToken ECONtoken_;
+
   std::unique_ptr<HGCalConcentratorProcessorBase> concentratorProcess_;
 };
 
@@ -39,7 +43,10 @@ DEFINE_FWK_MODULE(HGCalConcentratorProducer);
 HGCalConcentratorProducer::HGCalConcentratorProducer(const edm::ParameterSet& conf)
     : input_cell_(consumes<l1t::HGCalTriggerCellBxCollection>(conf.getParameter<edm::InputTag>("InputTriggerCells"))),
       input_sums_(consumes<l1t::HGCalTriggerSumsBxCollection>(conf.getParameter<edm::InputTag>("InputTriggerSums"))),
-      triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>()) {
+      triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>()) ,
+      AEtoken_(consumes<AEMap>(conf.getParameter<edm::InputTag>("InputAE"))),
+      ECONtoken_(consumes<ECONMap>(conf.getParameter<edm::InputTag>("InputAE")))
+      {
   //setup Concentrator parameters
   const edm::ParameterSet& concParamConfig = conf.getParameterSet("ProcessorParameters");
   const std::string& concProcessorName = concParamConfig.getParameter<std::string>("ProcessorName");
@@ -65,6 +72,17 @@ void HGCalConcentratorProducer::produce(edm::Event& e, const edm::EventSetup& es
   edm::Handle<l1t::HGCalTriggerCellBxCollection> trigCellBxColl;
 
   e.getByToken(input_cell_, trigCellBxColl);
+
+  if(concentratorProcess_->wantsAE()){
+    edm::Handle<AEMap> AEhandle;
+    edm::Handle<ECONMap> ECONhandle;
+  
+    e.getByToken(AEtoken_, AEhandle);
+    e.getByToken(ECONtoken_, ECONhandle);
+
+    concentratorProcess_->setAE(AEhandle.product(), ECONhandle.product());
+  }
+
   concentratorProcess_->run(trigCellBxColl, cc_output);
   // Put in the event
   e.put(std::make_unique<l1t::HGCalTriggerCellBxCollection>(std::move(std::get<0>(cc_output))),

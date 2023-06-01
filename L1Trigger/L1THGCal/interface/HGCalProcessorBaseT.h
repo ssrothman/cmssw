@@ -5,6 +5,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerGeometryBase.h"
+#include "L1Trigger/L1THGCal/interface/AEutil.h"
 
 template <typename InputCollection, typename OutputCollection>
 class HGCalProcessorBaseT {
@@ -19,6 +20,11 @@ public:
   virtual void setGeometry(const HGCalTriggerGeometryBase* const geom) { geometry_ = geom; }
 
   virtual void run(const InputCollection& inputColl, OutputCollection& outColl) = 0;
+
+  virtual void setAE(const AEMap *AEout, const ECONMap *ECONout){}
+  virtual bool wantsAE(){
+    return false;
+  }
 
 protected:
   const HGCalTriggerGeometryBase* geometry() const {
