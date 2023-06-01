@@ -79,8 +79,10 @@ private:
 
   std::vector<uint64_t> wafer_sumCALQ_;
 
+  std::vector<std::vector<uint32_t>> wafer_norm_;
+  std::vector<std::vector<uint32_t>> wafer_ADC_;
   std::vector<std::vector<uint32_t>> wafer_CALQ_;
-  std::vector<std::vector<float>> wafer_AEin_;
+  std::vector<std::vector<uint32_t>> wafer_AEin_;
 
   static constexpr int nTriggerCells_ = 48;
   static constexpr int ae_outputCellU_[nTriggerCells_] = {7, 6, 5, 4, 7, 6, 5, 4, 7, 6, 5, 4, 7, 6, 5, 4,
@@ -147,7 +149,6 @@ HGCalTriggerNtupleHGCWafers::HGCalTriggerNtupleHGCWafers(const edm::ParameterSet
 void HGCalTriggerNtupleHGCWafers::initialize(TTree& tree,
                                                    const edm::ParameterSet& conf,
                                                    edm::ConsumesCollector&& collector) {
-    printf("HGCalTriggerNtupleHGCWafers::initialize\n");
   trigger_cells_token_ =
       collector.consumes<l1t::HGCalTriggerCellBxCollection>(conf.getParameter<edm::InputTag>("TriggerCells"));
 
@@ -183,16 +184,17 @@ void HGCalTriggerNtupleHGCWafers::initialize(TTree& tree,
 
   wafer_CALQ_.resize(48);
   wafer_AEin_.resize(48);
+  wafer_ADC_.resize(48);
+  wafer_norm_.resize(48);
   for(unsigned i=0; i<48; ++i){
     tree.Branch(withPrefix(("CALQ"+std::to_string(i)).c_str()), &wafer_CALQ_[i]);
     tree.Branch(withPrefix(("AEin"+std::to_string(i)).c_str()), &wafer_AEin_[i]);
+    tree.Branch(withPrefix(("ADC"+std::to_string(i)).c_str()), &wafer_ADC_[i]);
+    tree.Branch(withPrefix(("norm"+std::to_string(i)).c_str()), &wafer_norm_[i]);
   }
-  printf("HGCalTriggerNtupleHGCWafers::initialize done\n");
 }
 
 void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNtupleEventSetup& es) {
-  printf("HGCalTriggerNtupleHGCWafers::fill\n");
-  fflush(stdout);
   // retrieve trigger cells
   edm::Handle<l1t::HGCalTriggerCellBxCollection> trigger_cells_h;
   e.getByToken(trigger_cells_token_, trigger_cells_h);
@@ -204,17 +206,11 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
   std::unordered_map<uint32_t, double> simhits_bh;
   std::unordered_map<uint32_t, bool> simhit_has_rechit;
   simhits(e, simhits_ee, simhits_fh, simhits_bh);
-  printf("got simhits\n");
-  fflush(stdout);
 
   triggerTools_.setGeometry(es.geometry.product());
   aeInputUtil_.setGeometry(es.geometry.product());
-  printf("set geometry\n");
-  fflush(stdout);
 
   clear();
-  printf("cleared\n");
-  fflush(stdout);
 
   std::unordered_map<uint32_t, std::vector<l1t::HGCalTriggerCell>> wafers;
   for(const auto& tc : trigger_cells){
@@ -222,8 +218,6 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
     uint32_t wafer_id = triggerTools_.getTriggerGeometry()->getModuleFromTriggerCell(tc.detId());
     wafers[wafer_id].push_back(tc);
   }
-  printf("setup wafers map\n");
-  fflush(stdout);
 
   for(const auto& wafer : wafers){
       ++wafer_n_;
@@ -248,8 +242,6 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
       } else {
           throw cms::Exception("HGCalTriggerNtupleWafers") << "Unknown detid " << id0.det() << std::endl;
       }
-      printf("got wafer props\n");
-  fflush(stdout);
 
       float mipPt=0, energy=0, simenergy=0;
       for(const auto& tc : wafer.second){
@@ -260,8 +252,6 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
       wafer_mipPt_.emplace_back(mipPt);
       wafer_energy_.emplace_back(energy);
       wafer_simenergy_.emplace_back(simenergy);
-      printf("got energies\n");
-  fflush(stdout);
 
       auto pos = triggerTools_.getTriggerGeometry()->getModulePosition(wafer.first);
       wafer_eta_.emplace_back(pos.eta());
@@ -269,16 +259,10 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
       wafer_x_.emplace_back(pos.x());
       wafer_y_.emplace_back(pos.y());
       wafer_z_.emplace_back(pos.z());
-      printf("got position\n");
-  fflush(stdout);
 
       aeInputUtil_.run(wafer.second);
-      printf("ran aeInputUtil\n");
-  fflush(stdout);
 
       wafer_sumCALQ_.emplace_back(aeInputUtil_.getModSum());
-      printf("got sumCALQ\n");
-  fflush(stdout);
 
       for(unsigned i=0; i<48; ++i){
 
@@ -287,10 +271,10 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
           unsigned remapIndex = cellRemap_[i];
 
           wafer_CALQ_[remapIndex].emplace_back(aeInputUtil_.getCALQ(u, v));
-          wafer_AEin_[remapIndex].emplace_back(aeInputUtil_.getInput(u, v)/aeInputUtil_.getInputNorm());
+          wafer_AEin_[remapIndex].emplace_back(aeInputUtil_.getInput(u, v));
+          wafer_ADC_[remapIndex].emplace_back(aeInputUtil_.getADC(u, v));
+          wafer_norm_[remapIndex].emplace_back(aeInputUtil_.getNorm(u, v));
       }
-      printf("got training data\n");
-  fflush(stdout);
   }
 }
 
@@ -366,5 +350,7 @@ void HGCalTriggerNtupleHGCWafers::clear() {
   for(unsigned i=0; i<48; ++i){
       wafer_CALQ_[i].clear();
       wafer_AEin_[i].clear();
+      wafer_ADC_[i].clear();
+      wafer_norm_[i].clear();
   }
 }

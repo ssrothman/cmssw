@@ -118,7 +118,16 @@ public:
     }
 
     inline double CALQtoADC(double CALQ, unsigned u, unsigned v){
-        return (CALQ / double(norms_[u][v])) * std::pow(2, bitsPerADC_ + bitsPerNorm_ - bitsPerCALQ_);
+        double factor;
+        if (useTransverseADC_){
+            factor = double(norms_[u][v]) / std::pow(2, bitsPerADC_ 
+                                                      + bitsPerNorm_ 
+                                                      - bitsPerCALQ_);
+            return (CALQ + 0.5) / factor;
+        } else {
+            return CALQ;
+        }
+        return CALQ / factor;
     }
 
 private:

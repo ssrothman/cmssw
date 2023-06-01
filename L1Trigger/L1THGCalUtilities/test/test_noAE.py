@@ -1,5 +1,22 @@
 import FWCore.ParameterSet.Config as cms 
 
+import FWCore.ParameterSet.VarParsing as VarParsing
+
+options = VarParsing.VarParsing('analysis')
+
+options.register('nProc',
+                 1,
+                 VarParsing.VarParsing.multiplicity.singleton,
+                 VarParsing.VarParsing.varType.int,
+                 'Number of threads to use')
+
+options.parseArguments()
+
+print("MADE OPTIONS")
+print("maxEvt = ",options.maxEvents)
+print("inputFiles = ",options.inputFiles)
+print("outputFile = ",options.outputFile)
+
 from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
 from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
 process = cms.Process('DIGI',Phase2C17I13M9)
@@ -25,25 +42,14 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(1)
+    input = cms.untracked.int32(options.maxEvents)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100-gun_noPU.root'),
     #fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/noPU_125X_mcRun4_realistic_v2-v1/2550000/066944a3-a061-42ac-ba45-9faadb46407a.root'),
-    fileNames = cms.untracked.vstring(
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/0ded0ca9-3a66-405d-bded-83d303a9c799.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/0df00bcc-d3d6-4502-b087-5bf8ad5e5f40.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/0df93a72-3417-467c-b72e-2d4b9e862de5.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/105accd4-e83c-40ae-814c-c2b4735c791f.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/10a2eff8-1514-4273-94c4-448432c8c273.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/11f8cfd2-e5b8-4ced-8d7d-a3d7bd72d151.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/129b02c2-7ba6-459d-80ea-d460ec9b61a1.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/12ca67ca-7592-4d25-9f00-20260e10bcf2.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/12ea965c-8ac8-44f6-889c-7b04b0080deb.root',
-        'file:/home/submit/srothman/cmsdata/ECON_datasets/DoubleElectron_FlatPt-1To100_PU200/MINIAOD/14035d77-8ae3-448b-bea4-8614189e6b30.root',
-),
+    fileNames = cms.untracked.vstring(options.inputFiles),
 
     inputCommands=cms.untracked.vstring(
         'keep *',
@@ -54,8 +60,8 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 
 )
-process.options.numberOfThreads = cms.untracked.uint32(1)
-process.options.numberOfStreams = cms.untracked.uint32(1)
+process.options.numberOfThreads = cms.untracked.uint32(options.nProc)
+process.options.numberOfStreams = cms.untracked.uint32(options.nProc)
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
@@ -68,7 +74,8 @@ process.configurationMetadata = cms.untracked.PSet(
 process.TFileService = cms.Service(
     "TFileService",
     #fileName = cms.string("/home/submit/srothman/cmsdata/hgcal/myntuples/ntuple_noAE6.root")
-    fileName = cms.string("ntuple.root")
+    #fileName = cms.string("ntuple.root")
+    fileName = cms.string(options.outputFile)
 )
 
 # Other statements
@@ -94,52 +101,41 @@ chains = HGCalTriggerChains()
 ## VFE
 chains.register_vfe("Floatingpoint", vfe.CreateVfe())
 ## ECON
+ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells']
+chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
+
 chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
   threshold_scintillator=cms.double(-1),
   threshold_silicon=cms.double(-1)
 ))
-chains.register_concentrator("NominalTot", concentrator.CreateAutoencoder(
-  useTransverseADC=False,
-  skipAE=True,
-  useModuleFactor=False,
-  bitShiftNormalization=True,
-  normByMax=False,
-))
-chains.register_concentrator("NormByMaxTot", concentrator.CreateAutoencoder(
-  useTransverseADC=False,
-  skipAE=True,
-  useModuleFactor=False,
-  bitShiftNormalization=True,
-  normByMax=True,
-))
-chains.register_concentrator("Nominal", concentrator.CreateAutoencoder(
-  useTransverseADC=True,
-  skipAE=True,
-  useModuleFactor=False,
-  bitShiftNormalization=True,
-  normByMax=False,
-))
-chains.register_concentrator("NormByMax", concentrator.CreateAutoencoder(
-    useTransverseADC=True,
-    skipAE=True,
-    useModuleFactor=False,
-    bitShiftNormalization=True,
-    normByMax=True,
-))
-chains.register_concentrator("NormByMaxModuleFactor", concentrator.CreateAutoencoder(
-    useTransverseADC=True,
-    skipAE=True,
-    useModuleFactor=True,
-    bitShiftNormalization=True,
-    normByMax=True,
-))
-chains.register_concentrator("ModuleFactor", concentrator.CreateAutoencoder(
-    useTransverseADC=True,
-    skipAE=True,
-    useModuleFactor=True,
-    bitShiftNormalization=True,
-    normByMax=False,
-))
+chains.register_concentrator("Threshold135", concentrator.CreateThreshold())
+chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
+chains.register_concentrator("Supertriggercell", concentrator.CreateSuperTriggerCell())
+names = ['Nominaltot', 'Normbymaxtot', 
+         'Nominal', 'Normbymax', 
+         'Modulefactor', 'Normbymaxmodulefactor']
+transverse = [False, False, True, True, True, True]
+skipAE = [True, True, True, True, True, True]
+moduleFactor = [False, False, False, False, True, True]
+bitShiftNormalization = [True, True, True, True, True, True]
+normByMax = [False, True, False, True, False, True]
+
+for i in range(len(names)):
+    chains.register_concentrator(names[i], concentrator.CreateAutoencoder(
+        useTransverseADC=transverse[i],
+        skipAE=skipAE[i],
+        useModuleFactor=moduleFactor[i],
+        bitShiftNormalization=bitShiftNormalization[i],
+        normByMax=normByMax[i],
+    ))
+    chains.register_ntuple(names[i], ntuple.CreateNtuple(
+        ntuple_list + ["wafers"],
+        useTransverseADC=transverse[i],
+        useModuleFactor=moduleFactor[i],
+        bitShiftNormalize=bitShiftNormalization[i],
+        normByMax=normByMax[i],
+        bitsPerInput = 10
+    ))
 
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
@@ -149,19 +145,13 @@ chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
 chains.register_selector("Dummy", selectors.CreateDummy())
 
 
-# Register ntuples
-ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells']
-chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
-
 # Register trigger chains
-concentrator_algos = ['Threshold0', "Nominal", "NormByMax", "NormByMaxModuleFactor", "ModuleFactor", "NominalTot", 'NormByMaxTot']
+standard_concentrators = ['Threshold0', 'Threshold135', 'Bestchoice', 'Supertriggercell']
+for cc in standard_concentrators:
+    chains.register_chain('Floatingpoint', cc, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
-backend1_algos = ['Dummy']# 'Distance'] #'Topological']#, 'ConstrTopological']
-backend2_algos = ['Histomax']#, 'Distance', 'Dbscan']
-## Make cross product fo ECON and BE algos
-import itertools
-for cc,be1,be2 in itertools.product(concentrator_algos,backend1_algos, backend2_algos):
-    chains.register_chain('Floatingpoint', cc, be1, be2, 'Dummy', 'nTuple')
+for name in names:
+    chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', name)
 
 process = chains.create_sequences(process)
 
