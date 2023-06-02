@@ -2,21 +2,6 @@ import FWCore.ParameterSet.Config as cms
 
 import FWCore.ParameterSet.VarParsing as VarParsing
 
-options = VarParsing.VarParsing('analysis')
-
-options.register('nProc',
-                 1,
-                 VarParsing.VarParsing.multiplicity.singleton,
-                 VarParsing.VarParsing.varType.int,
-                 'Number of threads to use')
-
-options.parseArguments()
-
-print("MADE OPTIONS")
-print("maxEvt = ",options.maxEvents)
-print("inputFiles = ",options.inputFiles)
-print("outputFile = ",options.outputFile)
-
 from Configuration.ProcessModifiers.enableSonicTriton_cff import enableSonicTriton
 from Configuration.Eras.Era_Phase2C17I13M9_cff import Phase2C17I13M9
 process = cms.Process('DIGI',Phase2C17I13M9)
@@ -42,14 +27,13 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(options.maxEvents)
+    input = cms.untracked.int32(10)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:DoubleElectron_FlatPt-1To100-gun_noPU.root'),
-    #fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/noPU_125X_mcRun4_realistic_v2-v1/2550000/066944a3-a061-42ac-ba45-9faadb46407a.root'),
-    fileNames = cms.untracked.vstring(options.inputFiles),
+    fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/noPU_125X_mcRun4_realistic_v2-v1/2550000/066944a3-a061-42ac-ba45-9faadb46407a.root'),
 
     inputCommands=cms.untracked.vstring(
         'keep *',
@@ -60,8 +44,8 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 
 )
-process.options.numberOfThreads = cms.untracked.uint32(options.nProc)
-process.options.numberOfStreams = cms.untracked.uint32(options.nProc)
+process.options.numberOfThreads = cms.untracked.uint32(4)
+process.options.numberOfStreams = cms.untracked.uint32(4)
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
@@ -75,7 +59,7 @@ process.TFileService = cms.Service(
     "TFileService",
     #fileName = cms.string("/home/submit/srothman/cmsdata/hgcal/myntuples/ntuple_noAE6.root")
     #fileName = cms.string("ntuple.root")
-    fileName = cms.string(options.outputFile)
+    fileName = cms.string('ntuple.root')
 )
 
 # Other statements
@@ -151,7 +135,8 @@ for cc in standard_concentrators:
     chains.register_chain('Floatingpoint', cc, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
 for name in names:
-    chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', name)
+    #chains.register_chain('Floatingpoint', "Threshold0", 'Dummy', 'Histomax', 'Dummy', name)
+    chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
 
