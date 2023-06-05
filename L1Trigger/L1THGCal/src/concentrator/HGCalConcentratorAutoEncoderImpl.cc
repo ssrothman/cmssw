@@ -171,21 +171,21 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
   }
 
   //legacy loop for uncompressed and compressed charges (don't really know what these are....)
+  //unsigned aeInput2d[8][8] = {};
   for (const auto& trigCell : trigCellVecInput) {
     HGCalTriggerDetId id(trigCell.detId());
     uint cellu = id.triggerCellU();
     uint cellv = id.triggerCellV();
-    int inputIndex = cellUVremap_[cellu][cellv];
+    int inputIndex = aeInputUtil_.getAEIndex(cellu, cellv);
     if (inputIndex < 0) {
       throw cms::Exception("BadInitialization")
-          << "Invalid index provided for trigger cell u=" << cellu << " v=" << cellv << " in cellUVRemap[" << cellu
-          << "][" << cellv << "]";
+          << "Invalid index provided for trigger cell u=" << cellu << " v=" << cellv;
     }
-    inputIndex = cellRemap_[inputIndex];
     uncompressedCharge[inputIndex] = trigCell.uncompressedCharge();
     compressedCharge[inputIndex] = trigCell.compressedCharge();
 
-    ae_inputArray[inputIndex] = aeInputUtil_.getInput(cellu, cellv)/aeInputUtil_.getInputNorm();
+    ae_inputArray[inputIndex] = aeInputUtil_.getInput(inputIndex)/aeInputUtil_.getInputNorm();
+    //aeInput2d[cellu][cellv] = aeInputUtil_.getInput(inputIndex);
   }
   modSum = aeInputUtil_.getModSum();
 
@@ -272,14 +272,13 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     double outputSum = 0;
 
     for (int i = 0; i < nTriggerCells_; i++) {
-        int remapIndex = cellRemap_[i];
-        cellU = ae_outputCellU_[i];
-        cellV = ae_outputCellV_[i];
+        cellU = aeInputUtil_.getU(i);
+        cellV = aeInputUtil_.getV(i);
         
         HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, cellU, cellV);
 
         if(triggerTools_.getTriggerGeometry()->validTriggerCell(id)){
-            outputSum += ae_outputArray[remapIndex];
+            outputSum += ae_outputArray[i];
         }
     }
     double renormalizationFactor = 1.;
@@ -295,32 +294,24 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     double finalINPUTsum = 0;
     //unsigned anID;
     for (int i = 0; i < nTriggerCells_; i++) {
-      int remapIndex = cellRemap_[i];
-      if (ae_outputArray[remapIndex] > 0) {
-        cellU = ae_outputCellU_[i];
-        cellV = ae_outputCellV_[i];
+      if (ae_outputArray[i] > 0) {
+        cellU = aeInputUtil_.getU(i);
+        cellV = aeInputUtil_.getV(i);
 
         HGCalTriggerDetId id(subdet, zp, type, layer, waferU, waferV, cellU, cellV);
         //anID = id;
 
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
-        double CALQ = ae_outputArray[remapIndex] * renormalizationFactor;
+        double CALQ = ae_outputArray[i] * renormalizationFactor;
         double adc = aeInputUtil_.CALQtoADC(CALQ, cellU, cellV);
 
         double mipPt = adc / mipToADC_conv / cosh(point.eta());
         double et = mipPt * mipPtToEt_conv;
 
-        finalINPUTsum += ae_outputArray[remapIndex];
+        finalINPUTsum += ae_outputArray[i];
         finalCALQsum += CALQ;
         finalADCsum += adc;
-
-        //round because this doesn't exist on-chip anyway,
-        //so may as well pretend its full-precision
-        //double out = ae_outputArray[remapIndex];
-        //aeOutput2d[cellU][cellV] = std::round(out * 256);
-        //aeOutputCALQ2d[cellU][cellV] = std::round(CALQ); 
-        //aeOutputADC2d[cellU][cellV] = std::round(adc);
 
         //if (adc < zeroSuppresionThreshold_)
         //  continue;
@@ -328,10 +319,12 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
         if (!triggerTools_.getTriggerGeometry()->validTriggerCell(id))
           continue;
 
+        //aeOutput2d[cellU][cellV] = ae_outputArray[i] * aeInputUtil_.getInputNorm();
+
         l1t::HGCalTriggerCell triggerCell(reco::LeafCandidate::LorentzVector(), adc, 0, 0, 0, id);
         //Keep the pre-autoencoder charge for this cell
-        triggerCell.setUncompressedCharge(uncompressedCharge[remapIndex]);
-        triggerCell.setCompressedCharge(compressedCharge[remapIndex]);
+        triggerCell.setUncompressedCharge(uncompressedCharge[i]);
+        triggerCell.setCompressedCharge(compressedCharge[i]);
         triggerCell.setMipPt(mipPt);
 
         math::PtEtaPhiMLorentzVector p4(et, point.eta(), point.phi(), 0.);
@@ -354,6 +347,10 @@ void HGCalConcentratorAutoEncoderImpl::select(unsigned nLinks,
     //aeInputUtil_.print2d(aeOutputCALQ2d);
     //printf("AE output [ADC]\n");
     //aeInputUtil_.print2d(aeOutputADC2d);
+    //printf("AE input\n");
+    //aeInputUtil_.print2d(aeInput2d);
+    //printf("AE output\n");
+    //aeInputUtil_.print2d(aeOutput2d);
 
     if (saveEncodedValues_) {
       id = HGCalTriggerDetId(subdet, zp, type, layer, waferU, waferV, 0, 0);

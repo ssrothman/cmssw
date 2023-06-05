@@ -134,7 +134,7 @@ standard_concentrators = ['Threshold0', 'Threshold135', 'Bestchoice', 'Supertrig
 for cc in standard_concentrators:
     chains.register_chain('Floatingpoint', cc, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
-for name in names:
+for name in ['Normbymaxmodulefactor']:
     #chains.register_chain('Floatingpoint', "Threshold0", 'Dummy', 'Histomax', 'Dummy', name)
     chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
