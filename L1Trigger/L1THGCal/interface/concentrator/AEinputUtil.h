@@ -3,6 +3,37 @@
 
 #include "DataFormats/ForwardDetId/interface/HGCalTriggerDetId.h"
 
+
+constexpr unsigned cellUVSize_ = 8;
+constexpr unsigned nTriggerCells_ = 48;
+constexpr int remap_[cellUVSize_][cellUVSize_] = {
+    {32, 36, 40, 44, -1, -1, -1, -1},
+    {24, 33, 37, 41, 45, -1, -1, -1},
+    {16, 25, 34, 38, 42, 46, -1, -1},
+    { 8, 17, 26, 35, 39, 43, 47, -1},
+    { 0,  9, 18, 27, 28, 20, 12,  4},
+    {-1,  1, 10, 19, 29, 21, 13,  5},
+    {-1, -1,  2, 11, 30, 22, 14,  6},
+    {-1, -1, -1,  3, 31, 23, 15,  7}
+};
+constexpr unsigned remapU_[nTriggerCells_] = {
+    4, 5, 6, 7, 4, 5, 6, 7, 
+    3, 4, 5, 6, 4, 5, 6, 7,
+    2, 3, 4, 5, 4, 5, 6, 7,
+    1, 2, 3, 4, 4, 5, 6, 7,
+    0, 1, 2, 3, 0, 1, 2, 3,
+    0, 1, 2, 3, 0, 1, 2, 3
+};
+constexpr unsigned remapV_[nTriggerCells_] = {
+    0, 1, 2, 3, 7, 7, 7, 7,
+    0, 1, 2, 3, 6, 6, 6, 6,
+    0, 1, 2, 3, 5, 5, 5, 5,
+    0, 1, 2, 3, 4, 4, 4, 4,
+    0, 1, 2, 3, 1, 2, 3, 4,
+    2, 3, 4, 5, 3, 4, 5, 6
+};
+
+
 class AEinputUtil{
 public:
     AEinputUtil(unsigned bitsPerADC, unsigned bitsPerNorm, unsigned bitsPerCALQ, unsigned bitsPerInput, 
@@ -21,9 +52,9 @@ public:
     }
 
     template <typename T>
-    void print2d(const T arr[8][8]) const {
-        for(unsigned u=0; u<8; ++u){
-            for(unsigned v=0; v<8; ++v){
+    void print2d(const T arr[cellUVSize_][cellUVSize_]) const {
+        for(unsigned u=0; u<cellUVSize_; ++u){
+            for(unsigned v=0; v<cellUVSize_; ++v){
                 std::cout << arr[u][v] << " ";
             }
             std::cout << std::endl;
@@ -85,20 +116,49 @@ public:
         //fflush(stdout);
     }
 
+    inline unsigned getU(unsigned iAE) const {
+        return remapU_[iAE];
+    }
+
+    inline unsigned getV(unsigned iAE) const {
+        return remapV_[iAE];
+    }
+
+    inline int getAEIndex(unsigned u, unsigned v) const {
+        return remap_[u][v];
+    }
+
     inline unsigned getNorm(unsigned u, unsigned v) const{
         return norms_[u][v];
     }
 
+    inline unsigned getNorm(unsigned iAE) const{
+        return norms_[remapU_[iAE]][remapV_[iAE]];
+    }
+
+
     inline unsigned getADC(unsigned u, unsigned v) const{
         return ADCs_[u][v];
+    }
+
+    inline unsigned getADC(unsigned iAE) const{
+        return ADCs_[remapU_[iAE]][remapV_[iAE]];
     }
 
     inline unsigned getCALQ(unsigned u, unsigned v) const{
         return CALQs_[u][v];
     }
 
+    inline unsigned getCALQ(unsigned iAE) const{
+        return CALQs_[remapU_[iAE]][remapV_[iAE]];
+    }
+
     inline unsigned getInput(unsigned u, unsigned v) const{
         return inputs_[u][v];
+    }
+
+    inline unsigned getInput(unsigned iAE) const{
+        return inputs_[remapU_[iAE]][remapV_[iAE]];
     }
 
     inline size_t getModSum() const{
@@ -117,7 +177,7 @@ public:
         return double(1 << (bitsPerInput_ - 1));
     }
 
-    inline double CALQtoADC(double CALQ, unsigned u, unsigned v){
+    inline double CALQtoADC(double CALQ, unsigned u, unsigned v) const{
         double factor;
         if (useTransverseADC_){
             factor = double(norms_[u][v]) / std::pow(2, bitsPerADC_ 
@@ -128,6 +188,10 @@ public:
             return CALQ;
         }
         return CALQ / factor;
+    }
+
+    inline double CALQtoADC(double CALQ, unsigned iAE) const {
+        return CALQtoADC(CALQ, remapU_[iAE], remapV_[iAE]);
     }
 
 private:
@@ -252,8 +316,6 @@ private:
         vs_.clear();
         modSum_ = 0;
     }
-    static constexpr unsigned cellUVSize_ = 8;
-    static constexpr unsigned nTriggerCells_ = 48;
 
     unsigned bitsPerADC_;
     unsigned bitsPerNorm_;
