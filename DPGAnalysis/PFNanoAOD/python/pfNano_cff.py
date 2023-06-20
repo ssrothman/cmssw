@@ -69,5 +69,10 @@ def customizeOutputForPF(process):
         'keep recoPFRecHits_*_*_*',
         "keep *_simSiStripDigis_*_*",
         "keep *_simSiPixelDigis_*_*",
+        "keep *_particleFlowRecHitECAL_*_*",
+        "keep *_particleFlowRecHitHBHE_*_*",
+        "keep *_particleFlowRecHitHF_*_*",
+        "keep *_particleFlowRecHitHO_*_*",
+        "keep *_particleFlowClusterPS_*_*",
     ])
     return process
