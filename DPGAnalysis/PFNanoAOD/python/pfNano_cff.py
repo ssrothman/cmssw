@@ -9,7 +9,6 @@ from DPGAnalysis.PFNanoAOD.pfClusters_cff import *
 from DPGAnalysis.PFNanoAOD.pfTracks_cff import *
 from DPGAnalysis.PFNanoAOD.pfAssociations_cff import *
 #from DPGAnalysis.PFNanoAOD.pfTruth_cff import *
-from DPGAnalysis.CaloNanoAOD.hcalRecHits_cff import *
 from DPGAnalysis.CaloNanoAOD.caloParticles_cff import *
 from DPGAnalysis.CaloNanoAOD.simClusters_cff import *
 from DPGAnalysis.HGCalNanoAOD.hgcRecHits_cff import *
@@ -52,7 +51,6 @@ pfNanoSequence = cms.Sequence(nanoMetadata
     +pfClusterTables
     #+pfTrackTables
     +cms.Sequence(trackTables)
-	+hcalRecHitTables
 	+cms.Sequence(hgcalTask)
 )
 

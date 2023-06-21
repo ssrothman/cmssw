@@ -3,7 +3,6 @@ from PhysicsTools.NanoAOD.common_cff import CandVars,Var,P3Vars
 from DPGAnalysis.PFNanoAOD.pfClusters_cff import *
 from DPGAnalysis.PFNanoAOD.pfCands_cff import *
 from DPGAnalysis.TrackNanoAOD.tracks_cff import *
-from DPGAnalysis.CaloNanoAOD.hcalRecHits_cff import *
 
 hitsAndElementsToPFCands = cms.EDProducer("PFCandAssociationsProducer",
     caloRecHits = cms.VInputTag("hbhereco", "hfreco", "horeco"),
@@ -30,6 +29,7 @@ pfClusterECALToCandTable = cms.EDProducer("PFClusterToPFCandIndexTableProducer",
     docString = cms.string("Index of PFCand containing PFCluster")
 )
 
+'''
 pfClusterHCALToCandTable = cms.EDProducer("PFClusterToPFCandIndexTableProducer",
     cut = hcalPFClusTable.cut,
     src = hcalPFClusTable.src,
@@ -65,14 +65,14 @@ hbheRecHitsToPFClusterTable = cms.EDProducer("CaloRecHitToPFClusterIndexTablePro
     objMap = cms.InputTag(f"hitsAndElementsToPFCands:{hbheRecHitTable.src.value()}To{hcalPFClusTable.src.value()}"),
     docString = cms.string("Association to PFCluster containing RecHit, and its energy fraction")
 )
-
+'''
 pfAssociationTables = cms.Sequence(
 	hitsAndElementsToPFCands
 	+trackToCandTable
 	+pfClusterECALToCandTable
-	+pfClusterHCALToCandTable
-	+pfClusterHFToCandTable
- 	+hbheRecHitsToPFCandTable
-	+hbheRecHitsToPFClusterTable 
+	#+pfClusterHCALToCandTable
+	#+pfClusterHFToCandTable
+ 	#+hbheRecHitsToPFCandTable
+	#+hbheRecHitsToPFClusterTable 
 )
 

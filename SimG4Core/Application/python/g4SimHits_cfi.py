@@ -70,6 +70,14 @@ fineCalo.toModify(common_MCtruth,
     EminFineTrack = 0.0,
 )
 
+from Configuration.ProcessModifiers.fineCaloRun3_cff import fineCaloRun3
+fineCaloRun3.toModify(common_MCtruth,
+    DoFineCalo = True,
+    UseFineCalo = [0, 1],
+    EminFineTrack = 0.0,
+    SaveCaloBoundaryInformation = True
+)
+
 ## enable CaloBoundary information for all Phase2 workflows
 from Configuration.Eras.Modifier_phase2_hgcal_cff import phase2_hgcal
 phase2_hgcal.toModify(common_MCtruth,
