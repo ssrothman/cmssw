@@ -15,6 +15,7 @@
 
 #include "L1Trigger/L1THGCal/interface/AEutil.h"
 #include "L1Trigger/L1THGCal/interface/TCSelector.h"
+#include "L1Trigger/L1THGCal/interface/concentrator/AEinputUtil.h"
 
 #include <sstream>
 #include <fstream>
@@ -46,31 +47,46 @@ class ECONTritonProducer : public TritonEDProducer<> {
     std::unordered_map<uint32_t, double> modSums_;
 
     //what variable to use as AE input
-    InputType inType_;
-    NormType normType_;
-    bool preNorm_;
-
     TCSelector selector_;
 
     unsigned verbose_;
+
+    unsigned bitsPerADC_;
+    unsigned bitsPerNorm_;
+    unsigned bitsPerCALQ_;
+    unsigned bitsPerInput_;
+
+    bool useModuleFactor_;
+    bool bitShiftNormalization_;
+    bool useTransverseADC_;
+    bool normByMax_;
+
+  AEinputUtil aeInputUtil_;
 };
 
 ECONTritonProducer::ECONTritonProducer(const edm::ParameterSet& cfg)
       : TritonEDProducer<>(cfg),
         inputTCToken_(consumes<l1t::HGCalTriggerCellBxCollection>(cfg.getParameter<edm::InputTag>("TriggerCells"))),
         triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>()),
-        preNorm_(cfg.getParameter<bool>("preNorm")),
         selector_(cfg.getParameter<std::string>("cut")),
-        verbose_(cfg.getParameter<unsigned>("verbose"))
+        verbose_(cfg.getParameter<unsigned>("verbose")),
+        bitsPerADC_(cfg.getParameter<unsigned>("bitsPerADC")),
+        bitsPerNorm_(cfg.getParameter<unsigned>("bitsPerNorm")),
+        bitsPerCALQ_(cfg.getParameter<unsigned>("bitsPerCALQ")),
+        bitsPerInput_(cfg.getParameter<unsigned>("nBitsPerInput")),
+        useModuleFactor_(cfg.getParameter<bool>("useModuleFactor")),
+        bitShiftNormalization_(cfg.getParameter<bool>("bitShiftNormalization")),
+        useTransverseADC_(cfg.getParameter<bool>("useTransverseADC")),
+        normByMax_(cfg.getParameter<bool>("normByMax")),
+        aeInputUtil_(bitsPerADC_, bitsPerNorm_, bitsPerCALQ_, bitsPerInput_, useModuleFactor_, bitShiftNormalization_, useTransverseADC_, normByMax_)
 {
-  inType_ = inputTypeStrToEnum(cfg.getParameter<std::string>("inputType"));
-  normType_ = normTypeStrToEnum(cfg.getParameter<std::string>("normType"));
   produces<AEMap>();
   produces<ECONMap>();
 }
 
 void ECONTritonProducer::beginRun(const edm::Run& run, const edm::EventSetup& es){
   triggerGeometry_ = es.getHandle(triggerGeomToken_);
+  aeInputUtil_.setGeometry(triggerGeometry_.product());
   triggerTools_.eventSetup(es, triggerGeomToken_);
 }
 
@@ -112,9 +128,8 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
       HGCalTriggerDetId id(tc.detId());
       unsigned cellu = id.triggerCellU();
       unsigned cellv = id.triggerCellV();
-      int inputIndex = cellUVremap[cellu][cellv];
+      int inputIndex = aeInputUtil_.getAEIndex(cellu, cellv);
       
-      //int inputIndex = 0;
       if (inputIndex < 0){
         throw cms::Exception("BadInitialization")
           << "Invalid index provided for trigger cell u=" 
@@ -126,51 +141,13 @@ void ECONTritonProducer::acquire(edm::Event const& e, edm::EventSetup const& es,
           << "][" << cellv << "]";
       }//end if uv lookup error
 
-      switch (inType_){
-        case ADC:
-          AEinput_module[inputIndex] = tc.hwPt();
-          break;
-        case ADCT:
-          AEinput_module[inputIndex] = tc.hwPt()/cosh(tc.eta());
-          break;
-        case MIPT:
-          AEinput_module[inputIndex] = tc.mipPt();
-          break;
-        case MIP:
-          AEinput_module[inputIndex] = tc.mipPt()*cosh(tc.eta());
-          break;
-        case E:
-          AEinput_module[inputIndex] = tc.energy();
-          break;
-        case ET:
-          AEinput_module[inputIndex] = tc.energy()/cosh(tc.eta());
-          break;
-        default:
-          throw cms::Exception("ECONTritonProducer") << "Invalid InputType";
-          break;
-      }
-      //add AE input to modSum
-      modSums_[tc_module.first] += AEinput_module[inputIndex];
+      AEinput_module[inputIndex] = aeInputUtil_.getInput(inputIndex)/aeInputUtil_.getInputNorm();
     }//end for each trigger cell in module
-
-    if(normType_ != NormType::None && preNorm_){
-      double normalization = 1;
-      if(normType_ == NormType::Floating){
-        normalization = modSums_[tc_module.first];
-      } else {
-        int msb = int(log2(modSums_[tc_module.first]));
-        normalization = pow(2, msb);
-      }
-      for(int iTC=0; iTC<nTriggerCells; ++iTC){
-        AEinput_module[iTC]/=normalization;
-      }
-    }
 
     dataCALQ->push_back(AEinput_module);
     ++nModule_;
   }//end for each module
   inputCALQ.toServer(dataCALQ);
-
 }//end acquire
 
 void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSetup, Output const& iOutput) {
@@ -215,60 +192,40 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
     }
     (*latentMap)[tc_module.first] = latent_wafer;
 
-    double AEmodSum=0;
+    double outputSum=0;
     for (int iTC=0; iTC<nTriggerCells; ++iTC){//loop to compute AEmodSum
-      int cellU = ae_outputCellU[iTC];
-      int cellV = ae_outputCellV[iTC];
+      int cellU = aeInputUtil_.getU(iTC);
+      int cellV = aeInputUtil_.getV(iTC);
       HGCalTriggerDetId id(subdet, zside, type, layer, waferU, waferV, cellU, cellV);
       if(!triggerTools_.getTriggerGeometry()->validTriggerCell(id)){
         continue;
       }
-      AEmodSum += std::max<float>(CALQout[iModule][iTC], 0.f);
+      outputSum += std::max<float>(CALQout[iModule][iTC], 0.f);
     }//end loop to compute AEmodSum
-
-    double normalization = 1;
-    if(normType_ != NormType::None && preNorm_){
-      if(normType_ == NormType::Floating){
-        normalization = modSums_[tc_module.first];
-      } else{
-        int msb = int(log2(modSums_[tc_module.first]));
-        normalization = pow(2, msb);
-      }
-    }
-    
-    double renormalization = 1;
-    if(normType_ != NormType::None){
-      if(normType_ == NormType::Floating){
-        renormalization = 1/AEmodSum;
-      } else {
-        renormalization = modSums_[tc_module.first]/(AEmodSum*normalization);
-      }
-      if(!preNorm_){
-        renormalization *= modSums_[tc_module.first];
-      }
-    }
-    
+    double renormalizationFactor = aeInputUtil_.getModSum()/outputSum;
 
     std::array<float, nTriggerCells> AE_wafer;
     for (int iTC=0; iTC<nTriggerCells; ++iTC){//loop to fill computed AE values
-      int cellU = ae_outputCellU[iTC];
-      int cellV = ae_outputCellV[iTC];
+      int cellU = aeInputUtil_.getU(iTC);
+      int cellV = aeInputUtil_.getV(iTC);
+
       HGCalTriggerDetId id(subdet, zside, type, layer, waferU, waferV, cellU, cellV);
       if(!triggerTools_.getTriggerGeometry()->validTriggerCell(id)){
         continue;
       }
 
-      float ans = std::max<float>(CALQout[iModule][iTC], 0.f);
-      AE_wafer[iTC] = ans * normalization * renormalization;
+      double ansCALQ = std::max<double>(CALQout[iModule][iTC], 0.0) * renormalizationFactor;
+      double ansADC = aeInputUtil_.CALQtoADC(ansCALQ, cellU, cellV);
+
+      AE_wafer[iTC] = ansADC;
 
     }
     if(!printed){
       printf("WAFER %d:\n", tc_module.first);
       printf("\toriginal wafer sum = %0.3lf\n",(modSums_[tc_module.first]));
-      printf("\toriginal normalization = %0.3lf\n",normalization);
-      printf("\toutput sum = %0.3lf\n", AEmodSum);
-      printf("\trenormalization = %0.3lf\n", renormalization);
-      printf("\toutput sum * normalization * renormalization = %0.3f\n", AEmodSum*normalization * renormalization);
+      printf("\toutput sum = %0.3lf\n", outputSum);
+      printf("\trenormalization = %0.3lf\n", renormalizationFactor);
+      printf("\toutput sum * renormalization = %0.3f\n", outputSum* renormalizationFactor);
       printf("\n");
       if(iPR++>verbose_){
         printed=true;
@@ -279,7 +236,6 @@ void ECONTritonProducer::produce(edm::Event& iEvent, edm::EventSetup const& iSet
     ++iModule;
   }
 
-
   iEvent.put(std::move(ADCmap));
   iEvent.put(std::move(latentMap));
 }
@@ -288,11 +244,16 @@ void ECONTritonProducer::fillDescriptions(edm::ConfigurationDescriptions& descri
   edm::ParameterSetDescription desc;
   TritonClient::fillPSetDescription(desc);
   desc.add<edm::InputTag>("TriggerCells");
-  desc.add<std::string>("inputType");
-  desc.add<std::string>("normType");
-  desc.add<bool>("preNorm");
   desc.add<std::string>("cut");
   desc.add<unsigned>("verbose");
+  desc.add<unsigned>("bitsPerADC");
+  desc.add<unsigned>("bitsPerNorm");
+  desc.add<unsigned>("bitsPerCALQ");
+  desc.add<unsigned>("bitsPerInput");
+  desc.add<bool>("useModuleFactor");
+  desc.add<bool>("bitShiftNormalization");
+  desc.add<bool>("useTransverseADC");
+  desc.add<bool>("normByMax");
   descriptions.addWithDefaultLabel(desc);
 }
 

@@ -27,13 +27,14 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "L1Trigger/L1THGCal/interface/HGCalTriggerCellCalibration.h"
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerTools.h"
 
 #include "DataFormats/L1THGCal/interface/HGCalTriggerCell.h"
 #include "DataFormats/L1THGCal/interface/HGCalConcentratorData.h"
 #include "DataFormats/ForwardDetId/interface/HGCalTriggerDetId.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
+
+#include "L1Trigger/L1THGCal/interface/concentrator/AEinputUtil.h"
 
 class HGCalConcentratorAEFromTritonImpl {
 public:
@@ -73,16 +74,21 @@ private:
   const AEMap * AEout_;
   const ECONMap * ECONout_;
 
-  std::unique_ptr<HGCalTriggerCellCalibration> calibrationEE_;
-  std::unique_ptr<HGCalTriggerCellCalibration> calibrationHEsi_;
-  std::unique_ptr<HGCalTriggerCellCalibration> calibrationHEsc_;
-  std::unique_ptr<HGCalTriggerCellCalibration> calibrationNose_;
-
   HGCalTriggerTools triggerTools_;
 
   const HGCalTriggerGeometryBase* geometry_;
 
-  InputType inType_;
+  unsigned bitsPerADC_;
+  unsigned bitsPerNorm_;
+  unsigned bitsPerCALQ_;
+  unsigned bitsPerInput_;
+
+  bool useModuleFactor_;
+  bool bitShiftNormalization_;
+  bool useTransverseADC_;
+  bool normByMax_;
+
+  AEinputUtil aeInputUtil_;
 };
 
 #endif
