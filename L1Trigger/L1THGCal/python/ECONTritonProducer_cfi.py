@@ -11,9 +11,14 @@ AEProducer = cms.EDProducer("ECONTritonProducer",
         useSharedMemory=cms.untracked.bool(False)
     ),
     TriggerCells = cms.InputTag("Floatingpoint","HGCalVFEProcessorSums"),
-    inputType = cms.string("ADC"),
-    normType = cms.string("None"),
     cut = cms.string(""),
     verbose = cms.uint32(0),
-    preNorm = cms.bool(False)
+    bitsPerADC = cms.uint32(22),
+    bitsPerNorm = cms.uint32(12),
+    bitsPerCALQ = cms.uint32(23),
+    nBitsPerInput = cms.uint32(8),
+    bitShiftNormalization = cms.bool(True),
+    useTransverseADC = cms.bool(True),
+    useModuleFactor=cms.bool(False),
+    normByMax=cms.bool(False),
 )

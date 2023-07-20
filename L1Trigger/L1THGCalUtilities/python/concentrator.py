@@ -72,26 +72,43 @@ from L1Trigger.L1THGCal.ECONTritonProducer_cfi import AEProducer
 from L1Trigger.L1THGCal.MapMergeProducer_cfi import MapMergeProducer
 
 class CreateTritonAE(object):
-    def __init__(self, inputType='ADC', 
-                       normType='None',
-                       AEProducerName="AEProducer",
-                       cuts = [''],
-                       modelNames = ['dummy'],
-                       preNorm=False,
-                       verbose=0):
+    def __init__(self, bitsPerADC = triton_ae_params.bitsPerADC,
+                bitsPerNorm = triton_ae_params.bitsPerNorm,
+                bitsPerCALQ = triton_ae_params.bitsPerCALQ,
+                bitsPerInput = triton_ae_params.bitsPerInput,
+                bitShiftNormalization = triton_ae_params.bitShiftNormalization,
+                useTransverseADC = triton_ae_params.useTransverseADC,
+                useModuleFactor = triton_ae_params.useModuleFactor,
+                normByMax = triton_ae_params.normByMax,
+                AEProducerName="AEProducer",
+                cuts = [''],
+                modelNames = ['dummy'],
+                verbose=0):
         #processor params
         self.processor = triton_ae_params.clone(
-            inputType = inputType
+                bitsPerADC = bitsPerADC,
+                bitsPerNorm = bitsPerNorm,
+                bitsPerCALQ = bitsPerCALQ,
+                bitsPerInput = bitsPerInput,
+                bitShiftNormalization = bitShiftNormalization,
+                useTransverseADC = useTransverseADC,
+                useModuleFactor = useModuleFactor,
+                normByMax = normByMax,
         )
 
         #AE producer params
         self.modelNames = modelNames
         self.cuts = cuts
         self.AEProducerName = AEProducerName
-        self.inputType = inputType
-        self.normType = normType
-        self.preNorm = preNorm
         self.verbose = verbose
+        self.bitsPerADC = bitsPerADC
+        self.bitsPerNorm = bitsPerNorm
+        self.bitsPerCALQ = bitsPerCALQ
+        self.bitsPerInput = bitsPerInput
+        self.bitShiftNormalization = bitShiftNormalization
+        self.useTransverseADC = useTransverseADC
+        self.useModuleFactor = useModuleFactor
+        self.normByMax = normByMax
 
     def __call__(self, process, inputs):
         mergeinputs = []
@@ -99,9 +116,14 @@ class CreateTritonAE(object):
             name = self.AEProducerName+"%d"%i
             mergeinputs.append(name)
             setattr(process, name, AEProducer.clone(
-                inputType = self.inputType,
-                normType = self.normType,
-                preNorm = self.preNorm,
+                bitsPerADC = self.bitsPerADC,
+                bitsPerNorm = self.bitsPerNorm,
+                bitsPerCALQ = self.bitsPerCALQ,
+                bitsPerInput = self.bitsPerInput,
+                bitShiftNormalization = self.bitShiftNormalization,
+                useTransverseADC = self.useTransverseADC,
+                useModuleFactor = self.useModuleFactor,
+                normByMax = self.normByMax,
                 verbose = self.verbose,
                 cut = self.cuts[i],
                 Client = AEProducer.Client.clone(
