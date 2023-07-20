@@ -265,15 +265,10 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
       wafer_sumCALQ_.emplace_back(aeInputUtil_.getModSum());
 
       for(unsigned i=0; i<48; ++i){
-
-          unsigned u = ae_outputCellU_[i];
-          unsigned v = ae_outputCellV_[i];
-          unsigned remapIndex = cellRemap_[i];
-
-          wafer_CALQ_[remapIndex].emplace_back(aeInputUtil_.getCALQ(u, v));
-          wafer_AEin_[remapIndex].emplace_back(aeInputUtil_.getInput(u, v));
-          wafer_ADC_[remapIndex].emplace_back(aeInputUtil_.getADC(u, v));
-          wafer_norm_[remapIndex].emplace_back(aeInputUtil_.getNorm(u, v));
+          wafer_CALQ_[i].emplace_back(aeInputUtil_.getCALQ(i));
+          wafer_AEin_[i].emplace_back(aeInputUtil_.getInput(i));
+          wafer_ADC_[i].emplace_back(aeInputUtil_.getADC(i));
+          wafer_norm_[i].emplace_back(aeInputUtil_.getNorm(i));
       }
   }
 }
