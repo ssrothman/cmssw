@@ -95,31 +95,13 @@ chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
 chains.register_concentrator("Threshold135", concentrator.CreateThreshold())
 chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
 chains.register_concentrator("Supertriggercell", concentrator.CreateSuperTriggerCell())
-names = ['Nominaltot', 'Normbymaxtot', 
-         'Nominal', 'Normbymax', 
-         'Modulefactor', 'Normbymaxmodulefactor']
-transverse = [False, False, True, True, True, True]
-skipAE = [False, False, False, False, False, False]
-moduleFactor = [False, False, False, False, True, True]
-bitShiftNormalization = [True, True, True, True, True, True]
-normByMax = [False, True, False, True, False, True]
-
-for i in range(len(names)):
-    chains.register_concentrator(names[i], concentrator.CreateAutoencoder(
-        useTransverseADC=transverse[i],
-        skipAE=skipAE[i],
-        useModuleFactor=moduleFactor[i],
-        bitShiftNormalization=bitShiftNormalization[i],
-        normByMax=normByMax[i],
-    ))
-    chains.register_ntuple(names[i], ntuple.CreateNtuple(
-        ntuple_list + ["wafers"],
-        useTransverseADC=transverse[i],
-        useModuleFactor=moduleFactor[i],
-        bitShiftNormalize=bitShiftNormalization[i],
-        normByMax=normByMax[i],
-        bitsPerInput = 10
-    ))
+chains.register_concentrator("Badae", concentrator.CreateAutoencoder(
+    useTransverseADC=True,
+    skipAE=False,
+    useModuleFactor=False,
+    bitShiftNormalization=True,
+    normByMax=False,
+))
 
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
@@ -130,13 +112,9 @@ chains.register_selector("Dummy", selectors.CreateDummy())
 
 
 # Register trigger chains
-standard_concentrators = ['Threshold0', 'Threshold135', 'Bestchoice', 'Supertriggercell']
+standard_concentrators = ['Threshold0', 'Threshold135', 'Bestchoice', 'Supertriggercell', 'Badae']
 for cc in standard_concentrators:
     chains.register_chain('Floatingpoint', cc, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
-
-for name in ['Normbymaxmodulefactor']:
-    #chains.register_chain('Floatingpoint', "Threshold0", 'Dummy', 'Histomax', 'Dummy', name)
-    chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
 

@@ -256,6 +256,15 @@ triton_ae_params = cms.PSet(
 
     fixedDataSizePerHGCROC = supertc_conc_proc.fixedDataSizePerHGCROC,
     allTrigCellsInTrigSums = supertc_conc_proc.allTrigCellsInTrigSums,
+
+    bitsPerADC = cms.uint32(22),
+    bitsPerNorm = cms.uint32(12),
+    bitsPerCALQ = cms.uint32(23),
+    nBitsPerInput = cms.uint32(8),
+    bitShiftNormalization = cms.bool(True),
+    useTransverseADC = cms.bool(True),
+    useModuleFactor = cms.bool(False),
+    normByMax = cms.bool(False),
 )
 
 from Configuration.Eras.Modifier_phase2_hgcalV10_cff import phase2_hgcalV10

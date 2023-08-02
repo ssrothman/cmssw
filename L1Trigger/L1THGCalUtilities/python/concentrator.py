@@ -71,6 +71,7 @@ class CreateBestChoice(object):
 from L1Trigger.L1THGCal.ECONTritonProducer_cfi import AEProducer
 from L1Trigger.L1THGCal.MapMergeProducer_cfi import MapMergeProducer
 
+'''
 class CreateTritonAE(object):
     def __init__(self, bitsPerADC = triton_ae_params.bitsPerADC,
                 bitsPerNorm = triton_ae_params.bitsPerNorm,
@@ -148,6 +149,7 @@ class CreateTritonAE(object):
             InputAE = self.AEProducerName+"Merge",
         )
         return producer
+'''
 
 class CreateAutoencoder(object):
     def __init__(self,
