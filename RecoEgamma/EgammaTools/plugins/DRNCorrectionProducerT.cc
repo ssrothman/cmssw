@@ -346,6 +346,68 @@ void DRNCorrectionProducerT<T>::acquire(edm::Event const& iEvent, edm::EventSetu
   /*
    * Convert input tensors to server data format
    */
+
+  printf("data xECAL:\n");
+  for(unsigned i=0; i<dataxECAL->size(); ++i){
+    for(unsigned j=0; j<dataxECAL->at(i).size(); ++j){
+      printf("%0.3f\t", dataxECAL->at(i).at(j));
+    }
+    printf("\n");
+  }
+  printf("\ndata fECAL:\n");
+  for(unsigned i=0; i<datafECAL->size(); ++i){
+    for(unsigned j=0; j<datafECAL->at(i).size(); ++j){
+      printf("%ld\t", datafECAL->at(i).at(j));
+    }
+    printf("\n");
+  }
+  printf("\ndata gainECAL:\n");
+  for(unsigned i=0; i<dataGainECAL->size(); ++i){
+    for(unsigned j=0; j<dataGainECAL->at(i).size(); ++j){
+      printf("%ld\t", dataGainECAL->at(i).at(j));
+    }
+    printf("\n");
+  }
+  printf("\ndataBatchECAL:\n");
+  for(unsigned i=0; i<dataBatchECAL->size(); ++i){
+    for(unsigned j=0; j<dataBatchECAL->at(i).size(); ++j){
+      printf("%ld\t", dataBatchECAL->at(i).at(j));
+    }
+    printf("\n");
+  }
+
+  printf("\ndata xES:\n");
+  for(unsigned i=0; i<dataxES->size(); ++i){
+    for(unsigned j=0; j<dataxES->at(i).size(); ++j){
+      printf("%0.3f\t", dataxES->at(i).at(j));
+    }
+    printf("\n");
+  }
+
+  printf("\ndata fES:\n");
+  for(unsigned i=0; i<datafES->size(); ++i){
+    for(unsigned j=0; j<datafES->at(i).size(); ++j){
+      printf("%ld\t", datafES->at(i).at(j));
+    }
+    printf("\n");
+  }
+
+  printf("\ndata batchES:\n");
+  for(unsigned i=0; i<dataBatchES->size(); ++i){
+    for(unsigned j=0; j<dataBatchES->at(i).size(); ++j){
+      printf("%ld\n", dataBatchES->at(i).at(j));
+    }
+    printf("\n");
+  }
+
+  printf("\ndata GX:\n");
+  for(unsigned i=0; i<dataGx->size(); ++i){
+    for(unsigned j=0; j<dataGx->at(i).size(); ++j){
+      printf("%0.3f\t", dataGx->at(i).at(j));
+    }
+    printf("\n");
+  }
+
   inputxECAL.toServer(dataxECAL);
   inputfECAL.toServer(datafECAL);
   inputGainECAL.toServer(dataGainECAL);
@@ -376,8 +438,13 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
     for (unsigned iPart = 0; iPart < nPart_; ++iPart) {
       const auto& part = particles_->at(iPart);
       if (!skip(part)) {
+        printf("got from server\n");
+        printf("\traw mu = %0.3g\n", muOut[0][0 + 6*i]);
+        printf("\traw sigma = %0.3g\n", sigmaOut[0][0 + 5*i]);
         mu = correction(muOut[0][0 + 6 * i]);
         sigma = resolution(sigmaOut[0][0 + 5 * i]);
+        printf("\tmu = %0.3g\n", mu);
+        printf("\tsigma = %0.3g\n", sigma);
         ++i;
 
         rawE = part.superCluster()->rawEnergy();
@@ -386,6 +453,7 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
         corrections.emplace_back(Epred, sigmaPred);
       } else {
         corrections.emplace_back(-1.0f, -1.0f);
+        printf("skipping\n");
       }
     }
   }
