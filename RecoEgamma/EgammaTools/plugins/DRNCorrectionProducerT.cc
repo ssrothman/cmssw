@@ -370,7 +370,6 @@ void DRNCorrectionProducerT<T>::produce(edm::Event& iEvent, const edm::EventSetu
   //but we can just put() an empty valueMap
   if (nPart_) {
     const auto& out = iOutput.at("combined_output__0").fromServer<float>();
-    //const auto& sigmaOut = iOutput.at("sigma").fromServer<float>();
 
     unsigned i = 0;
     float mu, sigma, Epred, sigmaPred, rawE;
