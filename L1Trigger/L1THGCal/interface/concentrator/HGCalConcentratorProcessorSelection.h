@@ -8,21 +8,18 @@
 #include "L1Trigger/L1THGCal/interface/concentrator/HGCalConcentratorCoarsenerImpl.h"
 #include "L1Trigger/L1THGCal/interface/concentrator/HGCalConcentratorTrigSumImpl.h"
 #include "L1Trigger/L1THGCal/interface/concentrator/HGCalConcentratorAutoEncoderImpl.h"
-#include "L1Trigger/L1THGCal/interface/concentrator/HGCalConcentratorAEFromTritonImpl.h"
 
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerTools.h"
 #include "DataFormats/L1THGCal/interface/HGCalTriggerCell.h"
 #include "DataFormats/L1THGCal/interface/HGCalTriggerSums.h"
 #include "DataFormats/L1THGCal/interface/HGCalConcentratorData.h"
 
-#include "L1Trigger/L1THGCal/interface/AEutil.h"
-
 #include <utility>
 #include <tuple>
 
 class HGCalConcentratorProcessorSelection : public HGCalConcentratorProcessorBase {
 private:
-  enum SelectionType { thresholdSelect, bestChoiceSelect, superTriggerCellSelect, autoEncoderSelect, AEFromTritonSelect, noSelection };
+  enum SelectionType { thresholdSelect, bestChoiceSelect, superTriggerCellSelect, autoEncoderSelect, noSelection };
 
 public:
   HGCalConcentratorProcessorSelection(const edm::ParameterSet& conf);
@@ -31,17 +28,6 @@ public:
            std::tuple<l1t::HGCalTriggerCellBxCollection,
                       l1t::HGCalTriggerSumsBxCollection,
                       l1t::HGCalConcentratorDataBxCollection>& triggerCollOutput) override;
-
-
-  void setAE(const AEMap *AEout, const ECONMap *ECONout) override {
-    if(AEFromTritonImpl_){
-      AEFromTritonImpl_->setAE(AEout, ECONout);
-    }
-  }
-
-  bool wantsAE() override{
-    return static_cast<bool>(AEFromTritonImpl_);
-  }
 
 private:
   bool fixedDataSizePerHGCROC_;
@@ -58,7 +44,6 @@ private:
   std::unique_ptr<HGCalConcentratorCoarsenerImpl> coarsenerImpl_;
   std::unique_ptr<HGCalConcentratorTrigSumImpl> trigSumImpl_;
   std::unique_ptr<HGCalConcentratorAutoEncoderImpl> autoEncoderImpl_;
-  std::unique_ptr<HGCalConcentratorAEFromTritonImpl> AEFromTritonImpl_;
 
   HGCalTriggerTools triggerTools_;
 };

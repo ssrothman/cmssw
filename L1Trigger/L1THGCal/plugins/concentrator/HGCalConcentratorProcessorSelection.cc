@@ -38,10 +38,6 @@ HGCalConcentratorProcessorSelection::HGCalConcentratorProcessorSelection(const e
       selectionType_[subdet] = autoEncoderSelect;
       if (!autoEncoderImpl_)
         autoEncoderImpl_ = std::make_unique<HGCalConcentratorAutoEncoderImpl>(conf);
-    } else if (selectionType[subdet] == "AEFromTriton"){
-      selectionType_[subdet] = AEFromTritonSelect;
-      if(!AEFromTritonImpl_)
-        AEFromTritonImpl_ = std::make_unique<HGCalConcentratorAEFromTritonImpl>(conf);
     } else if (selectionType[subdet] == "noSelection") {
       selectionType_[subdet] = noSelection;
     } else {
@@ -72,8 +68,6 @@ void HGCalConcentratorProcessorSelection::run(const edm::Handle<l1t::HGCalTrigge
     coarsenerImpl_->setGeometry(geometry());
   if (trigSumImpl_)
     trigSumImpl_->setGeometry(geometry());
-  if (AEFromTritonImpl_)
-    AEFromTritonImpl_->setGeometry(geometry());
   
   triggerTools_.setGeometry(geometry());
 
@@ -131,12 +125,6 @@ void HGCalConcentratorProcessorSelection::run(const edm::Handle<l1t::HGCalTrigge
                                    trigCellVecOutput,
                                    ae_EncodedLayerOutput);
           break;
-        case AEFromTritonSelect:
-          AEFromTritonImpl_->select(module_trigcell.first, 
-                                    trigCellVecCoarsened.at(0),
-                                    trigCellVecOutput,
-                                    ae_EncodedLayerOutput);
-          break;
         case noSelection:
           trigCellVecOutput = trigCellVecCoarsened;
           break;
@@ -165,12 +153,6 @@ void HGCalConcentratorProcessorSelection::run(const edm::Handle<l1t::HGCalTrigge
                                    module_trigcell.second,
                                    trigCellVecOutput,
                                    ae_EncodedLayerOutput);
-          break;
-        case AEFromTritonSelect:
-          AEFromTritonImpl_->select(module_trigcell.first,
-                                    module_trigcell.second.at(0),
-                                    trigCellVecOutput,
-                                    ae_EncodedLayerOutput);
           break;
         case noSelection:
           trigCellVecOutput = module_trigcell.second;
