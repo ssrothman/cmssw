@@ -44,8 +44,8 @@ process.source = cms.Source("PoolSource",
 process.options = cms.untracked.PSet(
 
 )
-process.options.numberOfThreads = cms.untracked.uint32(4)
-process.options.numberOfStreams = cms.untracked.uint32(4)
+process.options.numberOfThreads = cms.untracked.uint32(1)
+process.options.numberOfStreams = cms.untracked.uint32(1)
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
@@ -104,6 +104,13 @@ moduleFactor = [False, False, False, False, True, True]
 bitShiftNormalization = [True, True, True, True, True, True]
 normByMax = [False, True, False, True, False, True]
 
+names = [names[0]]
+transverse = [transverse[0]]
+skipAE = [skipAE[0]]
+moduleFactor = [moduleFactor[0]]
+bitShiftNormalization = [bitShiftNormalization[0]]
+normByMax = [normByMax[0]]
+
 for i in range(len(names)):
     chains.register_concentrator(names[i], concentrator.CreateAutoencoder(
         useTransverseADC=transverse[i],
@@ -111,6 +118,8 @@ for i in range(len(names)):
         useModuleFactor=moduleFactor[i],
         bitShiftNormalization=bitShiftNormalization[i],
         normByMax=normByMax[i],
+        encoderShape=cms.vuint32([1,8,8,1]),
+        decoderShape=cms.vuint32([1,16]),
     ))
     chains.register_ntuple(names[i], ntuple.CreateNtuple(
         ntuple_list + ["wafers"],
@@ -134,8 +143,8 @@ standard_concentrators = ['Threshold0', 'Threshold135', 'Bestchoice', 'Supertrig
 for cc in standard_concentrators:
     chains.register_chain('Floatingpoint', cc, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
-for name in ['Normbymaxmodulefactor']:
-    #chains.register_chain('Floatingpoint', "Threshold0", 'Dummy', 'Histomax', 'Dummy', name)
+for name in names:
+    chains.register_chain('Floatingpoint', "Threshold0", 'Dummy', 'Histomax', 'Dummy', name)
     chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
