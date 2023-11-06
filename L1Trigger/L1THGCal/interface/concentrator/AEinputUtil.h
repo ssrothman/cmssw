@@ -6,31 +6,58 @@
 
 constexpr unsigned cellUVSize_ = 8;
 constexpr unsigned nTriggerCells_ = 48;
+constexpr unsigned nInputs_ = 64;
+
+/*
+ * remap_, remapU_, remapV_ map from (cellU, cellV) to AE input space
+ * designed to agree with PDF from Danny
+ *
+ * conv 8x8 input looks like:
+ *
+ *     q0  q1  q2  q3  q4  q5  q6  q7
+ *     q8  q9  q10 q11 q12 q13 q14 q15
+ *     q16 q17 q18 q19 q20 q21 q22 q23
+ *     q24 q25 q26 q27 q28 q29 q30 q31
+ *     q32 q33 q34 q35 0   0   0   0
+ *     q36 q37 q38 q39 0   0   0   0
+ *     q40 q41 q42 q43 0   0   0   0 
+ *     q44 q45 q46 q47 0   0   0   0
+ *
+ * where the mapping from u,v to q# is given by the PDF and the jpg
+ * from our conversation in the slack
+ *
+ * NB this is probably NOT backwards-compatible with stuff from Rohan
+ */
+
 constexpr int remap_[cellUVSize_][cellUVSize_] = {
     {32, 36, 40, 44, -1, -1, -1, -1},
     {24, 33, 37, 41, 45, -1, -1, -1},
     {16, 25, 34, 38, 42, 46, -1, -1},
     { 8, 17, 26, 35, 39, 43, 47, -1},
-    { 0,  9, 18, 27, 28, 20, 12,  4},
-    {-1,  1, 10, 19, 29, 21, 13,  5},
-    {-1, -1,  2, 11, 30, 22, 14,  6},
-    {-1, -1, -1,  3, 31, 23, 15,  7}
+    { 0,  9, 18, 27, 28, 29, 30, 31},
+    {-1,  1, 10, 19, 20, 21, 22, 23},
+    {-1, -1,  2, 11, 12, 13, 14, 15},
+    {-1, -1, -1,  3,  4,  5,  6,  7}
 };
-constexpr unsigned remapU_[nTriggerCells_] = {
-    4, 5, 6, 7, 4, 5, 6, 7, 
-    3, 4, 5, 6, 4, 5, 6, 7,
-    2, 3, 4, 5, 4, 5, 6, 7,
-    1, 2, 3, 4, 4, 5, 6, 7,
-    0, 1, 2, 3, 0, 1, 2, 3,
-    0, 1, 2, 3, 0, 1, 2, 3
+constexpr unsigned remapU_[nInputs_] = {
+    4,  5,  6,  7,  7,  7,  7,  7, 
+    3,  4,  5,  6,  6,  6,  6,  6,
+    2,  3,  4,  5,  5,  5,  5,  5, 
+    1,  2,  3,  4,  4,  4,  4,  4,
+    0,  1,  2,  3, -1, -1, -1, -1,
+    0,  1,  2,  3, -1, -1, -1, -1,
+    0,  1,  2,  3, -1, -1, -1, -1,
+    0,  1,  2,  3, -1, -1, -1, -1,
 };
 constexpr unsigned remapV_[nTriggerCells_] = {
-    0, 1, 2, 3, 7, 7, 7, 7,
-    0, 1, 2, 3, 6, 6, 6, 6,
-    0, 1, 2, 3, 5, 5, 5, 5,
-    0, 1, 2, 3, 4, 4, 4, 4,
-    0, 1, 2, 3, 1, 2, 3, 4,
-    2, 3, 4, 5, 3, 4, 5, 6
+    0,  1,  2,  3,  4,  5,  6,  7, 
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3,  4,  5,  6,  7,
+    0,  1,  2,  3, -1, -1, -1, -1,
+    1,  2,  3,  4, -1, -1, -1, -1,
+    2,  3,  4,  5, -1, -1, -1, -1,
+    3,  4,  5,  6, -1, -1, -1, -1,
 };
 
 
