@@ -82,15 +82,9 @@ private:
   std::vector<std::vector<uint32_t>> wafer_norm_;
   std::vector<std::vector<uint32_t>> wafer_ADC_;
   std::vector<std::vector<uint32_t>> wafer_CALQ_;
-  std::vector<std::vector<uint32_t>> wafer_AEin_;
+  std::vector<std::vector<float>> wafer_AEin_;
 
   static constexpr int nTriggerCells_ = 48;
-  static constexpr int ae_outputCellU_[nTriggerCells_] = {7, 6, 5, 4, 7, 6, 5, 4, 7, 6, 5, 4, 7, 6, 5, 4,
-                                                          1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7,
-                                                          3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 0, 0};
-  static constexpr int ae_outputCellV_[nTriggerCells_] = {4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7,
-                                                          0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3,
-                                                          6, 5, 4, 3, 5, 4, 3, 2, 4, 3, 2, 1, 3, 2, 1, 0};
 
   std::vector<int> cellRemap_;
 };
@@ -182,11 +176,11 @@ void HGCalTriggerNtupleHGCWafers::initialize(TTree& tree,
   tree.Branch(withPrefix("z"), &wafer_z_);
   tree.Branch(withPrefix("sumCALQ"), &wafer_sumCALQ_);
 
-  wafer_CALQ_.resize(48);
-  wafer_AEin_.resize(48);
-  wafer_ADC_.resize(48);
-  wafer_norm_.resize(48);
-  for(unsigned i=0; i<48; ++i){
+  wafer_CALQ_.resize(nTriggerCells_);
+  wafer_AEin_.resize(nTriggerCells_);
+  wafer_ADC_.resize(nTriggerCells_);
+  wafer_norm_.resize(nTriggerCells_);
+  for(unsigned i=0; i<nTriggerCells_; ++i){
     tree.Branch(withPrefix(("CALQ"+std::to_string(i)).c_str()), &wafer_CALQ_[i]);
     tree.Branch(withPrefix(("AEin"+std::to_string(i)).c_str()), &wafer_AEin_[i]);
     tree.Branch(withPrefix(("ADC"+std::to_string(i)).c_str()), &wafer_ADC_[i]);
@@ -264,11 +258,12 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
 
       wafer_sumCALQ_.emplace_back(aeInputUtil_.getModSum());
 
-      for(unsigned i=0; i<48; ++i){
-          wafer_CALQ_[i].emplace_back(aeInputUtil_.getCALQ(i));
-          wafer_AEin_[i].emplace_back(aeInputUtil_.getInput(i));
+      for(unsigned i=0; i<nTriggerCells_; ++i){
           wafer_ADC_[i].emplace_back(aeInputUtil_.getADC(i));
           wafer_norm_[i].emplace_back(aeInputUtil_.getNorm(i));
+          wafer_CALQ_[i].emplace_back(aeInputUtil_.getCALQ(i));
+          wafer_AEin_[i].emplace_back(
+                  aeInputUtil_.getInput(i)/aeInputUtil_.getInputNorm());
       }
   }
 }
@@ -342,7 +337,7 @@ void HGCalTriggerNtupleHGCWafers::clear() {
   wafer_y_.clear();
   wafer_z_.clear();
 
-  for(unsigned i=0; i<48; ++i){
+  for(unsigned i=0; i<nTriggerCells_; ++i){
       wafer_CALQ_[i].clear();
       wafer_AEin_[i].clear();
       wafer_ADC_[i].clear();
