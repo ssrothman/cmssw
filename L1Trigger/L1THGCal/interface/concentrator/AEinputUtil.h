@@ -39,7 +39,7 @@ constexpr int remap_[cellUVSize_][cellUVSize_] = {
     {-1, -1,  2, 11, 12, 13, 14, 15},
     {-1, -1, -1,  3,  4,  5,  6,  7}
 };
-constexpr unsigned remapU_[nInputs_] = {
+constexpr int remapU_[nInputs_] = {
     4,  5,  6,  7,  7,  7,  7,  7, 
     3,  4,  5,  6,  6,  6,  6,  6,
     2,  3,  4,  5,  5,  5,  5,  5, 
@@ -49,7 +49,7 @@ constexpr unsigned remapU_[nInputs_] = {
     0,  1,  2,  3, -1, -1, -1, -1,
     0,  1,  2,  3, -1, -1, -1, -1,
 };
-constexpr unsigned remapV_[nTriggerCells_] = {
+constexpr int remapV_[nInputs_] = {
     0,  1,  2,  3,  4,  5,  6,  7, 
     0,  1,  2,  3,  4,  5,  6,  7,
     0,  1,  2,  3,  4,  5,  6,  7,
@@ -143,11 +143,11 @@ public:
         //fflush(stdout);
     }
 
-    inline unsigned getU(unsigned iAE) const {
+    inline int getU(unsigned iAE) const {
         return remapU_[iAE];
     }
 
-    inline unsigned getV(unsigned iAE) const {
+    inline int getV(unsigned iAE) const {
         return remapV_[iAE];
     }
 
