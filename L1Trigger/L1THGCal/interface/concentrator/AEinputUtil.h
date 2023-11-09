@@ -23,17 +23,29 @@ constexpr unsigned nInputs_ = 64;
  *     q40 q41 q42 q43 0   0   0   0 
  *     q44 q45 q46 q47 0   0   0   0
  *
+ *     0  1  2  3  4  5  6  7 
+ *     8  9  10 11 12 13 14 15
+ *     16 17 18 19 20 21 22 23
+ *     24 25 26 27 28 29 30 31
+ *     32 33 34 35 36 37 38 39
+ *     40 41 42 43 44 45 46 47
+ *     48 49 50 51 52 53 54 55
+ *     56 57 58 59 60 61 62 63
+ *
  * where the mapping from u,v to q# is given by the PDF and the jpg
  * from our conversation in the slack
  *
- * NB this is probably NOT backwards-compatible with stuff from Rohan
+ * NB this is NOT backwards-compatible with stuff from Rohan
  */
 
+//TODO: fix numbers to not be stupid and wrong
+//in particular, they should go all the way up into the 60s
+//you idiot
 constexpr int remap_[cellUVSize_][cellUVSize_] = {
-    {32, 36, 40, 44, -1, -1, -1, -1},
-    {24, 33, 37, 41, 45, -1, -1, -1},
-    {16, 25, 34, 38, 42, 46, -1, -1},
-    { 8, 17, 26, 35, 39, 43, 47, -1},
+    {32, 40, 48, 56, -1, -1, -1, -1},
+    {24, 33, 41, 49, 57, -1, -1, -1},
+    {16, 25, 34, 42, 50, 58, -1, -1},
+    { 8, 17, 26, 35, 43, 51, 59, -1},
     { 0,  9, 18, 27, 28, 29, 30, 31},
     {-1,  1, 10, 19, 20, 21, 22, 23},
     {-1, -1,  2, 11, 12, 13, 14, 15},
@@ -143,11 +155,19 @@ public:
         //fflush(stdout);
     }
 
-    inline int getU(unsigned iAE) const {
+    inline int getUAE(unsigned iAE) const {
+        return iAE%8;
+    }
+
+    inline int getVAE(unsigned iAE) const {
+        return iAE/8;
+    }
+
+    inline int getUtc(unsigned iAE) const {
         return remapU_[iAE];
     }
 
-    inline int getV(unsigned iAE) const {
+    inline int getVtc(unsigned iAE) const {
         return remapV_[iAE];
     }
 
@@ -160,7 +180,7 @@ public:
     }
 
     inline unsigned getNorm(unsigned iAE) const{
-        return norms_[remapU_[iAE]][remapV_[iAE]];
+        return getNorm(getUAE(iAE), getVAE(iAE));
     }
 
 
@@ -169,7 +189,7 @@ public:
     }
 
     inline unsigned getADC(unsigned iAE) const{
-        return ADCs_[remapU_[iAE]][remapV_[iAE]];
+        return getADC(getUAE(iAE), getVAE(iAE));
     }
 
     inline unsigned getCALQ(unsigned u, unsigned v) const{
@@ -177,7 +197,7 @@ public:
     }
 
     inline unsigned getCALQ(unsigned iAE) const{
-        return CALQs_[remapU_[iAE]][remapV_[iAE]];
+        return getCALQ(getUAE(iAE), getVAE(iAE));
     }
 
     inline unsigned getInput(unsigned u, unsigned v) const{
@@ -185,19 +205,11 @@ public:
     }
 
     inline unsigned getInput(unsigned iAE) const{
-        return inputs_[remapU_[iAE]][remapV_[iAE]];
+        return getInput(getUAE(iAE), getVAE(iAE));
     }
 
     inline size_t getModSum() const{
         return modSum_;
-    }
-
-    inline const std::vector<unsigned>& getUs() const{
-        return us_;
-    }
-
-    inline const std::vector<unsigned>& getVs() const{
-        return vs_;
     }
 
     inline double getInputNorm() const {
@@ -218,7 +230,7 @@ public:
     }
 
     inline double CALQtoADC(double CALQ, unsigned iAE) const {
-        return CALQtoADC(CALQ, remapU_[iAE], remapV_[iAE]);
+        return CALQtoADC(CALQ, getUAE(iAE), getVAE(iAE));
     }
 
 private:
@@ -237,9 +249,20 @@ private:
             auto id = HGCalTriggerDetId(tc.detId());
             unsigned u = id.triggerCellU();
             unsigned v = id.triggerCellV();
-            ADCs_[u][v] = tc.hwPt();
-            us_.push_back(u);
-            vs_.push_back(v);
+            //printf("nonzero tc (u,v) = (%u, %u)\n", u, v);
+            int iAE = getAEIndex(u, v);
+            //printf("\tiAE = %d\n", iAE);
+            if(iAE < 0){
+                continue;
+            }
+            int uAE = getUAE(iAE);
+            int vAE = getVAE(iAE);
+            //printf("\t(u, v)_AE = (%d, %d)\n", uAE, vAE);
+            //printf("\t\tgetU(%d) = %d\n", iAE, getU(iAE));
+            //printf("\t\tremapU_[%d] = %d\n", iAE, remapU_[iAE]);
+            //printf("\t\tgetV(%d) = %d\n", iAE, getV(iAE));
+            //printf("\t\tremapV_[%d] = %d\n", iAE, remapV_[iAE]);
+            ADCs_[uAE][vAE] = tc.hwPt();
         }
     }
 
@@ -321,14 +344,19 @@ private:
                 unsigned u = tc.triggerCellU();
                 unsigned v = tc.triggerCellV();
                 double norm = moduleFactor_/std::cosh(pos.eta()); //floating point number btw 0 and 1
+                int iAE = getAEIndex(u, v);
+                if (iAE < 0){
+                    throw std::logic_error("AE index error");
+                }
+                int uAE = getUAE(iAE);
+                int vAE = getVAE(iAE);
                 //printf("\tnorm %0.3lf\n", norm);
                 //can round bc these are precomputed
-                norms_[u][v] = std::round(norm); //12 bit int
+                norms_[uAE][vAE] = std::round(norm); //12 bit int
                 //printf("\tnorm[u][v] %u\n", norms_[u][v]);
             }
         }
     }
-
 
     void clear(){
         for(unsigned i=0; i<cellUVSize_; i++){
@@ -339,8 +367,6 @@ private:
                 ADCs_[i][j] = 0;
             }
         }
-        us_.clear();
-        vs_.clear();
         modSum_ = 0;
     }
 
@@ -363,7 +389,6 @@ private:
     unsigned CALQs_[cellUVSize_][cellUVSize_]; // 22 bit integers
     unsigned inputs_[cellUVSize_][cellUVSize_]; // 8 bit integers
     
-    std::vector<unsigned> us_, vs_;
     size_t modSum_;
     double moduleFactor_;
 };

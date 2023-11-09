@@ -85,8 +85,6 @@ private:
   std::vector<std::vector<float>> wafer_AEin_;
 
   static constexpr int nInputs_ = 64;
-
-  std::vector<int> cellRemap_;
 };
 
 DEFINE_EDM_PLUGIN(HGCalTriggerNtupleFactory, HGCalTriggerNtupleHGCWafers, "HGCalTriggerNtupleHGCWafers");
@@ -135,8 +133,7 @@ HGCalTriggerNtupleHGCWafers::HGCalTriggerNtupleHGCWafers(const edm::ParameterSet
       keV2fC_(conf.getParameter<double>("keV2fC")),
       fcPerMip_(conf.getParameter<std::vector<double>>("fcPerMip")),
       layerWeights_(conf.getParameter<std::vector<double>>("layerWeights")),
-      thicknessCorrections_(conf.getParameter<std::vector<double>>("thicknessCorrections")),
-      cellRemap_(conf.getParameter<std::vector<int>>("cellRemap")){
+      thicknessCorrections_(conf.getParameter<std::vector<double>>("thicknessCorrections")){
   accessEventSetup_ = false;
 }
 
@@ -265,6 +262,52 @@ void HGCalTriggerNtupleHGCWafers::fill(const edm::Event& e, const HGCalTriggerNt
           wafer_AEin_[i].emplace_back(
                   aeInputUtil_.getInput(i)/aeInputUtil_.getInputNorm());
       }
+
+      /*
+      printf("\n------------------------------------\n");
+      printf("ADCs\n");
+      unsigned i=0;
+      for(unsigned u=0; u<8; ++u){
+          for(unsigned v=0; v<8; ++v){
+            printf("%03u ", aeInputUtil_.getADC(i));
+            ++i;
+          }
+          printf("\n");
+      }
+      printf("\n");
+
+      printf("norms\n");
+      i=0;
+      for(unsigned u=0; u<8; ++u){
+          for(unsigned v=0; v<8; ++v){
+              printf("%03u ", aeInputUtil_.getNorm(i));
+              ++i;
+          }
+          printf("\n");
+      }
+      printf("\n");
+
+      printf("CALQ\n");
+      i=0;
+      for(unsigned u=0; u<8; ++u){
+          for(unsigned v=0; v<8; ++v){
+              printf("%03u ", aeInputUtil_.getCALQ(i));
+              ++i;
+          }
+          printf("\n");
+      }
+      printf("\n");
+
+      printf("AEin\n");
+      i=0;
+      for(unsigned u=0; u<8; ++u){
+          for(unsigned v=0; v<8; ++v){
+              printf("%0.3f ", aeInputUtil_.getInput(i)/aeInputUtil_.getInputNorm());
+              ++i;
+          }
+          printf("\n");
+      }
+      printf("\n------------------------------------\n");*/
   }
 }
 

@@ -27,7 +27,7 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(10)
+    input = cms.untracked.int32(1)
 )
 
 # Input source
@@ -85,44 +85,17 @@ chains = HGCalTriggerChains()
 ## VFE
 chains.register_vfe("Floatingpoint", vfe.CreateVfe())
 ## ECON
-ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells']
-chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list))
-
 chains.register_concentrator("Threshold0", concentrator.CreateThreshold(
   threshold_scintillator=cms.double(-1),
   threshold_silicon=cms.double(-1)
 ))
-chains.register_concentrator("Threshold135", concentrator.CreateThreshold())
-chains.register_concentrator("Bestchoice", concentrator.CreateBestChoice())
-chains.register_concentrator("Supertriggercell", concentrator.CreateSuperTriggerCell())
-names = ['Nominaltot', 'Normbymaxtot', 
-         'Nominal', 'Normbymax', 
-         'Modulefactor', 'Normbymaxmodulefactor']
-transverse = [False, False, True, True, True, True]
-skipAE = [True, True, True, True, True, True]
-moduleFactor = [False, False, False, False, True, True]
-bitShiftNormalization = [True, True, True, True, True, True]
-normByMax = [False, True, False, True, False, True]
-
-for i in range(len(names)):
-    chains.register_concentrator(names[i], concentrator.CreateAutoencoder(
-        useTransverseADC=transverse[i],
-        skipAE=skipAE[i],
-        useModuleFactor=moduleFactor[i],
-        bitShiftNormalization=bitShiftNormalization[i],
-        normByMax=normByMax[i],
-        encoderShape=cms.vuint32([1,8,8,1]),
-        decoderShape=cms.vuint32([1,16]),
-        verbose = 0
-    ))
-    chains.register_ntuple(names[i], ntuple.CreateNtuple(
-        ntuple_list + ["wafers"],
-        useTransverseADC=transverse[i],
-        useModuleFactor=moduleFactor[i],
-        bitShiftNormalize=bitShiftNormalization[i],
-        normByMax=normByMax[i],
-        bitsPerInput = 10
-    ))
+ntuple_list = ['event', 'gen', 'multiclusters', 'triggercells', 'wafers']
+chains.register_ntuple("nTuple", ntuple.CreateNtuple(ntuple_list,
+    useTransverseADC = True,
+    useModuleFactor=False,
+    bitShiftNormalize=True,
+    normByMax=False,
+))
 
 ## BE1
 chains.register_backend1("Dummy", clustering2d.CreateDummy())
@@ -131,19 +104,8 @@ chains.register_backend2("Histomax", clustering3d.CreateHistoMax())
 # Register selector
 chains.register_selector("Dummy", selectors.CreateDummy())
 
-
 # Register trigger chains
-'''
-standard_concentrators = ['Threshold0', 'Threshold135', 'Bestchoice', 'Supertriggercell']
-for cc in standard_concentrators:
-    chains.register_chain('Floatingpoint', cc, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
-
-for name in names:
-    chains.register_chain('Floatingpoint', "Threshold0", 'Dummy', 'Histomax', 'Dummy', name)
-    chains.register_chain('Floatingpoint', name, 'Dummy', 'Histomax', 'Dummy', 'nTuple')
-'''
-
-chains.register_chain('Floatingpoint', 'Nominal', 'Dummy', 'Histomax', 'Dummy', 'nTuple')
+chains.register_chain('Floatingpoint', 'Threshold0', 'Dummy', 'Histomax', 'Dummy', 'nTuple')
 
 process = chains.create_sequences(process)
 
