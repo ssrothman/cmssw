@@ -26,7 +26,8 @@ HGCalConcentratorAutoEncoderImpl::HGCalConcentratorAutoEncoderImpl(const edm::Pa
       preserveModuleSum_(conf.getParameter<bool>("preserveModuleSum")),
       aeInputUtil_(bitsPerADC_, bitsPerNorm_, bitsPerCALQ_, bitsPerInput_,
                   useModuleFactor_, bitShiftNormalization_, useTransverseADC_, 
-                  normByMax_){
+                  normByMax_),
+      verbose_(conf.getParameter<int>("verbose")){
   // find total size of the expected input shape
   nInputs_ = 1;
   for (const auto& i : encoderShape_) {
@@ -107,6 +108,9 @@ void HGCalConcentratorAutoEncoderImpl::select(
                     const std::vector<l1t::HGCalTriggerCell>& trigCellVecInput,
                     std::vector<l1t::HGCalTriggerCell>& trigCellVecOutput,
                     std::vector<l1t::HGCalConcentratorData>& ae_encodedLayer_Output) {
+    if(verbose_){
+      printf("\n----------------------------------------------------------\n");
+    }
   if(trigCellVecInput.empty()){
       return;
   }
@@ -144,8 +148,6 @@ void HGCalConcentratorAutoEncoderImpl::select(
       return;
   }
 
-  bool printed=false;
-
   for (const auto& trigCell : trigCellVecInput) {
     HGCalTriggerDetId id(trigCell.detId());
     uint cellu = id.triggerCellU();
@@ -160,9 +162,8 @@ void HGCalConcentratorAutoEncoderImpl::select(
 
     ae_inputArray[inputIndex] = aeInputUtil_.getInput(inputIndex)/
         aeInputUtil_.getInputNorm();
-    if(!printed){
-        printf("input index %d\n", inputIndex);
-        printf("ae_inputArray[i] = %0.3f\n", ae_inputArray[inputIndex]);
+    if(verbose_){
+        printf("tc (%u, %u) has ADC %u\n", cellu, cellv, aeInputUtil_.getADC(inputIndex));
     }
   }
   modSum = aeInputUtil_.getModSum();
@@ -183,48 +184,66 @@ void HGCalConcentratorAutoEncoderImpl::select(
                                    {encoderShape_[0], encoderShape_[1],
                                    encoderShape_[2], encoderShape_[3]});
 
-  for (unsigned i = 0; i < nInputs_; ++i) {
-    encoder_input.flat<float>().data()[i] = ae_inputArray[i];
+  if(verbose_){
+      printf("INPUT\n");
+      for (unsigned i = 0; i < nInputs_; ++i) {
+        encoder_input.flat<float>().data()[i] = ae_inputArray[i];
+        printf("%0.3f ", ae_inputArray[i]);
+        if((i+1)%8==0){
+            printf("\n");
+        }
+      }
   }
 
-  int graphIndex = linkToGraphMap_.at(nLinks);
+  if(!skipAE_){//run AE
+      int graphIndex = linkToGraphMap_.at(nLinks);
 
-  std::vector<tensorflow::Tensor> encoder_outputs;
-  tensorflow::run(session_encoder_.at(graphIndex).get(),
-                  {{inputTensorName_encoder_, encoder_input}},
-                  {outputTensorName_encoder_},
-                  &encoder_outputs);
+      std::vector<tensorflow::Tensor> encoder_outputs;
+      tensorflow::run(session_encoder_.at(graphIndex).get(),
+                      {{inputTensorName_encoder_, encoder_input}},
+                      {outputTensorName_encoder_},
+                      &encoder_outputs);
 
-  if (encoder_outputs.empty()) {
-    throw cms::Exception("BadInitialization") << "Autoencoder graph returning empty output vector";
-  }
+      if (encoder_outputs.empty()) {
+        throw cms::Exception("BadInitialization") << "Autoencoder graph returning empty output vector";
+      }
 
-  for (int i = 0; i < encoder_outputs[0].NumElements(); i++) {
-    ae_encodedLayer_[i] = encoder_outputs[0].flat<float>().data()[i];
-    //truncate the encoded layer bits
-    if (bitsPerOutput > 0 && maxBitsPerOutput_ > 0) {
-      ae_encodedLayer_[i] = std::min(std::floor(ae_encodedLayer_[i] * outputMaxIntSize) / outputMaxIntSize, outputSaturationValue);
-    }
-  }
+      for (int i = 0; i < encoder_outputs[0].NumElements(); i++) {
+        ae_encodedLayer_[i] = encoder_outputs[0].flat<float>().data()[i];
+        //truncate the encoded layer bits
+        if (bitsPerOutput > 0 && maxBitsPerOutput_ > 0) {
+          ae_encodedLayer_[i] = std::min(std::floor(ae_encodedLayer_[i] * outputMaxIntSize) / outputMaxIntSize, outputSaturationValue);
+        }
+      }
 
-  tensorflow::Tensor decoder_input(tensorflow::DT_FLOAT, 
-          {decoderShape_[0], decoderShape_[1]});
-  for (int i = 0; i < nEncodedLayerNodes_; i++) {
-    decoder_input.flat<float>().data()[i] = ae_encodedLayer_[i];
-  }
+      tensorflow::Tensor decoder_input(tensorflow::DT_FLOAT, 
+              {decoderShape_[0], decoderShape_[1]});
+      for (int i = 0; i < nEncodedLayerNodes_; i++) {
+        decoder_input.flat<float>().data()[i] = ae_encodedLayer_[i];
+      }
 
-  std::vector<tensorflow::Tensor> decoder_outputs;
-  tensorflow::run(session_decoder_.at(graphIndex).get(),
-                  {{inputTensorName_decoder_, decoder_input}},
-                  {outputTensorName_decoder_},
-                  &decoder_outputs);
-
-  for (uint i = 0; i < nInputs_; i++) {
-    if(skipAE_){
-        ae_outputArray[i] = ae_inputArray[i];
-    } else {
+      std::vector<tensorflow::Tensor> decoder_outputs;
+      tensorflow::run(session_decoder_.at(graphIndex).get(),
+                      {{inputTensorName_decoder_, decoder_input}},
+                      {outputTensorName_decoder_},
+                      &decoder_outputs);
+      for (uint i = 0; i < nInputs_; i++) {
         ae_outputArray[i] = decoder_outputs[0].flat<float>().data()[i];
-    }
+      }
+  } else { //skipAE
+      for (uint i = 0; i < nInputs_; i++) {
+        ae_outputArray[i] = ae_inputArray[i];
+      }
+  }//endif skipAE
+
+  if (verbose_){
+      printf("\nOUTPUTS\n");
+      for(unsigned i=0; i<nInputs_; ++i){
+          printf("%0.3f ", ae_outputArray[i]);
+          if((i+1)%8==0){
+              printf("\n");
+          }
+      }
   }
 
   // Add data back into trigger cells
@@ -240,44 +259,6 @@ void HGCalConcentratorAutoEncoderImpl::select(
     int cellU = id.triggerCellU();
     int cellV = id.triggerCellV();
 
-    if (!printed){
-        printf("waferU, waverV = (%d, %d)\n", waferU, waferV);
-        printf("ADCs_in:\n");
-        unsigned i=0;
-        for(unsigned u=0; u<8; ++u){
-            for(unsigned v=0; v<8; ++v){
-                if(aeInputUtil_.getU(i)<0){
-                    printf("-1  ");
-                } else {
-                    printf("%02d  ", aeInputUtil_.getADC(i));
-                }
-                ++i;
-            }
-            printf("\n");
-        }
-        printf("\n");
-        printf("AE input:\n");
-        i=0;
-        for(unsigned u=0; u<8; ++u){
-            for(unsigned v=0; v<8; ++v){
-                printf("%0.3f  ", ae_inputArray[i]);
-                ++i;
-            }
-            printf("\n");
-        }
-        printf("\n");
-        printf("AE output:\n");
-        i=0;
-        for(unsigned u=0; u<8; ++u){
-            for(unsigned v=0; v<8; ++v){
-                printf("%0.3f  ", ae_outputArray[i]);
-                ++i;
-            }
-            printf("\n");
-        }
-        printed=true;
-    }
-
     //use first TC to find mipPt conversions to Et and ADC
     float mipPtToEt_conv = trigCellVecInput[0].et() / trigCellVecInput[0].mipPt();
     float mipToADC_conv = trigCellVecInput[0].hwPt() / (trigCellVecInput[0].mipPt() * cosh(trigCellVecInput[0].eta()));
@@ -285,8 +266,8 @@ void HGCalConcentratorAutoEncoderImpl::select(
     double outputSum = 0;
 
     for (unsigned i = 0; i < nInputs_; i++) {
-        cellU = aeInputUtil_.getU(i);
-        cellV = aeInputUtil_.getV(i);
+        cellU = aeInputUtil_.getUtc(i);
+        cellV = aeInputUtil_.getVtc(i);
         
         if(cellU<0 || cellV<0){
             continue;
@@ -309,8 +290,8 @@ void HGCalConcentratorAutoEncoderImpl::select(
 
     for (unsigned i = 0; i < nInputs_; i++) {
       if (ae_outputArray[i] > 0) {
-        cellU = aeInputUtil_.getU(i);
-        cellV = aeInputUtil_.getV(i);
+        cellU = aeInputUtil_.getUtc(i);
+        cellV = aeInputUtil_.getVtc(i);
         if(cellU<0 || cellV<0){
             continue;
         }
@@ -320,7 +301,7 @@ void HGCalConcentratorAutoEncoderImpl::select(
         GlobalPoint point = triggerTools_.getTCPosition(id);
 
         double CALQ = ae_outputArray[i] * renormalizationFactor;
-        double adc = aeInputUtil_.CALQtoADC(CALQ, cellU, cellV);
+        double adc = aeInputUtil_.CALQtoADC(CALQ, i);
 
         double mipPt = adc / mipToADC_conv / cosh(point.eta());
         double et = mipPt * mipPtToEt_conv;
@@ -335,6 +316,9 @@ void HGCalConcentratorAutoEncoderImpl::select(
         if (!triggerTools_.getTriggerGeometry()->validTriggerCell(id))
           continue;
 
+        if(verbose_){
+            printf("tc (%u, %u) has ADC %f\n", cellU, cellV, adc);
+        }
         l1t::HGCalTriggerCell triggerCell(reco::LeafCandidate::LorentzVector(), adc, 0, 0, 0, id);
         //Keep the pre-autoencoder charge for this cell
         triggerCell.setUncompressedCharge(uncompressedCharge[i]);
@@ -356,6 +340,9 @@ void HGCalConcentratorAutoEncoderImpl::select(
         l1t::HGCalConcentratorData encodedLayerData(ae_encodedLayer_[i] * outputMaxIntSizeGlobal, i, id);
         ae_encodedLayer_Output.push_back(encodedLayerData);
       }
+    }
+    if(verbose_){
+      printf("------------------------------------------------------------\n");
     }
   }
 }

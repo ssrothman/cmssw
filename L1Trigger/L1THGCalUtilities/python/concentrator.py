@@ -1,7 +1,7 @@
 
 import FWCore.ParameterSet.Config as cms
 import SimCalorimetry.HGCalSimProducers.hgcalDigitizer_cfi as digiparam
-from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import threshold_conc_proc, best_conc_proc, supertc_conc_proc, coarsetc_onebitfraction_proc, custom_conc_proc, autoEncoder_conc_proc, triton_ae_params
+from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import threshold_conc_proc, best_conc_proc, supertc_conc_proc, coarsetc_onebitfraction_proc, custom_conc_proc, autoEncoder_conc_proc 
 
 
 class CreateSuperTriggerCell(object):
@@ -94,29 +94,31 @@ class CreateAutoencoder(object):
             useModuleFactor = autoEncoder_conc_proc.useModuleFactor, 
             bitShiftNormalization = autoEncoder_conc_proc.bitShiftNormalization,
             normByMax = autoEncoder_conc_proc.normByMax,
-            scintillatorMethod = 'thresholdSelect'):
+            scintillatorMethod = 'thresholdSelect',
+            verbose = 0):
         self.processor = autoEncoder_conc_proc.clone(
-                encoderShape = encoderShape,
-                decoderShape = decoderShape,
-                bitsPerADC = bitsPerADC,
-                bitsPerNorm = bitsPerNorm,
-                bitsPerCALQ = bitsPerCALQ,
-                nBitsPerInput = nBitsPerInput,
-                maxBitsPerOutput = maxBitsPerOutput,
-                bitsPerLink = bitsPerLink,
-                modelFiles = modelFiles,
-                linkToGraphMap = linkToGraphMap,
-                zeroSuppresionThreshold = zeroSuppresionThreshold,
-                useModuleFactor = useModuleFactor,
-                bitShiftNormalization = bitShiftNormalization,
-                useTransverseADC = useTransverseADC,
-                normByMax = normByMax,
-                skipAE = skipAE,
-                saveEncodedValues = saveEncodedValues,
-                preserveModuleSum = preserveModuleSum,
-                threshold_scintillator = threshold_scintillator,
-                threshold_silicon = threshold_silicon,
-                Method = cms.vstring(['autoEncoder','autoEncoder', scintillatorMethod]),
+            encoderShape = encoderShape,
+            decoderShape = decoderShape,
+            bitsPerADC = bitsPerADC,
+            bitsPerNorm = bitsPerNorm,
+            bitsPerCALQ = bitsPerCALQ,
+            nBitsPerInput = nBitsPerInput,
+            maxBitsPerOutput = maxBitsPerOutput,
+            bitsPerLink = bitsPerLink,
+            modelFiles = modelFiles,
+            linkToGraphMap = linkToGraphMap,
+            zeroSuppresionThreshold = zeroSuppresionThreshold,
+            useModuleFactor = useModuleFactor,
+            bitShiftNormalization = bitShiftNormalization,
+            useTransverseADC = useTransverseADC,
+            normByMax = normByMax,
+            skipAE = skipAE,
+            saveEncodedValues = saveEncodedValues,
+            preserveModuleSum = preserveModuleSum,
+            threshold_scintillator = threshold_scintillator,
+            threshold_silicon = threshold_silicon,
+            Method = cms.vstring(['autoEncoder','autoEncoder', scintillatorMethod]),
+            verbose = cms.int32(verbose)
         )
 
     def __call__(self, process, inputs):
@@ -124,7 +126,7 @@ class CreateAutoencoder(object):
                 InputTriggerCells = cms.InputTag(inputs),
                 InputTriggerSums = cms.InputTag(inputs),
                 ProcessorParameters = self.processor
-                )
+        )
         return producer
 
 

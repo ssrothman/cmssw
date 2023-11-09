@@ -74,7 +74,6 @@ ntuple_wafers = cms.PSet(
     useTransverseADC = autoEncoder_conc_proc.useTransverseADC,
     bitShiftNormalize = autoEncoder_conc_proc.bitShiftNormalization,
     normByMax = autoEncoder_conc_proc.normByMax,
-    cellRemap = autoEncoder_conc_proc.cellRemap,
 )
 
 ntuple_triggercells = cms.PSet(

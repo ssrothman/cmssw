@@ -82,6 +82,8 @@ private:
 
   HGCalTriggerTools triggerTools_;
   AEinputUtil aeInputUtil_;
+
+  int verbose_;
 };
 
 #endif
