@@ -5,5 +5,6 @@ from DPGAnalysis.CaloNanoAOD.hcalSimHitTables_cff import *
 from DPGAnalysis.CaloNanoAOD.ecalRecHitTables_cff import *
 from DPGAnalysis.CaloNanoAOD.hcalRecHitTables_cff import *
 
-caloTables = cms.Sequence(ecalSimHitTables + hcalSimHitTables 
-                        + ecalRecHitTables + hcalRecHitTables)
+caloSimHitTables = cms.Sequence(ecalSimHitTables + hcalSimHitTables)
+caloPFRecHitTables = cms.Sequence(ecalPFRecHitTables + hcalPFRecHitTables)
+caloRecHitTables = cms.Sequence(ecalRecHitTables + hcalRecHitTables)
