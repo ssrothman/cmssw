@@ -9,8 +9,8 @@ process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
 process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
-process.load('Configuration.Geometry.GeometryExtendedRun4D88Reco_cff')
-process.load('Configuration.Geometry.GeometryExtendedRun4D88_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110Reco_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.Generator_cff')
 process.load('IOMC.EventVertexGenerators.VtxSmearedHLLHC14TeV_cfi')
@@ -67,8 +67,8 @@ process = custom_tower_standalone(process)
 process.hgcl1tpg_step = cms.Path(process.L1THGCalTriggerPrimitives)
 
 # Change to custom geometry
-from L1Trigger.L1THGCal.customTriggerGeometry import custom_geometry_V11_Imp3
-process = custom_geometry_V11_Imp3(process)
+from L1Trigger.L1THGCal.customTriggerGeometry import custom_geometry_V16_Imp1
+process = custom_geometry_V16_Imp1(process)
 
 # load ntuplizer
 process.load('L1Trigger.L1THGCalUtilities.hgcalTriggerNtuples_cff')
