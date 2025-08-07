@@ -83,7 +83,7 @@ void edm::FlatEtaRangeGunProducer::produce(edm::Event& event, const edm::EventSe
     //check
     if(minDr_>0){
         bool isgood=true;
-        for(const auto ppvec: previousp4){
+        for(const auto& ppvec: previousp4){
             double drsq = reco::deltaR2(pVec,ppvec);
             if(drsq<minDr_){
                 isgood=false;
