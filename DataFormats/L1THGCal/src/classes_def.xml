@@ -78,6 +78,11 @@
   <class name="l1t::HGCalTriggerCellBxCollection"/>
   <class name="edm::Wrapper<l1t::HGCalTriggerCellBxCollection>"/>
 
+  <class name="l1t::HGCalTriggerCellTruth"/>
+  <class name="std::vector<l1t::HGCalTriggerCellTruth>" />
+  <class name="edm::ValueMap<l1t::HGCalTriggerCellTruth>"/>
+  <class name="edm::Wrapper<edm::ValueMap<l1t::HGCalTriggerCellTruth>>"/>
+
   <class name="l1t::HGCalTriggerSums" ClassVersion="12">
    <version ClassVersion="12" checksum="1802885417"/>
     <version ClassVersion="11" checksum="4058188392"/>

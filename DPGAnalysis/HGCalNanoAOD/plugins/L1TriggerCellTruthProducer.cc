@@ -132,33 +132,35 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
         uint32_t idint = tc.detId();
 
         DetId id(idint);
-        if (id.det() == DetId::HGCalHSc){
-            continue;
-        }
     
         const auto& simhitvec = simhits_map.find(idint); 
         float simE = 0.0;
         float matchedSimE = 0.0;
         std::vector<std::pair<int, float>> simclusters;
 
-        if (simhitvec != simhits_map.end()) {
-            for (unsigned i = 0; i < simhitvec->second.size(); ++i) {
-                const auto& hit = simhitvec->second[i];
-
-                unsigned thickness = triggerTools_.thicknessIndex(hit.id());
-                unsigned layer = triggerTools_.layerWithOffset(hit.id());
-
-                float E = calibrate(hit.energy(), thickness, layer);
+        if (simhitvec != simhits_map.end()){
+            std::unordered_map<uint32_t, float> simcluster_lookup;
+            for (const auto& simhit : simhitvec->second) {
+                unsigned thickness = triggerTools_.thicknessIndex(simhit.id());
+                unsigned layer = triggerTools_.layerWithOffset(simhit.id());
+                float E = calibrate(simhit.energy(), thickness, layer);
 
                 simE += E;
 
-                const auto& simclustervec = simclusters_map.find(hit.id());
-                if (simclustervec != simclusters_map.end()) {
-                    for (const auto& simcluster : simclustervec->second) {
+                const auto& simclusters = simclusters_map.find(simhit.id());
+                if (simclusters != simclusters_map.end()) {
+                    for (const auto& simcluster : simclusters->second) {
                         matchedSimE += simcluster.second * E;
-                        simclusters.push_back(simcluster);
+                        simcluster_lookup[simcluster.first] += simcluster.second * E;
                     }
                 }
+            } 
+
+            for (const auto& simcluster : simcluster_lookup) {
+                simclusters.emplace_back(
+                    simcluster.first, 
+                    simcluster.second / simE
+                );
             }
         }
 

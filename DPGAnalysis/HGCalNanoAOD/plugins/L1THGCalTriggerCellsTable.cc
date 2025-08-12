@@ -23,27 +23,18 @@
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerTools.h"
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
+#include "DataFormats/L1THGCal/interface/HGCalTriggerCellTruth.h"
 
 class L1THGCalTriggerCellsTableProducer : public edm::stream::EDProducer<> {
 public:
     explicit L1THGCalTriggerCellsTableProducer(const edm::ParameterSet&);
     
     void produce(edm::Event&, const edm::EventSetup&) override;
-    //static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) override;
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
 private:
-    double calibrate(double energy, unsigned thickness, unsigned layer);
-
     edm::EDGetToken trigger_cells_token_;
-    edm::EDGetToken simhits_ee_token_;
-    edm::EDGetToken simhits_fh_token_;
-    edm::EDGetToken simhits_bh_token_;
-    edm::EDGetToken simclusters_token_;
+    edm::EDGetToken tc_truth_token_;
 
-    double keV2fC_;
-    std::vector<double> fcPerMip_;
-    std::vector<double> layerWeights_;
-    std::vector<double> thicknessCorrections_;
 
     edm::ESGetToken<HGCalTriggerGeometryBase, CaloGeometryRecord> triggerGeomToken_;
 
@@ -52,26 +43,12 @@ private:
 
 
 L1THGCalTriggerCellsTableProducer::L1THGCalTriggerCellsTableProducer(const edm::ParameterSet& conf)
-    : trigger_cells_token_(consumes<l1t::HGCalTriggerCellBxCollection>(conf.getParameter<edm::InputTag>("triggerCells"))),
-      simhits_ee_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsEE"))),
-      simhits_fh_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsFH"))),
-      simhits_bh_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsBH"))),
-      simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simClusters"))),
-      keV2fC_(conf.getParameter<double>("keV2fC")),
-      fcPerMip_(conf.getParameter<std::vector<double>>("fcPerMip")),
-      layerWeights_(conf.getParameter<std::vector<double>>("layerWeights")),
-      thicknessCorrections_(conf.getParameter<std::vector<double>>("thicknessCorrections")),
+    : trigger_cells_token_(consumes<edm::View<l1t::HGCalTriggerCell>>(conf.getParameter<edm::InputTag>("triggerCells"))),
+      tc_truth_token_(consumes<edm::ValueMap<l1t::HGCalTriggerCellTruth>>(conf.getParameter<edm::InputTag>("tcTruth"))),
       triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>())
 {
-    produces<nanoaod::FlatTable>("HGCalTriggerCellsTableProducer");
-}
-
-double L1THGCalTriggerCellsTableProducer::calibrate(double energy, unsigned thickness, unsigned layer) {
-    double fcPerMip = fcPerMip_[thickness];
-    double thicknessCorrection = thicknessCorrections_[thickness];
-    double layerWeight = layerWeights_[layer];
-    double TeV2GeV = 1000.0;
-  return energy * keV2fC_ / fcPerMip * layerWeight * TeV2GeV / thicknessCorrection;
+    produces<nanoaod::FlatTable>("TCs");
+    produces<nanoaod::FlatTable>("TCsToSimClusters");
 }
 
 void L1THGCalTriggerCellsTableProducer::beginRun(const edm::Run&, const edm::EventSetup& es) {
@@ -81,67 +58,13 @@ void L1THGCalTriggerCellsTableProducer::beginRun(const edm::Run&, const edm::Eve
 
 void L1THGCalTriggerCellsTableProducer::produce(edm::Event& evt, const edm::EventSetup& es) {
     // Get the trigger cells
-    edm::Handle<l1t::HGCalTriggerCellBxCollection> trigger_cells_h;
+    edm::Handle<edm::View<l1t::HGCalTriggerCell>> trigger_cells_h;
     evt.getByToken(trigger_cells_token_, trigger_cells_h);
-    const auto& trigger_cells = *trigger_cells_h;
 
-    // Get the simhits
-    edm::Handle<edm::PCaloHitContainer> simhits_ee_h;
-    evt.getByToken(simhits_ee_token_, simhits_ee_h);
-    const auto& simhits_ee = *simhits_ee_h;
-
-    edm::Handle<edm::PCaloHitContainer> simhits_fh_h;
-    evt.getByToken(simhits_fh_token_, simhits_fh_h);
-    const auto& simhits_fh = *simhits_fh_h;
-
-    edm::Handle<edm::PCaloHitContainer> simhits_bh_h;
-    evt.getByToken(simhits_bh_token_, simhits_bh_h);
-    const auto& simhits_bh = *simhits_bh_h;
-
-    // Get the simclusters
-    edm::Handle<std::vector<SimCluster>> simclusters_h;
-    evt.getByToken(simclusters_token_, simclusters_h);
-
-    std::unordered_map<uint32_t, l1t::HGCalTriggerCell> hits_map;
-    std::unordered_map<uint32_t, std::vector<PCaloHit>> simhits_map;
-    std::set<uint32_t> unique_ids;
-
-    std::unordered_map<uint32_t, std::vector<std::pair<int, float>>> simclusters_map;
-
-    // Fill the hits map
-    for (const auto& tc : trigger_cells) {
-        hits_map[tc.detId()] = tc;
-        unique_ids.insert(tc.detId());
-    }
-
-    // Fill the simhits map
-    for (const auto& hit : simhits_ee) {
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.id());
-        simhits_map[tcid].push_back(hit);
-        unique_ids.insert(tcid);
-    }
-    for (const auto& hit : simhits_fh) {
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.id());
-        simhits_map[tcid].push_back(hit);
-        unique_ids.insert(tcid);
-    }
-    for (const auto& hit : simhits_bh) {
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.id());
-        simhits_map[tcid].push_back(hit);
-        unique_ids.insert(tcid);
-    }
-
-    // Fill the simclusters map
-    for (uint32_t iSimCluster = 0; iSimCluster < simclusters_h->size(); ++iSimCluster) {
-        const auto& simcluster = (*simclusters_h)[iSimCluster];
-        for (const auto& hit : simcluster.hits_and_fractions()){
-            uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.first);
-            if (tcid != 0) { // Only consider valid trigger cells
-                simclusters_map[hit.first].emplace_back(iSimCluster, hit.second);
-                unique_ids.insert(tcid);
-            }
-        }
-    }
+    // Get the trigger cell truth map
+    edm::Handle<edm::ValueMap<l1t::HGCalTriggerCellTruth>> tc_truth_h;
+    evt.getByToken(tc_truth_token_, tc_truth_h);
+    const auto& tc_truth = *tc_truth_h;
 
     std::vector<int> ids, subdet, side, layer;
     std::vector<int> waferu, waferv, wafertype, cellu, cellv;
@@ -151,7 +74,17 @@ void L1THGCalTriggerCellsTableProducer::produce(edm::Event& evt, const edm::Even
     std::vector<int> nSimCluster;
     std::vector<float> totSimClusterFrac;
 
-    for(const auto& idint : unique_ids){
+    std::vector<int> simclusterIds;
+    std::vector<float> simclusterFracs;
+
+    for(size_t i = 0; i < trigger_cells_h->size(); ++i){
+        const auto& tc = trigger_cells_h->at(i);
+        const auto& tcref = trigger_cells_h->refAt(i);
+
+        l1t::HGCalTriggerCellTruth tc_truth_info = tc_truth[tcref];
+
+        uint32_t idint = tc.detId();
+
         DetId id(idint);
         if (id.det() == DetId::HGCalHSc){
             continue;
@@ -182,53 +115,20 @@ void L1THGCalTriggerCellsTableProducer::produce(edm::Event& evt, const edm::Even
         eta.push_back(pos.eta());
         phi.push_back(pos.phi());
 
-        const auto& hit = hits_map.find(idint); 
-        if (hit == hits_map.end()) {
-            tcdata.push_back(0);
-            uncompressedCharge.push_back(0);
-            compressedCharge.push_back(0);
-            mipPt.push_back(0);
-            pt.push_back(0);
-            energy.push_back(0);
-        } else {
-            const auto& tc = hit->second;
-            tcdata.push_back(tc.hwPt());
-            uncompressedCharge.push_back(tc.uncompressedCharge());
-            compressedCharge.push_back(tc.compressedCharge());
-            mipPt.push_back(tc.mipPt());
-            pt.push_back(tc.pt());
-            energy.push_back(tc.energy());
-        }
+        tcdata.push_back(tc.hwPt());
+        uncompressedCharge.push_back(tc.uncompressedCharge());
+        compressedCharge.push_back(tc.compressedCharge());
+        mipPt.push_back(tc.mipPt());
+        pt.push_back(tc.pt());
+        energy.push_back(tc.energy());
 
-        const auto& simhitvec = simhits_map.find(idint);
-        if (simhitvec == simhits_map.end() || simhitvec->second.empty()) {
-            simenergy.push_back(0);
-        } else {
-            float E=0;
-            unsigned thickness = triggerTools_.thicknessIndex(idint);
-            unsigned layer = triggerTools_.layerWithOffset(idint);
+        simenergy.push_back(tc_truth_info.simEnergy());
+        nSimCluster.push_back(tc_truth_info.nSimClusters());
+        totSimClusterFrac.push_back(tc_truth_info.allocSimEnergyFraction());
 
-            int nSimClus = 0;
-            float totFracE = 0;
-
-            for(const auto& simhit : simhitvec->second){
-                E += calibrate(simhit.energy(), thickness, layer);
-                const auto& simcluss = simclusters_map.find(simhit.id());
-                if (simcluss != simclusters_map.end()) {
-                    for (const auto& simclus : simcluss->second){
-                        ++nSimClus;
-                        totFracE += simclus.second * calibrate(simhit.energy(), thickness, layer);
-                    }
-                }
-            }
-            simenergy.push_back(E);
-            nSimCluster.push_back(nSimClus);
-            if (E == 0) {
-                totFracE = 0; // Avoid division by zero
-            } else {
-                totFracE /= E; // Normalize the total fraction
-            }
-            totSimClusterFrac.push_back(totFracE);
+        for (const auto& simcluster : tc_truth_info.simclusters()) {
+            simclusterIds.push_back(simcluster.first);
+            simclusterFracs.push_back(simcluster.second);
         }
     }
 
@@ -257,7 +157,12 @@ void L1THGCalTriggerCellsTableProducer::produce(edm::Event& evt, const edm::Even
     table->addColumn<float>("simenergy", simenergy, "Simulated energy of the trigger cell");
     table->addColumn<int>("nSimCluster", nSimCluster, "Number of SimClusters contributing to the trigger cell");
     table->addColumn<float>("totSimClusterFrac", totSimClusterFrac, "Total fraction of SimCluster energy contributing to the trigger cell");
-    evt.put(std::move(table), "HGCalTriggerCellsTableProducer");
+    evt.put(std::move(table), "TCs");
+
+    auto simclust_table = std::make_unique<nanoaod::FlatTable>(simclusterIds.size(), "L1HGCalHitsToSimclusters", false);
+    simclust_table->addColumn<int>("idx", simclusterIds, "ID of the SimCluster contributing to the trigger cell");
+    simclust_table->addColumn<float>("frac", simclusterFracs, "Fraction of the SimCluster energy contributing to the trigger cell");
+    evt.put(std::move(simclust_table), "TCsToSimClusters");
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

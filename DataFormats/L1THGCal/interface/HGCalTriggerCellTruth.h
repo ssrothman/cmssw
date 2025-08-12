@@ -2,6 +2,7 @@
 #define DATAFORMATS_L1THGCAL_TRIGGERCELLTRUTH_H
 
 #include "DataFormats/L1THGCal/interface/HGCalTriggerCell.h"
+#include "DataFormats/Common/interface/ValueMap.h"
 
 namespace l1t {
 
