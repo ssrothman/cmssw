@@ -64,7 +64,8 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
     std::vector<int> waferu, waferv, wafertype, cellu, cellv;
     //scint
     std::vector<int> paneltype, granularity, ieta, iphi, sipmsize, istrigger;
-
+    //boolean flag
+    std::vector<bool> isScintillator;
 
     for(const auto& tc : *trigger_cells_h) {
         uint32_t idint = tc.detId();
@@ -85,12 +86,14 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
             cellu.push_back(detid.triggerCellU());
             cellv.push_back(detid.triggerCellV());
 
-            paneltype.push_back(-1);
-            granularity.push_back(-1);
-            ieta.push_back(-1);
-            iphi.push_back(-1);
-            sipmsize.push_back(-1);
-            istrigger.push_back(-1);
+            paneltype.push_back(-999);
+            granularity.push_back(-999);
+            ieta.push_back(-999);
+            iphi.push_back(-999);
+            sipmsize.push_back(-999);
+            istrigger.push_back(-999);
+
+            isScintillator.push_back(false);
         } else if (id.det() == DetId::HGCalHSc) {
             HGCScintillatorDetId detid(idint);
 
@@ -102,11 +105,13 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
             sipmsize.push_back(detid.sipm());
             istrigger.push_back(detid.trigger());
 
-            waferu.push_back(-1);
-            waferv.push_back(-1);
-            wafertype.push_back(-1);
-            cellu.push_back(-1);
-            cellv.push_back(-1);
+            waferu.push_back(-999);
+            waferv.push_back(-999);
+            wafertype.push_back(-999);
+            cellu.push_back(-999);
+            cellv.push_back(-999);
+
+            isScintillator.push_back(true);
         } else {
             throw cms::Exception("L1HGCalTCPropertiesTableProducer") 
                 << "Unsupported DetId type: " << id.det() << " for trigger cell with ID: " << idint;
@@ -142,6 +147,7 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
     table->addColumn<int>("iphi", iphi, "iPhi of the scintillator cell");
     table->addColumn<int>("sipmsize", sipmsize, "SiPM size in the scintillator cell");
     table->addColumn<int>("trigger", istrigger, "Is this a trigger cell?");
+    table->addColumn<bool>("isScintillator", isScintillator, "Is this a scintillator cell?");
     evt.put(std::move(table));
 }
 

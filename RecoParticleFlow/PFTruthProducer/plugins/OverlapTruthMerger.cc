@@ -383,6 +383,7 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
                     kvpair.second / totalEnergies[kvpair.first]
             );
             newcluster.addHitEnergy(kvpair.second);
+            newcluster.addSimHit(PCaloHit(float(kvpair.second)));
         }
 
         mergedClusters->push_back(newcluster);
