@@ -24,7 +24,6 @@
     <use name="RecoParticleFlow/PFTruthProducer" />
     <use name="hepmc" />
     <use name="heppdt" />
-
     <flags EDM_PLUGIN="1" />
 </library>
 

@@ -9,12 +9,48 @@ fcPerMip = recoparam.HGCalUncalibRecHit.HGCEEConfig.fCPerMIP
 keV2fC = digiparam.hgceeDigitizer.digiCfg.keV2fC
 thicknessCorrections = recocalibparam.HGCalRecHit.thicknessCorrection
 
+#geometry from https://cms-docdb.cern.ch/cgi-bin/PublicDocDB/RetrieveFile?docid=13251&filename=20210803%20HGCAL%20PARAMETER%20DRAWING.pdf&version=11
+simonMergedTruth = cms.EDProducer("SimTreeTruthMerger",
+    simtracks = cms.InputTag('g4SimHits'),
+    simvertices = cms.InputTag('g4SimHits'),
+    simhits = cms.VInputTag('g4SimHits:HGCHitsEE',
+                            'g4SimHits:HGCHitsHEfront',
+                            'g4SimHits:HGCHitsHEback'),
+    caloR = cms.double(136.5),
+    caloZ = cms.double(318.5),
+    verbose = cms.int32(0)
+)
+
+testMerger = cms.EDProducer("OverlapTruthMerger",
+    simtracks = cms.InputTag("simonMergedTruth:mergedSimTracks"),
+    simvertices = cms.InputTag("g4SimHits"),
+    simhits = cms.InputTag("simonMergedTruth:relabeledSimHits"),
+    simclusters = cms.InputTag("simonMergedTruth:mergedSimClusters"),
+    overlapThreshold = cms.double(0.2),
+    caloR = cms.double(136.5),
+    caloZ = cms.double(318.5),
+    distanceTol = cms.double(0.1),
+    verbose = cms.int32(0)
+)
+
+SimonMergedSimClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
+    src = cms.InputTag('simonMergedTruth', 'mergedSimClusters'),
+    name = cms.string("SimonMergedSimCluster"),
+    extension = cms.bool(False),  # this is the main table for the simclusters
+    singleton = cms.bool(False),  # the number of entries is variable
+    variables = cms.PSet(
+        eta = Var('eta()', 'float', doc='eta of the simcluster'),
+        phi = Var('phi()', 'float', doc='phi of the simcluster'),
+        energy = Var('energy()', 'float', doc='energy of the simcluster'),
+    )
+)
+
 L1HGCalTCsTruth = cms.EDProducer("L1TriggerCellTruthProducer",
     triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
     simHitsEE = cms.InputTag('g4SimHits','HGCHitsEE'),
     simHitsFH = cms.InputTag('g4SimHits','HGCHitsHEfront'),
     simHitsBH = cms.InputTag('g4SimHits','HGCHitsHEback'),
-    simClusters = cms.InputTag('mix','MergedCaloTruth'),
+    simClusters = cms.InputTag('simonMergedTruth', 'mergedSimClusters'),
     fcPerMip = fcPerMip,
     keV2fC = keV2fC,
     layerWeights = layercalibparam.triggerWeights.weights,
@@ -46,3 +82,5 @@ triggerCellTruthTable = cms.EDProducer("L1HGCalTCTruthTableProducer",
     tcTruth = cms.InputTag('L1HGCalTCsTruth'),
     name = cms.string("L1THGCalTC"),
 )
+
+
