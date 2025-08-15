@@ -76,11 +76,14 @@ void L1TriggerCellTruthProducer::beginRun(const edm::Run& run, const edm::EventS
 }
 
 double L1TriggerCellTruthProducer::calibrate(double energy, unsigned thickness, unsigned layer) {
-    double fcPerMip = fcPerMip_[thickness];
-    double thicknessCorrection = thicknessCorrections_[thickness];
     double layerWeight = layerWeights_[layer];
+    if (thickness == 3){//thickness 3 = scintillator
+        return energy  * layerWeight / 0.48;  //ad hoc?
+    }
+    double thicknessCorrection = thicknessCorrections_[thickness];
+    double fcPerMip = fcPerMip_[thickness];
     double TeV2GeV = 1000.0;
-  return energy * keV2fC_ / fcPerMip * layerWeight * TeV2GeV / thicknessCorrection;
+    return energy * keV2fC_ / fcPerMip * layerWeight * TeV2GeV / thicknessCorrection;
 }
 
 void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetup& setup) {
@@ -144,6 +147,12 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
                 unsigned thickness = triggerTools_.thicknessIndex(simhit.id());
                 unsigned layer = triggerTools_.layerWithOffset(simhit.id());
                 float E = calibrate(simhit.energy(), thickness, layer);
+                if (triggerTools_.isScintillator(id)) {
+                    printf("Attempting to calibrate a scintillator hit, with\n");
+                    printf("\tthickness: %u, layer: %u\n", thickness, layer);
+                    printf("\tenergy: %f, id: %u\n", simhit.energy(), simhit.id());
+                    printf("\tcalibrated energy: %f\n", E);
+                }
 
                 simE += E;
 
