@@ -241,8 +241,6 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
         for (const auto& hitkey : hits) {
             const auto& hit = simhits[hitkey.first][hitkey.second];
 
-            printf("In SimTreeTruthMerger, processing hit with detId %u\n", hit.id());
-
             PCaloHit newhit(
                     hit.id(),
                     float(hit.energy()),

@@ -101,7 +101,6 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
     edm::Handle<std::vector<SimCluster>> simClusters;
     event.getByToken(simclusters_token_, simClusters);
 
-    //std::unordered_map<uint32_t, std::vector<PCaloHit>> simhits_map;
     std::unordered_map<uint32_t, float> simenergy_map;
 
     std::unordered_map<uint32_t, std::vector<std::pair<int, float>>> simclusters_map;
@@ -109,10 +108,6 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
     // Fill the simhits map
     for (const auto& simhit_h : simhits_handles){
         for (const auto& simhit : *simhit_h){
-            printf("SimHit with id %u, energy %f, trackId %u\n", 
-                   simhit.id(), simhit.energy(), simhit.geantTrackId());
-            printf("\tvalid trigger cell? %d'\n", triggerTools_.getTriggerGeometry()->validTriggerCell(simhit.id()));
-            //simhits_map[simhit.id()].push_back(simhit);
             simenergy_map[simhit.id()] += simhit.energy();
         }
     }

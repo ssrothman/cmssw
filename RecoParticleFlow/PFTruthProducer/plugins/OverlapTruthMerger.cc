@@ -181,7 +181,6 @@ double OverlapTruthMerger::impactDistance(
 }
 
 void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
-    printf("test...\n");
     // Get the simtracks
     edm::Handle<std::vector<SimTrack>> simtracks_h;
     evt.getByToken(simtracks_token_, simtracks_h);
@@ -375,8 +374,6 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
 
         SimCluster newcluster(mergedTrack);
         for (const auto& kvpair : mergedHitEnergies){
-            printf("In OverlapTruthMerger, adding hit %u with energy %f\n",
-                  kvpair.first, kvpair.second);
             newcluster.addRecHitAndFraction(
                     kvpair.first, 
                     kvpair.second / totalEnergies[kvpair.first]
