@@ -101,14 +101,19 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
     edm::Handle<std::vector<SimCluster>> simClusters;
     event.getByToken(simclusters_token_, simClusters);
 
-    std::unordered_map<uint32_t, std::vector<PCaloHit>> simhits_map;
+    //std::unordered_map<uint32_t, std::vector<PCaloHit>> simhits_map;
+    std::unordered_map<uint32_t, float> simenergy_map;
 
     std::unordered_map<uint32_t, std::vector<std::pair<int, float>>> simclusters_map;
 
     // Fill the simhits map
     for (const auto& simhit_h : simhits_handles){
         for (const auto& simhit : *simhit_h){
-            simhits_map[simhit.id()].push_back(simhit);
+            printf("SimHit with id %u, energy %f, trackId %u\n", 
+                   simhit.id(), simhit.energy(), simhit.geantTrackId());
+            printf("\tvalid trigger cell? %d'\n", triggerTools_.getTriggerGeometry()->validTriggerCell(simhit.id()));
+            //simhits_map[simhit.id()].push_back(simhit);
+            simenergy_map[simhit.id()] += simhit.energy();
         }
     }
 
@@ -125,45 +130,44 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
 
         DetId id(idint);
     
-        const auto& simhitvec = simhits_map.find(idint); 
+        //const auto& simhitvec = simhits_map.find(idint); 
+         
+
         float simE = 0.0;
-        float matchedSimE = 0.0;
+
+        const auto& simE_item = simenergy_map.find(idint);
+        if(simE_item != simenergy_map.end()){
+            simE = simE_item->second;
+        }
+
         std::vector<std::pair<int, float>> simclusters;
 
-        if (simhitvec != simhits_map.end()){
-            std::unordered_map<uint32_t, float> simcluster_lookup;
-            for (const auto& simhit : simhitvec->second) {
-                unsigned thickness = triggerTools_.thicknessIndex(simhit.id());
-                unsigned layer = triggerTools_.layerWithOffset(simhit.id());
-                float E = calibrate(simhit.energy(), thickness, layer);
-                simE += E;
+        unsigned thickness = triggerTools_.thicknessIndex(tc.detId());
+        unsigned layer = triggerTools_.layerWithOffset(tc.detId());
+        simE = calibrate(simE, thickness, layer);
 
-                const auto& simclusters = simclusters_map.find(simhit.id());
-                if (simclusters != simclusters_map.end()) {
-                    for (const auto& simcluster : simclusters->second) {
-                        matchedSimE += simcluster.second * E;
-                        simcluster_lookup[simcluster.first] += simcluster.second * E;
-                    }
-                }
-            } 
+        float matchedFrac = 0.0;
+        std::unordered_map<uint32_t, float> simcluster_lookup;
 
-            for (const auto& simcluster : simcluster_lookup) {
-                simclusters.emplace_back(
-                    simcluster.first, 
-                    simcluster.second / simE
-                );
+        const auto& associated_simclusters = simclusters_map.find(tc.detId());
+        if (associated_simclusters != simclusters_map.end()) {
+            for (const auto& simcluster : associated_simclusters->second) {
+                matchedFrac += simcluster.second;
+                simcluster_lookup[simcluster.first] += simcluster.second;
             }
         }
 
-        float simEfrac = 1.0;
-        if (simE > 0.0) {
-            simEfrac = matchedSimE / simE;
+        for (const auto& simcluster : simcluster_lookup) {
+            simclusters.emplace_back(
+                simcluster.first, 
+                simcluster.second
+                );
         }
 
         triggerCellsTruth.emplace_back(
             simclusters,
             simE, 
-            simEfrac,
+            matchedFrac,
             simclusters.size()
         );
     }

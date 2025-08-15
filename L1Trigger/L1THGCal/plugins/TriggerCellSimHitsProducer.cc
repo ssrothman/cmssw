@@ -69,6 +69,9 @@ void TriggerCellSimHitsProducer::produce(edm::Event& evt, const edm::EventSetup&
             uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(detid);
             uint32_t trackId = simhit.geantTrackId();
             simHitsMap[trackId][tcid].push_back(simhit);
+            printf("Mapping simhit from %u to tc %u\n", detid, tcid);
+            printf("\ttc %u is valid trigger cell? %s\n",
+                    tcid, triggerTools_.getTriggerGeometry()->validTriggerCell(tcid) ? "true" : "false");
         }
     }
 

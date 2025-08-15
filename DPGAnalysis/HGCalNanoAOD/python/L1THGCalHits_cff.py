@@ -24,7 +24,7 @@ simTreeMerger = cms.EDProducer("SimTreeTruthMerger",
     caloR = cms.double(136.5),
     caloZ = cms.double(318.5),
 
-    verbose = cms.int32(0)
+    verbose = cms.int32(1)
 )
 
 overlapMerger = cms.EDProducer("OverlapTruthMerger",
@@ -37,9 +37,9 @@ overlapMerger = cms.EDProducer("OverlapTruthMerger",
     caloZ = cms.double(318.5),
 
     overlapThreshold = cms.double(0.2),
-    distanceTol = cms.double(0.1),
+    distanceTol = cms.double(0.0),
 
-    verbose = cms.int32(0)
+    verbose = cms.int32(1)
 )
 
 SimonMergedSimClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
@@ -61,26 +61,9 @@ SimonMergedSimClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
     )
 )
 
-#SimonMergedSimTrackTable = cms.EDProducer("SimpleSimTrackFlatTableProducer",
-#    src = cms.InputTag('overlapMerger', 'mergedSimTracks'),
-#    name = cms.string("SimonMergedSimTrack"),
-#    extension = cms.bool(False),  # this is the main table for the simtracks
-#    singleton = cms.bool(False),  # the number of entries is variable
-#    variables = cms.PSet(
-#
-#        eta = Var('momentum().eta()', 'float', doc='eta of the simtrack'),
-#        phi = Var('momentum().phi()', 'float', doc='phi of the simtrack'),
-#        pt = Var('momentum().pt()', 'float', doc='pt of the simtrack'),
-#        charge = Var('charge()', 'float', doc='charge of the simtrack'),
-#        pdgId = Var('type()', 'int', doc='PDG ID of the simtrack'),
-#    )
-#)
-
 L1HGCalTCsTruth = cms.EDProducer("L1TriggerCellTruthProducer",
     triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
-    simHitsEE = cms.InputTag('g4SimHits','HGCHitsEE'),
-    simHitsFH = cms.InputTag('g4SimHits','HGCHitsHEfront'),
-    simHitsBH = cms.InputTag('g4SimHits','HGCHitsHEback'),
+    simHits = cms.VInputTag('TCSimHits'),
     simClusters = cms.InputTag('overlapMerger', 'mergedSimClusters'),
     fcPerMip = fcPerMip,
     keV2fC = keV2fC,
@@ -119,7 +102,6 @@ fullChain = cms.Sequence(
     simTreeMerger *
     overlapMerger *
     SimonMergedSimClusterTable *
-    #SimonMergedSimTrackTable *
     L1HGCalTCsTruth *
     triggerCellTable *
     triggerCellPropsTable *

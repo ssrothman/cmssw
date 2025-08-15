@@ -40,10 +40,10 @@ public:
 
 private:
     double computeOverlap(
-            const std::unordered_map<int, double>& cluster1,
-            const std::unordered_map<int, double>& cluster2,
-            const std::set<int>& detIds1,
-            const std::set<int>& detIds2);
+            const std::unordered_map<uint32_t, double>& cluster1,
+            const std::unordered_map<uint32_t, double>& cluster2,
+            const std::set<uint32_t>& detIds1,
+            const std::set<uint32_t>& detIds2);
             
     double impactDistance(
             const SimTrack& track1,
@@ -99,12 +99,12 @@ void OverlapTruthMerger::beginRun(const edm::Run&, const edm::EventSetup& es) {
 }
 
 double OverlapTruthMerger::computeOverlap(
-        const std::unordered_map<int, double>& cluster1,
-        const std::unordered_map<int, double>& cluster2,
-        const std::set<int>& detIds1,
-        const std::set<int>& detIds2) {
+        const std::unordered_map<uint32_t, double>& cluster1,
+        const std::unordered_map<uint32_t, double>& cluster2,
+        const std::set<uint32_t>& detIds1,
+        const std::set<uint32_t>& detIds2) {
 
-    std::set<int> commonDetIds;
+    std::set<uint32_t> commonDetIds;
     std::set_intersection(
         detIds1.begin(), detIds1.end(),
         detIds2.begin(), detIds2.end(),
@@ -112,7 +112,7 @@ double OverlapTruthMerger::computeOverlap(
     );
     double overlapEnergy1 = 0.0;
     double overlapEnergy2 = 0.0;
-    for (int detId : commonDetIds) {
+    for (uint32_t detId : commonDetIds) {
         overlapEnergy1 += cluster1.at(detId);
         overlapEnergy2 += cluster2.at(detId);
     }
@@ -204,25 +204,25 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     evt.getByToken(simvertices_token_, simvertices_h);
     const auto& simvertices = *simvertices_h;
 
-    std::unordered_map<int, double> totalEnergies;
+    std::unordered_map<uint32_t, double> totalEnergies;
     for (const auto& simhits_h : simhits_handles){
         for (const auto& simhit : *simhits_h){
             totalEnergies[simhit.id()] += simhit.energy();
         }
     }
 
-    std::unordered_map<int, int> geantToIndexMap;
+    std::unordered_map<uint32_t, uint32_t> geantToIndexMap;
     for(size_t i = 0; i < simtracks.size(); ++i){
         geantToIndexMap[simtracks[i].trackId()] = i;
     }
 
-    std::vector<std::unordered_map<int, double>> clusterHitEnergies;
+    std::vector<std::unordered_map<uint32_t, double>> clusterHitEnergies;
     clusterHitEnergies.reserve(simclusters.size());
-    std::vector<std::set<int>> clusterDetIds;
+    std::vector<std::set<uint32_t>> clusterDetIds;
     clusterDetIds.reserve(simclusters.size());
     for(const auto& simcluster : simclusters){
-        std::unordered_map<int, double> hitEnergies;
-        std::set<int> detIds;
+        std::unordered_map<uint32_t, double> hitEnergies;
+        std::set<uint32_t> detIds;
         for(const auto& hit : simcluster.hits_and_fractions()){
             hitEnergies[hit.first] += hit.second * totalEnergies[hit.first];
             detIds.insert(hit.first);
@@ -231,7 +231,7 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
         clusterDetIds.push_back(detIds);
     }
 
-    std::vector<std::set<int>> adjacencies;
+    std::vector<std::set<uint32_t>> adjacencies;
     adjacencies.resize(simclusters.size());
     for (size_t i=0; i<simclusters.size(); ++i){
         for(size_t j=i+1; j<simclusters.size(); ++j){
@@ -269,22 +269,22 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     }
 
     std::vector<bool> visited(simclusters.size(), false);
-    std::vector<std::vector<int>> components;
+    std::vector<std::vector<uint32_t>> components;
     //use BFS to find connected components
     for (size_t i = 0; i < simclusters.size(); ++i) {
         if (visited[i]) continue;
 
-        std::vector<int> component;
-        std::queue<int> queue;
+        std::vector<uint32_t> component;
+        std::queue<uint32_t> queue;
         queue.push(i);
         visited[i] = true;
 
         while (!queue.empty()) {
-            int current = queue.front();
+            uint32_t current = queue.front();
             queue.pop();
             component.push_back(current);
 
-            for (int neighbor : adjacencies[current]) {
+            for (uint32_t neighbor : adjacencies[current]) {
                 if (!visited[neighbor]) {
                     visited[neighbor] = true;
                     queue.push(neighbor);
@@ -327,7 +327,7 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
         }
     
         std::vector<SimTrack> tracks;
-        for (int idx: component){
+        for (uint32_t idx: component){
             for (const auto& track : simclusters[idx].g4Tracks()){
                 tracks.push_back(track);
             }
@@ -366,8 +366,8 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
             netpdgId, netmomentum
         );
 
-        std::unordered_map<int, double> mergedHitEnergies;
-        for (int idx : component){
+        std::unordered_map<uint32_t, double> mergedHitEnergies;
+        for (uint32_t idx : component){
             for (const auto& hit : simclusters[idx].hits_and_fractions()){
                 mergedHitEnergies[hit.first] += hit.second * totalEnergies[hit.first];
             }
@@ -375,6 +375,8 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
 
         SimCluster newcluster(mergedTrack);
         for (const auto& kvpair : mergedHitEnergies){
+            printf("In OverlapTruthMerger, adding hit %u with energy %f\n",
+                  kvpair.first, kvpair.second);
             newcluster.addRecHitAndFraction(
                     kvpair.first, 
                     kvpair.second / totalEnergies[kvpair.first]

@@ -35,11 +35,11 @@ public:
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
 
 private:
-    int recursive_find_parent(
-            int startTrackIdx,
+    uint32_t recursive_find_parent(
+            uint32_t startTrackIdx,
             const std::vector<SimTrack>& simTracks,
             const std::vector<SimVertex>& simVertices,
-            const std::unordered_map<int, int>& geantToIndexMap);
+            const std::unordered_map<uint32_t, uint32_t>& geantToIndexMap);
 
     edm::EDGetToken simtracks_token_;
     edm::EDGetToken simvertices_token_;
@@ -72,11 +72,11 @@ SimTreeTruthMerger::SimTreeTruthMerger(const edm::ParameterSet& conf)
 void SimTreeTruthMerger::beginRun(const edm::Run&, const edm::EventSetup& es) {
 }
 
-int SimTreeTruthMerger::recursive_find_parent(
-        int startTrackIdx,
+uint32_t SimTreeTruthMerger::recursive_find_parent(
+        uint32_t startTrackIdx,
         const std::vector<SimTrack>& simTracks,
         const std::vector<SimVertex>& simVertices,
-        const std::unordered_map<int, int>& geantToIndexMap) {
+        const std::unordered_map<uint32_t, uint32_t>& geantToIndexMap) {
 
     const auto& track = simTracks[startTrackIdx];
     int iVert = track.vertIndex();
@@ -96,7 +96,7 @@ int SimTreeTruthMerger::recursive_find_parent(
     vertexPastCaloBoundary |= std::sqrt(pos.X()*pos.X() + pos.Y()*pos.Y()) > caloR_;
 
     //extrapolate parent and daughter momenta from vertex to calo boundary
-    int parentIdx = geantToIndexMap.at(vertex.parentIndex());
+    uint32_t parentIdx = geantToIndexMap.at(vertex.parentIndex());
     const auto& parent = simTracks[parentIdx];
 
     if (verbose_){
@@ -170,17 +170,17 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     }
 
     // key: geantTrackId, value: index in simtracks
-    std::unordered_map<int, int> geantToIndexMap;
+    std::unordered_map<uint32_t, uint32_t> geantToIndexMap;
     for(size_t i = 0; i < simtracks.size(); ++i){
         geantToIndexMap[simtracks[i].trackId()] = i;
     }
 
     // key: track index in simtracks vector
     // value: index of the parent track in simtracks vector
-    std::unordered_map<int, int> trackToParentMap;
-    std::set<int> parentTracks;
+    std::unordered_map<uint32_t, uint32_t> trackToParentMap;
+    std::set<uint32_t> parentTracks;
     for(size_t i = 0; i < simtracks.size(); ++i){
-        int parentIdx = recursive_find_parent(
+        uint32_t parentIdx = recursive_find_parent(
             i, simtracks, simvertices, 
             geantToIndexMap
         );
@@ -190,7 +190,7 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
 
     // key: parent track index in simtracks vector
     // value: indices of child tracks in simtracks vector
-    std::unordered_map<int, std::vector<int>> parentToChildMap;
+    std::unordered_map<uint32_t, std::vector<uint32_t>> parentToChildMap;
     for(size_t i = 0; i < simtracks.size(); ++i){
         parentToChildMap[trackToParentMap[i]].push_back(i);
     }
@@ -199,23 +199,23 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     // value: vector of (i, j) with
     //      i = index of simhit collection in simhits vector
     //      j = index of simhit in the collection
-    std::unordered_map<int, std::vector<std::pair<int, int>>> trackToHitsMap;
+    std::unordered_map<uint32_t, std::vector<std::pair<uint32_t, uint32_t>>> trackToHitsMap;
     // key: det id
     // value: total sim energy
-    std::unordered_map<int, double> detIdToEnergyMap;
+    std::unordered_map<uint32_t, double> detIdToEnergyMap;
 
     for (size_t i = 0; i < simhits.size(); ++i) {
         const auto& hits = simhits[i];
         for (size_t j=0; j<hits.size(); ++j){
             const auto& hit = hits[j];
-            int trackId = hit.geantTrackId();
-            int trackIdx = geantToIndexMap[trackId];
-            int parentTrackIdx = trackToParentMap[trackIdx];
+            uint32_t trackId = hit.geantTrackId();
+            uint32_t trackIdx = geantToIndexMap[trackId];
+            uint32_t parentTrackIdx = trackToParentMap[trackIdx];
 
             trackToHitsMap[parentTrackIdx].emplace_back(i, j);
 
             // Add energy to the detIdToEnergyMap
-            int detId = hit.id();
+            uint32_t detId = hit.id();
             double energy = hit.energy();
             detIdToEnergyMap[detId] += energy;
         }
@@ -225,7 +225,7 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     auto mergedclusters = std::make_unique<std::vector<SimCluster>>();
     auto mergedtracks = std::make_unique<std::vector<SimTrack>>();
 
-    for (int parentTrack : parentTracks){
+    for (uint32_t parentTrack : parentTracks){
         const auto& track = simtracks[parentTrack];
         mergedtracks->push_back(track);
 
@@ -235,11 +235,13 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
 
         const auto& hits = trackToHitsMap[parentTrack];
 
-        std::unordered_map<int, double> detIdToEnergyPerTrack;
+        std::unordered_map<uint32_t, double> detIdToEnergyPerTrack;
         double totalEnergy = 0.0;
 
         for (const auto& hitkey : hits) {
             const auto& hit = simhits[hitkey.first][hitkey.second];
+
+            printf("In SimTreeTruthMerger, processing hit with detId %u\n", hit.id());
 
             PCaloHit newhit(
                     hit.id(),
