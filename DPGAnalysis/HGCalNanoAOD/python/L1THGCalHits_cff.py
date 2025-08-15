@@ -9,13 +9,17 @@ fcPerMip = recoparam.HGCalUncalibRecHit.HGCEEConfig.fCPerMIP
 keV2fC = digiparam.hgceeDigitizer.digiCfg.keV2fC
 thicknessCorrections = recocalibparam.HGCalRecHit.thicknessCorrection
 
+TCSimHits = cms.EDProducer("TriggerCellSimHitsProducer",
+    simHits = cms.VInputTag('g4SimHits:HGCHitsEE',
+                            'g4SimHits:HGCHitsHEfront',
+                            'g4SimHits:HGCHitsHEback'),
+)
+
 #geometry from https://cms-docdb.cern.ch/cgi-bin/PublicDocDB/RetrieveFile?docid=13251&filename=20210803%20HGCAL%20PARAMETER%20DRAWING.pdf&version=11
 simTreeMerger = cms.EDProducer("SimTreeTruthMerger",
     simtracks = cms.InputTag('g4SimHits'),
     simvertices = cms.InputTag('g4SimHits'),
-    simhits = cms.VInputTag('g4SimHits:HGCHitsEE',
-                            'g4SimHits:HGCHitsHEfront',
-                            'g4SimHits:HGCHitsHEback'),
+    simhits = cms.VInputTag('TCSimHits'),
 
     caloR = cms.double(136.5),
     caloZ = cms.double(318.5),
@@ -26,7 +30,7 @@ simTreeMerger = cms.EDProducer("SimTreeTruthMerger",
 overlapMerger = cms.EDProducer("OverlapTruthMerger",
     simtracks = cms.InputTag("simTreeMerger:mergedSimTracks"),
     simvertices = cms.InputTag("g4SimHits"),
-    simhits = cms.InputTag("simTreeMerger:relabeledSimHits"),
+    simhits = cms.VInputTag("simTreeMerger:relabeledSimHits"),
     simclusters = cms.InputTag("simTreeMerger:mergedSimClusters"),
 
     caloR = cms.double(136.5),
@@ -111,6 +115,7 @@ triggerCellTruthTable = cms.EDProducer("L1HGCalTCTruthTableProducer",
 )
 
 fullChain = cms.Sequence(
+    TCSimHits *
     simTreeMerger *
     overlapMerger *
     SimonMergedSimClusterTable *

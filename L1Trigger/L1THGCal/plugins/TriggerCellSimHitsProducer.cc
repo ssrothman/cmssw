@@ -31,11 +31,7 @@ public:
     void produce(edm::Event&, const edm::EventSetup&) override;
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
 private:
-    std::string name_;
-
-    edm::EDGetToken simhits_ee_token_;
-    edm::EDGetToken simhits_fh_token_;
-    edm::EDGetToken simhits_bh_token_;
+    std::vector<edm::EDGetToken> simhits_tokens_;
 
     edm::ESGetToken<HGCalTriggerGeometryBase, CaloGeometryRecord> triggerGeomToken_;
 
@@ -43,12 +39,12 @@ private:
 };
 
 TriggerCellSimHitsProducer::TriggerCellSimHitsProducer(const edm::ParameterSet& conf)
-    : name_(conf.getParameter<std::string>("name")),
-      simhits_ee_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsEE"))),
-      simhits_fh_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsFH"))),
-      simhits_bh_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsBH"))),
-      triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>())
+    : triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>())
 {
+    std::vector<edm::InputTag> simhits_tags = conf.getParameter<std::vector<edm::InputTag>>("simHits");
+    for (const auto& tag : simhits_tags) {
+        simhits_tokens_.emplace_back(consumes<edm::PCaloHitContainer>(tag));
+    }
     produces<std::vector<PCaloHit>>();
 }
 
@@ -59,34 +55,21 @@ void TriggerCellSimHitsProducer::beginRun(const edm::Run&, const edm::EventSetup
 
 void TriggerCellSimHitsProducer::produce(edm::Event& evt, const edm::EventSetup& es) {
     // Get the sim hits
-    edm::Handle<edm::PCaloHitContainer> simhits_ee_h;
-    evt.getByToken(simhits_ee_token_, simhits_ee_h);
-    
-    edm::Handle<edm::PCaloHitContainer> simhits_fh_h;
-    evt.getByToken(simhits_fh_token_, simhits_fh_h);
-    
-    edm::Handle<edm::PCaloHitContainer> simhits_bh_h;
-    evt.getByToken(simhits_bh_token_, simhits_bh_h);
+    std::vector<edm::Handle<edm::PCaloHitContainer>> simhits_handles;
+    simhits_handles.resize(simhits_tokens_.size());
+    for (size_t i = 0; i < simhits_tokens_.size(); ++i) {
+        evt.getByToken(simhits_tokens_[i], simhits_handles[i]);
+    }
 
     std::unordered_map<int, std::unordered_map<int, std::vector<PCaloHit>>> simHitsMap;
 
-    for (const auto& simhit : *simhits_ee_h) {
-        uint32_t detid = simhit.id();
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(detid);
-        uint32_t trackId = simhit.geantTrackId();
-        simHitsMap[trackId][tcid].push_back(simhit);
-    }
-    for (const auto& simhit : *simhits_fh_h) {
-        uint32_t detid = simhit.id();
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(detid);
-        uint32_t trackId = simhit.geantTrackId();
-        simHitsMap[trackId][tcid].push_back(simhit);
-    }
-    for (const auto& simhit : *simhits_bh_h) {
-        uint32_t detid = simhit.id();
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(detid);
-        uint32_t trackId = simhit.geantTrackId();
-        simHitsMap[trackId][tcid].push_back(simhit);
+    for (const auto& simhit_h : simhits_handles){
+        for (const auto& simhit : *simhit_h){
+            uint32_t detid = simhit.id();
+            uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(detid);
+            uint32_t trackId = simhit.geantTrackId();
+            simHitsMap[trackId][tcid].push_back(simhit);
+        }
     }
 
     auto output_hits = std::make_unique<std::vector<PCaloHit>>();
@@ -102,7 +85,7 @@ void TriggerCellSimHitsProducer::produce(edm::Event& evt, const edm::EventSetup&
                 E += hit.energy();
                 E_EM += hit.energyEM();
             }
-            output_hits.emplace_back(tcid, E, 0.0, trackId, E_EM/E);
+            output_hits->emplace_back(tcid, E, 0.0, trackId, E_EM/E);
         }
     }
 

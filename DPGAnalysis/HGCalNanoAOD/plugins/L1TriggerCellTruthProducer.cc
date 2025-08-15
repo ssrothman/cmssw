@@ -39,9 +39,7 @@ private:
     double calibrate(double energy, unsigned thickness, unsigned layer);
 
     edm::EDGetToken trigger_cells_token_;
-    edm::EDGetToken simhits_ee_token_;
-    edm::EDGetToken simhits_fh_token_;
-    edm::EDGetToken simhits_bh_token_;
+    std::vector<edm::EDGetToken> simhits_tokens_;
     edm::EDGetToken simclusters_token_;
 
     double keV2fC_;
@@ -56,15 +54,17 @@ private:
 
 L1TriggerCellTruthProducer::L1TriggerCellTruthProducer(const edm::ParameterSet& conf)
     : trigger_cells_token_(consumes<l1t::HGCalTriggerCellBxCollection>(conf.getParameter<edm::InputTag>("triggerCells"))),
-      simhits_ee_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsEE"))),
-      simhits_fh_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsFH"))),
-      simhits_bh_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simHitsBH"))),
       simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simClusters"))),
       keV2fC_(conf.getParameter<double>("keV2fC")),
       fcPerMip_(conf.getParameter<std::vector<double>>("fcPerMip")),
       layerWeights_(conf.getParameter<std::vector<double>>("layerWeights")),
       thicknessCorrections_(conf.getParameter<std::vector<double>>("thicknessCorrections")),
       triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>()) {
+
+    std::vector<edm::InputTag> simhits_tags = conf.getParameter<std::vector<edm::InputTag>>("simHits");
+    for (const auto& tag : simhits_tags) {
+        simhits_tokens_.emplace_back(consumes<edm::PCaloHitContainer>(tag));
+    }
     produces<edm::ValueMap<l1t::HGCalTriggerCellTruth>>();
 }
 
@@ -92,12 +92,11 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
     edm::Handle<l1t::HGCalTriggerCellBxCollection> triggerCells;
     event.getByToken(trigger_cells_token_, triggerCells);
 
-    edm::Handle<edm::PCaloHitContainer> simHitsEE;
-    event.getByToken(simhits_ee_token_, simHitsEE);
-    edm::Handle<edm::PCaloHitContainer> simHitsFH;
-    event.getByToken(simhits_fh_token_, simHitsFH);
-    edm::Handle<edm::PCaloHitContainer> simHitsBH;
-    event.getByToken(simhits_bh_token_, simHitsBH);
+    std::vector<edm::Handle<edm::PCaloHitContainer>> simhits_handles;
+    simhits_handles.resize(simhits_tokens_.size());
+    for (size_t i = 0; i < simhits_tokens_.size(); ++i) {
+        event.getByToken(simhits_tokens_[i], simhits_handles[i]);
+    }
 
     edm::Handle<std::vector<SimCluster>> simClusters;
     event.getByToken(simclusters_token_, simClusters);
@@ -107,27 +106,17 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
     std::unordered_map<uint32_t, std::vector<std::pair<int, float>>> simclusters_map;
 
     // Fill the simhits map
-    for (const auto& hit : *simHitsEE) {
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.id());
-        simhits_map[tcid].push_back(hit);
-    }
-    for (const auto& hit : *simHitsFH) {
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.id());
-        simhits_map[tcid].push_back(hit);
-    }
-    for (const auto& hit : *simHitsBH) {
-        uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.id());
-        simhits_map[tcid].push_back(hit);
+    for (const auto& simhit_h : simhits_handles){
+        for (const auto& simhit : *simhit_h){
+            simhits_map[simhit.id()].push_back(simhit);
+        }
     }
 
     // Fill the simclusters map
     for (uint32_t iSimCluster = 0; iSimCluster < simClusters->size(); ++iSimCluster) {
         const auto& simcluster = (*simClusters)[iSimCluster];
         for (const auto& hit : simcluster.hits_and_fractions()){
-            uint32_t tcid = triggerTools_.getTriggerGeometry()->getTriggerCellFromCell(hit.first);
-            if (tcid != 0) { // Only consider valid trigger cells
-                simclusters_map[hit.first].emplace_back(iSimCluster, hit.second);
-            }
+            simclusters_map[hit.first].emplace_back(iSimCluster, hit.second);
         }
     }
 
@@ -147,13 +136,6 @@ void L1TriggerCellTruthProducer::produce(edm::Event& event, const edm::EventSetu
                 unsigned thickness = triggerTools_.thicknessIndex(simhit.id());
                 unsigned layer = triggerTools_.layerWithOffset(simhit.id());
                 float E = calibrate(simhit.energy(), thickness, layer);
-                if (triggerTools_.isScintillator(id)) {
-                    printf("Attempting to calibrate a scintillator hit, with\n");
-                    printf("\tthickness: %u, layer: %u\n", thickness, layer);
-                    printf("\tenergy: %f, id: %u\n", simhit.energy(), simhit.id());
-                    printf("\tcalibrated energy: %f\n", E);
-                }
-
                 simE += E;
 
                 const auto& simclusters = simclusters_map.find(simhit.id());

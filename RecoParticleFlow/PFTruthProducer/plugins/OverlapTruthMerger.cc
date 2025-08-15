@@ -54,7 +54,7 @@ private:
     edm::EDGetToken simtracks_token_;
     edm::EDGetToken simclusters_token_;
     edm::EDGetToken simvertices_token_;
-    edm::EDGetToken simhits_token_;
+    std::vector<edm::EDGetToken> simhits_tokens_;
 
     double overlapThreshold_;
 
@@ -72,7 +72,6 @@ OverlapTruthMerger::OverlapTruthMerger(const edm::ParameterSet& conf)
     : simtracks_token_(consumes<std::vector<SimTrack>>(conf.getParameter<edm::InputTag>("simtracks"))),
       simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simclusters"))),
       simvertices_token_(consumes<std::vector<SimVertex>>(conf.getParameter<edm::InputTag>("simvertices"))),
-      simhits_token_(consumes<edm::PCaloHitContainer>(conf.getParameter<edm::InputTag>("simhits"))),
       overlapThreshold_(conf.getParameter<double>("overlapThreshold")),
       caloR_(conf.getParameter<double>("caloR")),
       caloZ_(conf.getParameter<double>("caloZ")),
@@ -80,6 +79,11 @@ OverlapTruthMerger::OverlapTruthMerger(const edm::ParameterSet& conf)
       distanceTol_(conf.getParameter<double>("distanceTol")),
       verbose_(conf.getParameter<int>("verbose")) 
 {
+    std::vector<edm::InputTag> simhits_tags = conf.getParameter<std::vector<edm::InputTag>>("simhits");
+    for (const auto& tag : simhits_tags) {
+        simhits_tokens_.emplace_back(consumes<edm::PCaloHitContainer>(tag));
+    }
+
     produces<std::vector<SimCluster>>("mergedSimClusters");
     produces<std::vector<SimTrack>>("mergedSimTracks"); 
 
@@ -184,9 +188,11 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     const auto& simtracks = *simtracks_h;
 
     // Get the simhits
-    edm::Handle<edm::PCaloHitContainer> simhits_h;
-    evt.getByToken(simhits_token_, simhits_h);
-    const auto& simhits = *simhits_h;
+    std::vector<edm::Handle<edm::PCaloHitContainer>> simhits_handles;
+    simhits_handles.resize(simhits_tokens_.size());
+    for (size_t i = 0; i < simhits_tokens_.size(); ++i) {
+        evt.getByToken(simhits_tokens_[i], simhits_handles[i]);
+    }
 
     //get the simclusters
     edm::Handle<std::vector<SimCluster>> simclusters_h;
@@ -199,8 +205,10 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     const auto& simvertices = *simvertices_h;
 
     std::unordered_map<int, double> totalEnergies;
-    for (const auto& simhit : simhits){
-        totalEnergies[simhit.id()] += simhit.energy();
+    for (const auto& simhits_h : simhits_handles){
+        for (const auto& simhit : *simhits_h){
+            totalEnergies[simhit.id()] += simhit.energy();
+        }
     }
 
     std::unordered_map<int, int> geantToIndexMap;
@@ -333,7 +341,7 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
         float netcharge = tracks[0].charge();
         int netpdgId = tracks[0].type();
         for(size_t i=1; i<tracks.size(); ++i){
-            if (tracks[i].type() != netpdgId){
+            if (tracks[i].type() != netpdgId && netpdgId != 0){
                 int smaller = std::min(netpdgId, tracks[i].type());
                 int larger = std::max(netpdgId, tracks[i].type());
 
@@ -341,18 +349,6 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
                     netpdgId = 11;
                 } else if (larger == 22 && std::abs(smaller) == 13){
                     netpdgId = 13;
-                } else if (std::abs(larger) > 100 && std::abs(smaller) > 100){
-                    /*
-                     * Both are hadrons.
-                     *
-                     * If the harder one is neutral and the softer one is charged, 
-                     * take the softer one.
-                     *
-                     * Else always take the harder one
-                     */
-                    if (std::abs(netcharge) < 1e-3 && std::abs(tracks[i].charge()) > 1e-3) {
-                        netpdgId = tracks[i].type();
-                    }
                 } else if (smaller == -11 && larger == 11){
                     netpdgId = 22;
                 } else if (smaller == -13 && larger == 13){
@@ -360,6 +356,7 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
                 } else {
                     printf("Warning: Merging tracks with different PDG IDs: %d and %d\n",
                            netpdgId, tracks[i].type());
+                    netpdgId = 0;
                 }
             }
             netmomentum += tracks[i].momentum();

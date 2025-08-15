@@ -34,10 +34,6 @@ public:
     void produce(edm::Event&, const edm::EventSetup&) override;
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
 
-    enum CaloBoundaryType {
-        ENDCAP = 0,
-        BARREL = 1
-    };
 private:
     int recursive_find_parent(
             int startTrackIdx,
