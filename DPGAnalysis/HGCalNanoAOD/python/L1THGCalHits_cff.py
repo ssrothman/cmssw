@@ -61,6 +61,13 @@ SimonMergedSimClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
     )
 )
 
+SimClusterTCTable = cms.EDProducer("SimClusterToTriggerCellTableProducer",
+    triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
+    simClusters = cms.InputTag('overlapMerger', 'mergedSimClusters'),
+    name = cms.string("SimonMergedSimCluster"),
+    matchName = cms.string("SimonMergedSimClusterTCs")
+)
+
 L1HGCalTCsTruth = cms.EDProducer("L1TriggerCellTruthProducer",
     triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
     simHits = cms.VInputTag('TCSimHits'),
@@ -102,6 +109,7 @@ fullChain = cms.Sequence(
     simTreeMerger *
     overlapMerger *
     SimonMergedSimClusterTable *
+    SimClusterTCTable *
     L1HGCalTCsTruth *
     triggerCellTable *
     triggerCellPropsTable *
