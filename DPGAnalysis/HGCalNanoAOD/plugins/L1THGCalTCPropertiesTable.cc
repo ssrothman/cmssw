@@ -11,6 +11,7 @@
 #include "Geometry/HcalCommonData/interface/HcalHitRelabeller.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "DataFormats/L1THGCal/interface/HGCalTriggerCell.h"
+#include "DataFormats/L1THGCal/interface/HGCalModule.h"
 #include "DataFormats/L1THGCal/interface/HGCalMulticluster.h"
 #include "DataFormats/Common/interface/AssociationMap.h"
 #include "DataFormats/Common/interface/OneToMany.h"
@@ -24,9 +25,10 @@
 #include "DataFormats/NanoAOD/interface/FlatTable.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 
-class L1HGCalTCPropertiesTableProducer : public edm::stream::EDProducer<> {
+template <typename T>
+class L1HGCalPropertiesTableProducerT : public edm::stream::EDProducer<> {
 public:
-    explicit L1HGCalTCPropertiesTableProducer(const edm::ParameterSet&);
+    explicit L1HGCalPropertiesTableProducerT(const edm::ParameterSet&);
     
     void produce(edm::Event&, const edm::EventSetup&) override;
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
@@ -39,22 +41,25 @@ private:
     HGCalTriggerTools triggerTools_;
 };
 
-L1HGCalTCPropertiesTableProducer::L1HGCalTCPropertiesTableProducer(const edm::ParameterSet& conf)
-    : trigger_cells_token_(consumes<edm::View<l1t::HGCalTriggerCell>>(conf.getParameter<edm::InputTag>("triggerCells"))),
+template <typename T>
+L1HGCalPropertiesTableProducerT<T>::L1HGCalPropertiesTableProducerT(const edm::ParameterSet& conf)
+    : trigger_cells_token_(consumes<edm::View<T>>(conf.getParameter<edm::InputTag>("triggerCells"))),
       name_(conf.getParameter<std::string>("name")),
       triggerGeomToken_(esConsumes<HGCalTriggerGeometryBase, CaloGeometryRecord, edm::Transition::BeginRun>())
 {
     produces<nanoaod::FlatTable>();
 }
 
-void L1HGCalTCPropertiesTableProducer::beginRun(const edm::Run&, const edm::EventSetup& es) {
+template <typename T>
+void L1HGCalPropertiesTableProducerT<T>::beginRun(const edm::Run&, const edm::EventSetup& es) {
     const auto& triggerGeometry = es.getHandle(triggerGeomToken_);
     triggerTools_.setGeometry(triggerGeometry.product());
 }
 
-void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::EventSetup& es) {
+template <typename T>
+void L1HGCalPropertiesTableProducerT<T>::produce(edm::Event& evt, const edm::EventSetup& es) {
     // Get the trigger cells
-    edm::Handle<edm::View<l1t::HGCalTriggerCell>> trigger_cells_h;
+    edm::Handle<edm::View<T>> trigger_cells_h;
     evt.getByToken(trigger_cells_token_, trigger_cells_h);
 
     //common
@@ -68,7 +73,12 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
     std::vector<bool> isScintillator;
 
     for(const auto& tc : *trigger_cells_h) {
-        uint32_t idint = tc.detId();
+        uint32_t idint;
+        if constexpr (std::is_same<T, l1t::HGCalTriggerCell>::value) {
+            idint = tc.detId();
+        } else if constexpr (std::is_same<T, l1t::HGCalModule>::value) {
+            idint = tc.tcId0();
+        }
 
         DetId id(idint);
 
@@ -113,11 +123,16 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
 
             isScintillator.push_back(true);
         } else {
-            throw cms::Exception("L1HGCalTCPropertiesTableProducer") 
+            throw cms::Exception("L1HGCalPropertiesTableProducerT") 
                 << "Unsupported DetId type: " << id.det() << " for trigger cell with ID: " << idint;
         }
  
-        const auto& pos = triggerTools_.getTriggerGeometry()->getTriggerCellPosition(idint);
+        GlobalPoint pos;
+        if constexpr (std::is_same<T, l1t::HGCalTriggerCell>::value) {
+            pos = triggerTools_.getTriggerGeometry()->getTriggerCellPosition(idint);
+        } else {
+            pos = triggerTools_.getTriggerGeometry()->getModulePosition(tc.moduleId());
+        }
         x.push_back(pos.x());
         y.push_back(pos.y());
         z.push_back(pos.z());
@@ -152,4 +167,8 @@ void L1HGCalTCPropertiesTableProducer::produce(edm::Event& evt, const edm::Event
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
+using L1HGCalTCPropertiesTableProducer = L1HGCalPropertiesTableProducerT<l1t::HGCalTriggerCell>;
 DEFINE_FWK_MODULE(L1HGCalTCPropertiesTableProducer);
+
+using L1HGCalModulePropertiesTableProducer = L1HGCalPropertiesTableProducerT<l1t::HGCalModule>;
+DEFINE_FWK_MODULE(L1HGCalModulePropertiesTableProducer);

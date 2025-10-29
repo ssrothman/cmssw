@@ -6,4 +6,6 @@ typedef SimpleFlatTableProducer<l1t::HGCalTriggerCell> SimpleHGCalTriggerCellFla
 #include "FWCore/Framework/interface/MakerMacros.h"
 DEFINE_FWK_MODULE(SimpleHGCalTriggerCellFlatTableProducer);
 
-
+#include "DataFormats/L1THGCal/interface/HGCalModule.h"
+typedef SimpleFlatTableProducer<l1t::HGCalModule> SimpleHGCalModuleFlatTableProducer;
+DEFINE_FWK_MODULE(SimpleHGCalModuleFlatTableProducer);

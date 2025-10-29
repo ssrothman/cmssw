@@ -6,6 +6,7 @@
 #include "DataFormats/L1THGCal/interface/HGCalCluster.h"
 #include "DataFormats/L1THGCal/interface/HGCalMulticluster.h"
 #include "DataFormats/L1THGCal/interface/HGCalTower.h"
+#include "DataFormats/L1THGCal/interface/HGCalModule.h"
 #include "DataFormats/L1THGCal/interface/HGCalTowerMap.h"
 #include "DataFormats/L1THGCal/interface/HGCalTriggerCell.h"
 #include "DataFormats/L1THGCal/interface/HGCalTriggerCellTruth.h"

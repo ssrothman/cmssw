@@ -24,7 +24,7 @@ simTreeMerger = cms.EDProducer("SimTreeTruthMerger",
     caloR = cms.double(136.5),
     caloZ = cms.double(318.5),
 
-    verbose = cms.int32(1)
+    verbose = cms.int32(0)
 )
 
 overlapMerger = cms.EDProducer("OverlapTruthMerger",
@@ -39,7 +39,7 @@ overlapMerger = cms.EDProducer("OverlapTruthMerger",
     overlapThreshold = cms.double(0.2),
     distanceTol = cms.double(0.0),
 
-    verbose = cms.int32(1)
+    verbose = cms.int32(0)
 )
 
 SimonMergedSimClusterTable = cms.EDProducer("SimpleSimClusterFlatTableProducer",
@@ -78,6 +78,27 @@ L1HGCalTCsTruth = cms.EDProducer("L1TriggerCellTruthProducer",
     thicknessCorrections = thicknessCorrections,
 )
 
+HGCModules = cms.EDProducer("L1THGCalModuleProducer",
+    triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
+    tcTruth = cms.InputTag('L1HGCalTCsTruth'),
+)
+
+moduleTruth = cms.EDProducer("L1THGCalModuleTruthProducer",
+    wafers = cms.InputTag('HGCModules'),
+)
+
+ECONdata = cms.EDProducer("L1THGCalECONdataProducer",
+    wafers = cms.InputTag('HGCModules'),
+    bitsPerADC = cms.uint32(22),  
+    bitsPerNorm = cms.uint32(12),
+    bitsPerCALQ = cms.uint32(23),
+    bitsPerInput = cms.uint32(8),
+    useModuleFactor = cms.bool(True),  
+    bitShiftNormalize = cms.bool(True),
+    useTransverseADC = cms.bool(True), 
+    normByMax = cms.bool(True)
+)
+
 triggerCellTable = cms.EDProducer("SimpleHGCalTriggerCellFlatTableProducer",
     src = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
     name = cms.string("L1THGCalTC"),
@@ -93,15 +114,44 @@ triggerCellTable = cms.EDProducer("SimpleHGCalTriggerCellFlatTableProducer",
     )
 )
 
+moduleTable = cms.EDProducer("SimpleHGCalModuleFlatTableProducer",
+    src = cms.InputTag('HGCModules'),
+    name = cms.string("L1THGCalModule"),
+    singleton = cms.bool(False),  # the number of entries is variable
+    extension = cms.bool(False),  # this is the main table for the modules
+    variables = cms.PSet(
+        moduleId = Var('moduleId()', 'int', doc='Module ID of the trigger cell'),
+        energy = Var('energy()', 'float', doc='Energy of the module'),
+        mipPt = Var('mipPt()', 'int', doc='MIP pT of the module'),
+    )
+)
+
 triggerCellPropsTable = cms.EDProducer("L1HGCalTCPropertiesTableProducer",
     triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
     name = cms.string("L1THGCalTC"),
+)
+
+modulePropsTable = cms.EDProducer("L1HGCalModulePropertiesTableProducer",
+    triggerCells = cms.InputTag('HGCModules'),
+    name = cms.string("L1THGCalModule"),
 )
 
 triggerCellTruthTable = cms.EDProducer("L1HGCalTCTruthTableProducer",
     triggerCells = cms.InputTag('FloatingpointThreshold0', 'HGCalConcentratorProcessorSelection'),
     tcTruth = cms.InputTag('L1HGCalTCsTruth'),
     name = cms.string("L1THGCalTC"),
+)
+
+moduleTruthTable = cms.EDProducer("L1HGCalModuleTruthTableProducer",
+    triggerCells = cms.InputTag('HGCModules'),
+    tcTruth = cms.InputTag('moduleTruth'),
+    name = cms.string("L1THGCalModule"),
+)
+
+ECONdataTable = cms.EDProducer("L1HGCalECONdataTableProducer",
+    wafers=cms.InputTag('HGCModules'),
+    ECONdata = cms.InputTag('ECONdata'),
+    name = cms.string("L1THGCalModule"),
 )
 
 fullChain = cms.Sequence(
@@ -113,5 +163,12 @@ fullChain = cms.Sequence(
     L1HGCalTCsTruth *
     triggerCellTable *
     triggerCellPropsTable *
-    triggerCellTruthTable
+    triggerCellTruthTable *
+    HGCModules *
+    moduleTable *
+    modulePropsTable *
+    ECONdata *
+    moduleTruth *
+    moduleTruthTable *
+    ECONdataTable
 )

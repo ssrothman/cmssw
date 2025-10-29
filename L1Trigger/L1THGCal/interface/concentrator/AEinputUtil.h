@@ -111,7 +111,7 @@ public:
     void run(const std::vector<l1t::HGCalTriggerCell>& trigCellVecInput){
         //printf("top of run\n");
         //fflush(stdout);
-        clear();
+        //clear();
         //printf("cleared\n");
         //fflush(stdout);
 
