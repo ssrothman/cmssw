@@ -30,33 +30,25 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "CommonTools/BaseParticlePropagator/interface/RawParticle.h"
 #include "CommonTools/BaseParticlePropagator/interface/BaseParticlePropagator.h"
+#include "CaloML/SimTruth/src/util.h"
 
-class OverlapTruthMerger : public edm::stream::EDProducer<> {
+class ImpactDistanceTruthMerger : public edm::stream::EDProducer<> {
 public:
-    explicit OverlapTruthMerger(const edm::ParameterSet&);
+    explicit ImpactDistanceTruthMerger(const edm::ParameterSet&);
     
     void produce(edm::Event&, const edm::EventSetup&) override;
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
 
 private:
-    double computeOverlap(
-            const std::unordered_map<uint32_t, double>& cluster1,
-            const std::unordered_map<uint32_t, double>& cluster2,
-            const std::set<uint32_t>& detIds1,
-            const std::set<uint32_t>& detIds2);
-            
     double impactDistance(
             const SimTrack& track1,
             const SimTrack& track2,
             const SimVertex& vertex1,
             const SimVertex& vertex2);
 
-    edm::EDGetToken simtracks_token_;
     edm::EDGetToken simclusters_token_;
     edm::EDGetToken simvertices_token_;
     std::vector<edm::EDGetToken> simhits_tokens_;
-
-    double overlapThreshold_;
 
     double caloR_;
     double caloZ_;
@@ -68,11 +60,9 @@ private:
 };
 
 
-OverlapTruthMerger::OverlapTruthMerger(const edm::ParameterSet& conf)
-    : simtracks_token_(consumes<std::vector<SimTrack>>(conf.getParameter<edm::InputTag>("simtracks"))),
-      simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simclusters"))),
+ImpactDistanceTruthMerger::ImpactDistanceTruthMerger(const edm::ParameterSet& conf)
+    : simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simclusters"))),
       simvertices_token_(consumes<std::vector<SimVertex>>(conf.getParameter<edm::InputTag>("simvertices"))),
-      overlapThreshold_(conf.getParameter<double>("overlapThreshold")),
       caloR_(conf.getParameter<double>("caloR")),
       caloZ_(conf.getParameter<double>("caloZ")),
       magfield_token_(esConsumes<MagneticField, IdealMagneticFieldRecord, edm::Transition::BeginRun>()),
@@ -92,48 +82,13 @@ OverlapTruthMerger::OverlapTruthMerger(const edm::ParameterSet& conf)
     );
 }
 
-void OverlapTruthMerger::beginRun(const edm::Run&, const edm::EventSetup& es) {
+void ImpactDistanceTruthMerger::beginRun(const edm::Run&, const edm::EventSetup& es) {
     edm::ESHandle<MagneticField> magfield;
     magfield = es.getHandle(magfield_token_);
     propagator_.setMagneticField(magfield->inTesla(GlobalPoint(0,0,0)).z());
 }
 
-double OverlapTruthMerger::computeOverlap(
-        const std::unordered_map<uint32_t, double>& cluster1,
-        const std::unordered_map<uint32_t, double>& cluster2,
-        const std::set<uint32_t>& detIds1,
-        const std::set<uint32_t>& detIds2) {
-
-    std::set<uint32_t> commonDetIds;
-    std::set_intersection(
-        detIds1.begin(), detIds1.end(),
-        detIds2.begin(), detIds2.end(),
-        std::inserter(commonDetIds, commonDetIds.begin())
-    );
-    double overlapEnergy1 = 0.0;
-    double overlapEnergy2 = 0.0;
-    for (uint32_t detId : commonDetIds) {
-        overlapEnergy1 += cluster1.at(detId);
-        overlapEnergy2 += cluster2.at(detId);
-    }
-
-    double totalEnergy1 = 0.0;
-    for (const auto& kvpair : cluster1) {
-        totalEnergy1 += kvpair.second;
-    }
-
-    double totalEnergy2 = 0.0;
-    for (const auto& kvpair : cluster2) {
-        totalEnergy2 += kvpair.second;
-    }
-
-    return std::max(
-        overlapEnergy1 / totalEnergy1, 
-        overlapEnergy2 / totalEnergy2
-    );
-}
-
-double OverlapTruthMerger::impactDistance(
+double ImpactDistanceTruthMerger::impactDistance(
         const SimTrack& track1,
         const SimTrack& track2,
         const SimVertex& vertex1,
@@ -180,13 +135,8 @@ double OverlapTruthMerger::impactDistance(
     return R;
 }
 
-void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
-    // Get the simtracks
-    edm::Handle<std::vector<SimTrack>> simtracks_h;
-    evt.getByToken(simtracks_token_, simtracks_h);
-    const auto& simtracks = *simtracks_h;
-
-    // Get the simhits
+void ImpactDistanceTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
+    // Get the simhits (needed for energy maps)
     std::vector<edm::Handle<edm::PCaloHitContainer>> simhits_handles;
     simhits_handles.resize(simhits_tokens_.size());
     for (size_t i = 0; i < simhits_tokens_.size(); ++i) {
@@ -203,55 +153,20 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     evt.getByToken(simvertices_token_, simvertices_h);
     const auto& simvertices = *simvertices_h;
 
-    std::unordered_map<uint32_t, double> totalEnergies;
-    for (const auto& simhits_h : simhits_handles){
-        for (const auto& simhit : *simhits_h){
-            totalEnergies[simhit.id()] += simhit.energy();
-        }
-    }
-
-    std::unordered_map<uint32_t, uint32_t> geantToIndexMap;
-    for(size_t i = 0; i < simtracks.size(); ++i){
-        geantToIndexMap[simtracks[i].trackId()] = i;
-    }
-
-    std::vector<std::unordered_map<uint32_t, double>> clusterHitEnergies;
-    clusterHitEnergies.reserve(simclusters.size());
-    std::vector<std::set<uint32_t>> clusterDetIds;
-    clusterDetIds.reserve(simclusters.size());
-    for(const auto& simcluster : simclusters){
-        std::unordered_map<uint32_t, double> hitEnergies;
-        std::set<uint32_t> detIds;
-        for(const auto& hit : simcluster.hits_and_fractions()){
-            hitEnergies[hit.first] += hit.second * totalEnergies[hit.first];
-            detIds.insert(hit.first);
-        }
-        clusterHitEnergies.push_back(hitEnergies);
-        clusterDetIds.push_back(detIds);
-    }
+    auto totalEnergies = CaloML::buildTotalEnergies(simhits_handles);
 
     std::vector<std::set<uint32_t>> adjacencies;
     adjacencies.resize(simclusters.size());
     for (size_t i=0; i<simclusters.size(); ++i){
         for(size_t j=i+1; j<simclusters.size(); ++j){
-            double overlap = computeOverlap(
-                clusterHitEnergies[i], clusterHitEnergies[j],
-                clusterDetIds[i], clusterDetIds[j]
-            );
-
-            if (overlap > overlapThreshold_){
-                adjacencies[i].insert(j);
-                adjacencies[j].insert(i);
-            } else if (simclusters[i].genParticles().size() == 1 && 
-                       simclusters[j].genParticles().size() == 1) {
+            // Only attempt distance-based merging if both clusters have a single generator particle
+            if (simclusters[i].genParticles().size() == 1 && 
+                simclusters[j].genParticles().size() == 1) {
 
                 const auto& track1 = simclusters[i].g4Tracks()[0];
                 const auto& track2 = simclusters[j].g4Tracks()[0];
 
-                if (track1.vertIndex() < 0 ||
-                    track2.vertIndex() < 0){
-                    continue;
-                }
+                if (track1.vertIndex() < 0 || track2.vertIndex() < 0) continue;
 
                 double R = impactDistance(
                     track1, track2,
@@ -324,64 +239,11 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
             mergedClusters->push_back(simclusters[component[0]]);
             continue;
         }
-    
-        std::vector<SimTrack> tracks;
-        for (uint32_t idx: component){
-            for (const auto& track : simclusters[idx].g4Tracks()){
-                tracks.push_back(track);
-            }
-        }
 
-        std::sort(tracks.begin(), tracks.end(), [](const SimTrack& a, const SimTrack& b){
-            return a.momentum().pt() > b.momentum().pt();
-        });
-
-        math::XYZTLorentzVectorD netmomentum = tracks[0].momentum();
-        float netcharge = tracks[0].charge();
-        int netpdgId = tracks[0].type();
-        for(size_t i=1; i<tracks.size(); ++i){
-            if (tracks[i].type() != netpdgId && netpdgId != 0){
-                int smaller = std::min(netpdgId, tracks[i].type());
-                int larger = std::max(netpdgId, tracks[i].type());
-
-                if (larger == 22 && std::abs(smaller) == 11){
-                    netpdgId = 11;
-                } else if (larger == 22 && std::abs(smaller) == 13){
-                    netpdgId = 13;
-                } else if (smaller == -11 && larger == 11){
-                    netpdgId = 22;
-                } else if (smaller == -13 && larger == 13){
-                    netpdgId = 22;
-                } else {
-                    printf("Warning: Merging tracks with different PDG IDs: %d and %d\n",
-                           netpdgId, tracks[i].type());
-                    netpdgId = 0;
-                }
-            }
-            netmomentum += tracks[i].momentum();
-            netcharge += tracks[i].charge();
-        }
-        SimTrack mergedTrack(
-            netpdgId, netmomentum
-        );
-
-        std::unordered_map<uint32_t, double> mergedHitEnergies;
-        for (uint32_t idx : component){
-            for (const auto& hit : simclusters[idx].hits_and_fractions()){
-                mergedHitEnergies[hit.first] += hit.second * totalEnergies[hit.first];
-            }
-        }
-
-        SimCluster newcluster(mergedTrack);
-        for (const auto& kvpair : mergedHitEnergies){
-            newcluster.addRecHitAndFraction(
-                    kvpair.first, 
-                    kvpair.second / totalEnergies[kvpair.first]
-            );
-            newcluster.addHitEnergy(kvpair.second);
-            newcluster.addSimHit(PCaloHit(float(kvpair.second)));
-        }
-
+        SimTrack mergedTrack = CaloML::mergeTracksFromComponent(simclusters, component);
+        auto mergedHitEnergies = CaloML::computeMergedHitEnergiesForComponent(simclusters, component, totalEnergies);
+        SimCluster newcluster = CaloML::makeMergedSimCluster(mergedTrack, mergedHitEnergies, totalEnergies);
+        
         mergedClusters->push_back(newcluster);
         mergedTracks->push_back(mergedTrack);
     }
@@ -390,4 +252,4 @@ void OverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     evt.put(std::move(mergedTracks), "mergedSimTracks");
 }
 
-DEFINE_FWK_MODULE(OverlapTruthMerger);
+DEFINE_FWK_MODULE(ImpactDistanceTruthMerger);

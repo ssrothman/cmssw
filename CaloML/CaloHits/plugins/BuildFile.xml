@@ -22,6 +22,7 @@
     <use name="HGCSimTruth/HGCSimTruth" />
     <use name="RecoHGCal/GraphReco" />
     <use name="RecoParticleFlow/PFTruthProducer" />
+    <use name="PhysicsTools/NanoAOD" />
     <use name="hepmc" />
     <use name="heppdt" />
     <flags EDM_PLUGIN="1" />

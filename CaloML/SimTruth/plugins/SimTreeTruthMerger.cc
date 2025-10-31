@@ -25,6 +25,7 @@
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/Track/interface/SimTrack.h"
 #include "SimDataFormats/Vertex/interface/SimVertex.h"
+#include "CaloML/SimTruth/src/util.h"
 
 
 class SimTreeTruthMerger : public edm::stream::EDProducer<> {
@@ -95,7 +96,6 @@ uint32_t SimTreeTruthMerger::recursive_find_parent(
     vertexPastCaloBoundary = std::abs(pos.Z()) > caloZ_;
     vertexPastCaloBoundary |= std::sqrt(pos.X()*pos.X() + pos.Y()*pos.Y()) > caloR_;
 
-    //extrapolate parent and daughter momenta from vertex to calo boundary
     uint32_t parentIdx = geantToIndexMap.at(vertex.parentIndex());
     const auto& parent = simTracks[parentIdx];
 
@@ -256,19 +256,8 @@ void SimTreeTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
             totalEnergy += hit.energy();
         }
 
-        SimCluster newcluster(track);
-
-        //iterate over detIdToEnergyMap to fill the SimCluster
-        for (const auto& kvpair : detIdToEnergyPerTrack) {
-            newcluster.addRecHitAndFraction(
-                kvpair.first, 
-                kvpair.second / detIdToEnergyMap[kvpair.first]
-            );
-            newcluster.addHitEnergy(
-                kvpair.second
-            );
-        }
-        
+        // build merged cluster using utility
+        auto newcluster = CaloML::makeMergedSimCluster(track, detIdToEnergyPerTrack, detIdToEnergyMap);
         mergedclusters->push_back(newcluster);
     }
 
