@@ -1,6 +1,6 @@
-import FWCore.ParameterSet.Config as cms
+import FWCore.ParameterSet.Config as cms # pyright: ignore[reportMissingImports]
 
-from common_cff import merging_params
+from CaloML.SimTruth.common_cff import merging_params # pyright: ignore[reportMissingImports]
 
 def setupSimTruth(process, subdet, verbose=0):
     #lookup parameters
@@ -10,15 +10,7 @@ def setupSimTruth(process, subdet, verbose=0):
         valid_options = "', '".join(merging_params.keys())
         raise ValueError(f"subdet must be one of '{valid_options}'")
 
-    seq = cms.Sequence()
-
-    #setup list of simhit collections
-    if subdet == 'L1THGCAL':
-        process.TCSimHits = cms.EDProducer("TriggerCellSimHitsProducer",
-            simHits = merging_params['HGCAL'].simhits
-        )
-        seq += process.TCSimHits
-
+    producers = []
 
     setattr(process, 'SimTreeTruthMerger%s'%subdet,
         cms.EDProducer("SimTreeTruthMerger",
@@ -53,17 +45,20 @@ def setupSimTruth(process, subdet, verbose=0):
         )
     )
 
-    seq += getattr(process, 'SimTreeTruthMerger%s'%subdet)
-    seq += getattr(process, 'OverlapTruthMerger%s'%subdet)
+    producers += [getattr(process, 'SimTreeTruthMerger%s'%subdet)]
+    producers += [getattr(process, 'OverlapTruthMerger%s'%subdet)]
     
 
-    setattr(process, 'SimTruth%sSequence'%subdet,
-        seq
+    setattr(process, 'SimTruth%sTask'%subdet,
+        cms.Task(*producers)
+    )
+    process.schedule.associate(
+        getattr(process, 'SimTruth%sTask'%subdet)
     )
 
     return process
 
-from RecoParticleFlow.PFTruthProducer.SimClusterTable_cfi import SimClusterTable
+from CaloML.SimTruth.SimClusterTable_cfi import SimClusterTable # pyright: ignore[reportMissingImports]
 
 def setupSimTruthTables(process, subdet):
     setattr(process, 'MergedSimCluster%sTable'%subdet,
@@ -73,15 +68,15 @@ def setupSimTruthTables(process, subdet):
         )
     )
 
-    setattr(process, 'SimTruth%sTablesSequence'%subdet,
-        cms.Sequence(
+    setattr(process, 'SimTruth%sTablesTask'%subdet,
+        cms.Task(
             getattr(process, 'MergedSimCluster%sTable'%subdet)
         )
     )
 
-    #process.schedule.associate(
-    #    getattr(process, 'SimTruth%sTablesTask'%subdet)
-    #)
+    process.schedule.associate(
+        getattr(process, 'SimTruth%sTablesTask'%subdet)
+    )
 
     return process
 

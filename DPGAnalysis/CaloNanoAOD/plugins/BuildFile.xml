@@ -8,6 +8,7 @@
 <use name="Geometry/CaloGeometry"/>
 <use name="Geometry/CSCGeometry"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
+<use name="Geometry/HcalTowerAlgo"/>
 <use name="PhysicsTools/PatAlgos"/>
 <use name="DataFormats/NanoAOD"/>
 <use name="IOPool/Provenance"/>

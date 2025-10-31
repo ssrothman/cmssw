@@ -17,9 +17,13 @@ public:
   HitPositionTableProducer(edm::ParameterSet const& params)
       : name_(params.getParameter<std::string>("name")),
         doc_(params.getParameter<std::string>("doc")),
-        src_(consumes<T>(params.getParameter<edm::InputTag>("src"))),
         cut_(params.getParameter<std::string>("cut"), true) {
     produces<nanoaod::FlatTable>();
+
+    const std::vector<edm::InputTag> srctags = params.getParameter<std::vector<edm::InputTag>>("src");
+    for (const auto& tag : srctags) {
+        srcs_.emplace_back(consumes<T>(tag));
+    }
   }
 
   ~HitPositionTableProducer() override {}
@@ -34,23 +38,27 @@ public:
 
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override {
     edm::Handle<T> objs;
-    iEvent.getByToken(src_, objs);
 
     std::vector<float> xvals;
     std::vector<float> yvals;
     std::vector<float> zvals;
     std::vector<float> hitrvals;
-    for (const auto& obj : *objs) {
-      if (cut_(obj)) {
-        auto position = positionFromHit(obj);
-        xvals.emplace_back(position.x());
-        yvals.emplace_back(position.y());
-        zvals.emplace_back(position.z());
-        hitrvals.emplace_back(radiusFromHit(obj));
-      }
+
+    for (const auto& src : srcs_){
+        iEvent.getByToken(src, objs);
+
+        for (const auto& obj : *objs) {
+          if (cut_(obj)) {
+            auto position = positionFromHit(obj);
+            xvals.emplace_back(position.x());
+            yvals.emplace_back(position.y());
+            zvals.emplace_back(position.z());
+            hitrvals.emplace_back(radiusFromHit(obj));
+          }
+        }
     }
 
-    auto tab = std::make_unique<nanoaod::FlatTable>(xvals.size(), name_, false, true);
+    auto tab = std::make_unique<nanoaod::FlatTable>(xvals.size(), name_, false, false);
     tab->addColumn<float>("x", xvals, "x position");
     tab->addColumn<float>("y", yvals, "y position");
     tab->addColumn<float>("z", zvals, "z position");
@@ -62,7 +70,7 @@ public:
 
 protected:
   const std::string name_, doc_;
-  const edm::EDGetTokenT<T> src_;
+  std::vector<edm::EDGetTokenT<T>> srcs_;
   const StringCutObjectSelector<typename T::value_type> cut_;
 };
 

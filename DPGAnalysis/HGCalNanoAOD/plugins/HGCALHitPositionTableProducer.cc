@@ -12,10 +12,10 @@
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
 #include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
+#include "DataFormats/ParticleFlowReco/interface/PFRecHit.h"
 
 template <typename T>
 class HGCalHitPositionTableProducer : public HitPositionTableProducer<edm::View<T>> {
-//class HGCalHitPositionTableProducer : public HitPositionTableProducer<edm::View<CaloRecHit>> {
 public:
   HGCalHitPositionTableProducer(edm::ParameterSet const& params)
       : HitPositionTableProducer<edm::View<T>>(params),
@@ -23,8 +23,25 @@ public:
 
   ~HGCalHitPositionTableProducer() override {}
 
+  float radiusFromHit(const CaloRecHit& hit) {
+    return radiusFromDetId(hit.detid()); 
+  }
+
+  float radiusFromHit(const reco::PFRecHit& hit) {
+    return radiusFromDetId(hit.detId()); 
+  }
+
+  float radiusFromHit(const PCaloHit& hit) {
+    return radiusFromDetId(hit.id()); 
+  }
+
   GlobalPoint positionFromHit(const CaloRecHit& hit) { 
     DetId detId = hit.detid();
+    return positionFromDetId(detId); 
+  }
+
+  GlobalPoint positionFromHit(const reco::PFRecHit& hit) { 
+    DetId detId = hit.detId();
     return positionFromDetId(detId); 
   }
 
@@ -32,10 +49,6 @@ public:
     DetId detId = hit.id();
     return positionFromDetId(detId); 
   }
-
-  float radiusFromHit(const CaloRecHit& hit) { return radiusFromDetId(hit.detid()); }
-
-  float radiusFromHit(const PCaloHit& hit) { return radiusFromDetId(hit.id()); }
 
   void beginRun(const edm::Run&, const edm::EventSetup& iSetup) override {
     auto& geom = iSetup.getData(caloGeoToken_);
@@ -47,7 +60,7 @@ public:
     if (det == DetId::HGCalEE || det == DetId::HGCalHSi || det == DetId::HGCalHSc) {
       return rhtools_.getPosition(id);
     } else {
-      throw cms::Exception("HGCalHitPositionTableProducer") << "Unsupported DetId type";
+      throw cms::Exception("HGCalHitPositionTableProducer") << "Unsupported DetId type" << id.det();
     }
   }
 
@@ -79,8 +92,10 @@ protected:
 };
 
 #include "FWCore/Framework/interface/MakerMacros.h"
-//typedef HGCalHitPositionTableProducer HGCalRecHitPositionTableProducer;
 typedef HGCalHitPositionTableProducer<CaloRecHit> HGCalRecHitPositionTableProducer;
 typedef HGCalHitPositionTableProducer<PCaloHit> HGCalSimHitPositionTableProducer;
+typedef HGCalHitPositionTableProducer<reco::PFRecHit> HGCalPFRecHitPositionTableProducer;
+
 DEFINE_FWK_MODULE(HGCalRecHitPositionTableProducer);
 DEFINE_FWK_MODULE(HGCalSimHitPositionTableProducer);
+DEFINE_FWK_MODULE(HGCalPFRecHitPositionTableProducer);

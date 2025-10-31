@@ -1,5 +1,5 @@
-import FWCore.ParameterSet.Config as cms
-from PhysicsTools.NanoAOD.common_cff import Var
+import FWCore.ParameterSet.Config as cms # pyright: ignore[reportMissingImports]
+from PhysicsTools.NanoAOD.common_cff import Var # pyright: ignore[reportMissingImports]
 
 SimClusterTable = cms.EDProducer(
     "SimpleSimClusterFlatTableProducer",
