@@ -26,28 +26,38 @@ def setupSimTruth(process, subdet, verbose=0):
         )
     )
 
-    setattr(process, 'OverlapTruthMerger%s'%subdet,
+    setattr(process, 'ImpactDistanceTruthMerger%s'%subdet,
         cms.EDProducer(
-            'OverlapTruthMerger',
+            'ImpactDistanceTruthMerger',
             simvertices = cms.InputTag('g4SimHits'),
-
-            simtracks = cms.InputTag('SimTreeTruthMerger%s:mergedSimTracks'%subdet),
             simhits = cms.VInputTag('SimTreeTruthMerger%s:relabeledSimHits'%subdet),
             simclusters = cms.InputTag('SimTreeTruthMerger%s:mergedSimClusters'%subdet),
 
             caloR = params.caloR,
             caloZ = params.caloZ,
 
-            overlapThreshold = params.overlapThreshold,
             distanceTol = params.distanceTol,
 
             verbose = cms.int32(verbose)
         )
     )
 
+        
+    setattr(process, 'HitOverlapTruthMerger%s'%subdet,
+        cms.EDProducer(
+            'HitOverlapTruthMerger',
+            simhits = cms.VInputTag('SimTreeTruthMerger%s:relabeledSimHits'%subdet),
+            simclusters = cms.InputTag('ImpactDistanceTruthMerger%s:mergedSimClusters'%subdet),
+
+            overlapThreshold = params.overlapThreshold,
+
+            verbose = cms.int32(verbose)
+        )
+    )
+
     producers += [getattr(process, 'SimTreeTruthMerger%s'%subdet)]
-    producers += [getattr(process, 'OverlapTruthMerger%s'%subdet)]
-    
+    producers += [getattr(process, 'ImpactDistanceTruthMerger%s'%subdet)]
+    producers += [getattr(process, 'HitOverlapTruthMerger%s'%subdet)]
 
     setattr(process, 'SimTruth%sTask'%subdet,
         cms.Task(*producers)
@@ -63,7 +73,7 @@ from CaloML.SimTruth.SimClusterTable_cfi import SimClusterTable # pyright: ignor
 def setupSimTruthTables(process, subdet):
     setattr(process, 'MergedSimCluster%sTable'%subdet,
         SimClusterTable.clone(
-            src = cms.InputTag('OverlapTruthMerger%s:mergedSimClusters'%subdet),
+            src = cms.InputTag('HitOverlapTruthMerger%s:mergedSimClusters'%subdet),
             name = 'MergedSimCluster%s'%subdet
         )
     )

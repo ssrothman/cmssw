@@ -58,7 +58,7 @@ public:
         }
     }
 
-    auto tab = std::make_unique<nanoaod::FlatTable>(xvals.size(), name_, false, false);
+    auto tab = std::make_unique<nanoaod::FlatTable>(xvals.size(), name_, false, true);
     tab->addColumn<float>("x", xvals, "x position");
     tab->addColumn<float>("y", yvals, "y position");
     tab->addColumn<float>("z", zvals, "z position");

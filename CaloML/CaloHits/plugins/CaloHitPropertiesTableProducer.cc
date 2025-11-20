@@ -79,6 +79,7 @@ public:
     edm::Handle<T> objs;
 
     std::vector<int> dets, subdets;
+    std::vector<float> energies, times;
 
     for (const auto& src : srcs_){
         iEvent.getByToken(src, objs);
@@ -89,6 +90,8 @@ public:
                 DetId::Detector det = detid.det();
 
                 dets.push_back(det);
+                energies.push_back(obj.energy());
+                times.push_back(obj.time());
 
                 if (det == DetId::Ecal){
                     EcalSubdetector subdet = static_cast<EcalSubdetector>(detid.subdetId());
@@ -106,6 +109,8 @@ public:
     auto tab = std::make_unique<nanoaod::FlatTable>(subdets.size(), name_, false, false);
     tab->addColumn<int>("subdet", subdets, "Subdetector ID");
     tab->addColumn<int>("det", dets, "Detector ID");
+    tab->addColumn<float>("energy", energies, "Hit energy");
+    tab->addColumn<float>("time", times, "Hit time");
 
     iEvent.put(std::move(tab));
   }
@@ -120,15 +125,15 @@ typedef CaloHitPropertiesTableProducer<edm::View<PCaloHit>> CaloSimHitProperties
 typedef CaloHitPropertiesTableProducer<edm::View<CaloRecHit>> CaloCaloRecHitPropertiesTableProducer;
 typedef CaloHitPropertiesTableProducer<edm::View<reco::PFRecHit>> CaloPFRecHitPropertiesTableProducer;
 
-typedef CaloHitPropertiesTableProducer<edm::View<EcalRecHit>> EcalCaloRecHitPropertiesTableProducer;
-typedef CaloHitPropertiesTableProducer<edm::View<HBHERecHit>> HBHECaloRecHitPropertiesTableProducer;
-typedef CaloHitPropertiesTableProducer<edm::View<HFRecHit>> HFCaloRecHitPropertiesTableProducer;
-typedef CaloHitPropertiesTableProducer<edm::View<HORecHit>> HOCaloRecHitPropertiesTableProducer;
+typedef CaloHitPropertiesTableProducer<edm::View<EcalRecHit>> EcalRecHitPropertiesTableProducer;
+typedef CaloHitPropertiesTableProducer<edm::View<HBHERecHit>> HBHERecHitPropertiesTableProducer;
+typedef CaloHitPropertiesTableProducer<edm::View<HFRecHit>> HFRecHitPropertiesTableProducer;
+typedef CaloHitPropertiesTableProducer<edm::View<HORecHit>> HORecHitPropertiesTableProducer;
 
 DEFINE_FWK_MODULE(CaloSimHitPropertiesTableProducer);
 DEFINE_FWK_MODULE(CaloCaloRecHitPropertiesTableProducer);
 DEFINE_FWK_MODULE(CaloPFRecHitPropertiesTableProducer);
-DEFINE_FWK_MODULE(EcalCaloRecHitPropertiesTableProducer);
-DEFINE_FWK_MODULE(HBHECaloRecHitPropertiesTableProducer);
-DEFINE_FWK_MODULE(HFCaloRecHitPropertiesTableProducer);
-DEFINE_FWK_MODULE(HOCaloRecHitPropertiesTableProducer);
+DEFINE_FWK_MODULE(EcalRecHitPropertiesTableProducer);
+DEFINE_FWK_MODULE(HBHERecHitPropertiesTableProducer);
+DEFINE_FWK_MODULE(HFRecHitPropertiesTableProducer);
+DEFINE_FWK_MODULE(HORecHitPropertiesTableProducer);

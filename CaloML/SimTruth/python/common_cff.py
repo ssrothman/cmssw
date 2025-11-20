@@ -1,5 +1,60 @@
 import FWCore.ParameterSet.Config as cms # pyright: ignore[reportMissingImports]
 
+rechits = {
+    'HGCAL' : {
+        'hits' : cms.VInputTag(
+            'HGCalRecHit:HGCEERecHits',
+            'HGCalRecHit:HGCHEFRecHits',
+            'HGCalRecHit:HGCHEBRecHits'
+        ),
+        'pos_producer' : 'HGCalRecHitPositionTableProducer',
+        'props_producer' : 'HGCalRecHitPropertiesTableProducer',
+        'hittruth_producer' : 'HGCalRecHitTruthBuilder'
+    },
+    'L1THGCAL' : {
+        'hits' : cms.VInputTag(
+            'FloatingpointThreshold0:HGCalConcentratorProcessorSelection'
+        ),
+        'pos_producer' : 'L1THGCalRecHitPositionTableProducer',
+        'props_producer' : 'HGCalTriggerCellPropertiesTableProducer',
+        'hittruth_producer' : 'HGCalTriggerCellTruthBuilder'
+    },
+    'HBHE' : {
+        'hits' : cms.VInputTag(
+            'hbhereco',
+        ),
+        'pos_producer' : 'HBHERecHitPositionTableProducer' ,
+        'props_producer' : 'HBHERecHitPropertiesTableProducer',
+        'hittruth_producer' : 'HBHERecHitTruthBuilder'
+    },
+    'HF' : {
+        'hits' : cms.VInputTag(
+            'hfreco',
+        ),
+        'pos_producer' : 'HFRecHitPositionTableProducer',
+        'props_producer' : 'HFRecHitPropertiesTableProducer',
+        'hittruth_producer' : 'HFRecHitTruthBuilder'
+    },
+    'HO' : {
+        'hits' : cms.VInputTag(
+            'horeco',
+        ),
+        'pos_producer' : 'HORecHitPositionTableProducer' ,
+        'props_producer' : 'HORecHitPropertiesTableProducer',
+        'hittruth_producer' : 'HORecHitTruthBuilder'
+    },
+    'ECAL' : {
+        'hits' : cms.VInputTag(
+            'ecalRecHit:EcalRecHitsEB',
+            'ecalRecHit:EcalRecHitsEE',
+            'ecalPreshowerRecHit:EcalRecHitsES'
+        ),
+        'pos_producer' : 'EcalRecHitPositionTableProducer',
+        'props_producer' : 'EcalRecHitPropertiesTableProducer',
+        'hittruth_producer' : 'EcalRecHitTruthBuilder'
+    }
+}
+
 merging_params = {
     #geometry from https://cms-docdb.cern.ch/cgi-bin/PublicDocDB/RetrieveFile?docid=13251&filename=20210803%20HGCAL%20PARAMETER%20DRAWING.pdf&version=11
     'HGCAL' : cms.PSet(
@@ -11,19 +66,7 @@ merging_params = {
             'g4SimHits:HGCHitsEE',
             'g4SimHits:HGCHitsHEfront',
             'g4SimHits:HGCHitsHEback'
-        ),
-        rechits = cms.VInputTag(
-            'HGCalRecHit:HGCEERecHits',
-            'HGCalRecHit:HGCEBRecHits',
-            'HGCalRecHit:HGCHEFRecHits',
-            #'HGCalRecHit:HGCHFNoseRecHits',
-
-            #or
-            #'particleFlowRecHitHGC'
-
-            #or
-            #'particleFlowRecHitHGC:Cleaned'
-        ),
+        )
     ),
 
     #ibid
@@ -34,9 +77,6 @@ merging_params = {
         distanceTol = cms.double(0.1),
         simhits = cms.VInputTag(
             'TCSimHits'
-        ),
-        rechits = cms.VInputTag(
-            'FloatingpointThreshold0'
         )
     ),
 
@@ -48,26 +88,6 @@ merging_params = {
         distanceTol = cms.double(0.1),
         simhits = cms.VInputTag(
             'RelabelledHcalSimHits'
-        ),
-        rechits = cms.VInputTag(
-            'hbhereco',
-            'hfreco',
-            'horeco',
-
-            #or
-            #'reducedHcalRecHits:hbhereco',
-            #'reducedHcalRecHits:hfreco',
-            #'reducedHcalRecHits:horeco'
-
-            #or
-            #'particleFlowRecHitHBHE',
-            #'particleFlowRecHitHF',
-            #'particleFlowRecHitHO'
-
-            #or
-            #'particleFlowRecHitHBHE:Cleaned',
-            #'particleFlowRecHitHF:Cleaned',
-            #'particleFlowRecHitHO:Cleaned'
         )
     ),
 
@@ -79,23 +99,8 @@ merging_params = {
         distanceTol = cms.double(0.1),
         simhits = cms.VInputTag(
             'g4SimHits:EcalHitsEB',
-        ),
-        rechits = cms.VInputTag(
-            'ecalRecHit:EcalRecHitsEB',
-            'ecalRecHit:EcalRecHitsEE',
-            'ecalPreshowerRecHit:EcalRecHitsES',
-
-            #or
-            #'reducedEcalRecHitsEB',
-            #'reducedEcalRecHitsEE',
-            #'ecalPreshowerRecHit:EcalRecHitsES',
-
-            #or
-            #'particleFlowRecHitECAL',
         )
-    ),
-
-    #ibid
+    )
 }
 
 merging_params['ECALHCAL'] = cms.PSet(
@@ -108,11 +113,5 @@ merging_params['ECALHCAL'] = cms.PSet(
     simhits = cms.VInputTag(
         merging_params['ECAL'].simhits +
         merging_params['HCAL'].simhits
-    ),
-    rechits = cms.VInputTag(
-        merging_params['ECAL'].rechits +
-        merging_params['HCAL'].rechits
     )
 )
-
-

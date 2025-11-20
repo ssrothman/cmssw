@@ -31,15 +31,28 @@ def setupSimHitTables(process, subdet):
         raise ValueError(f"subdet must be one of '{valid_options}'")
 
     if subdet == 'HGCAL':
-        which_producer = 'HGCalSimHitPositionTableProducer'
+        position_producer = 'HGCalSimHitPositionTableProducer'
+        props_producer = 'HGCalSimHitPropertiesTableProducer'
     elif subdet == 'L1THGCAL':
-        which_producer = 'L1THGCalSimHitPositionTableProducer'
+        position_producer = 'L1THGCalSimHitPositionTableProducer'
+        props_producer = 'HGCalSimHitPropertiesTableProducer' #HGCal properties producer is same for L1T and offline
     else:
-        which_producer = 'CaloSimHitPositionTableProducer'
+        position_producer = 'CaloSimHitPositionTableProducer'
+        props_producer = 'CaloSimHitPropertiesTableProducer'
 
-    setattr(process, 'SimHit%sTable'%subdet,
+    setattr(process, 'SimHit%sPositionTable'%subdet,
         cms.EDProducer(
-            which_producer,
+            position_producer,
+            src = cms.VInputTag(*params.simhits),
+            name = cms.string('SimHits%s'%subdet),
+            cut = cms.string(''),
+            doc = cms.string('')
+        )
+    )
+
+    setattr(process, 'SimHit%sPropertiesTable'%subdet,
+        cms.EDProducer(
+            props_producer,
             src = cms.VInputTag(*params.simhits),
             name = cms.string('SimHits%s'%subdet),
             cut = cms.string(''),
@@ -49,7 +62,8 @@ def setupSimHitTables(process, subdet):
 
     setattr(process, 'SimHit%sTablesTask'%subdet,
         cms.Task(
-            getattr(process, 'SimHit%sTable'%subdet)
+            getattr(process, 'SimHit%sPositionTable'%subdet),
+            getattr(process, 'SimHit%sPropertiesTable'%subdet)
         )
     )
 
