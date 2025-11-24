@@ -26,6 +26,27 @@ def setupSimTruth(process, subdet, verbose=0):
         )
     )
 
+    setattr(process, 'SimTreeMergedTrackInfo%s'%subdet,
+        cms.EDProducer("SimTrackInfoBuilder",
+            simtracks = cms.InputTag('SimTreeTruthMerger%s:relabeledSimTracks'%subdet),
+            simvertices = cms.InputTag('g4SimHits'),
+
+            caloR = params.caloR,
+            caloZ = params.caloZ,
+
+            verbose = cms.int32(verbose)
+        )
+    )
+
+    setattr(process, 'SimTreeMergedClusterInfo%s'%subdet,
+        cms.EDProducer("SimClusterInfoBuilder",
+            simclusters = cms.InputTag('SimTreeTruthMerger%s:mergedSimClusters'%subdet),     
+            simhits = cms.VInputTag('SimTreeTruthMerger%s:relabeledSimHits'%subdet),
+            simtrackinfos = cms.InputTag('SimTreeMergedTrackInfo%s'%subdet),
+            verbose = cms.int32(verbose)
+        )
+    )
+
     setattr(process, 'ImpactDistanceTruthMerger%s'%subdet,
         cms.EDProducer(
             'ImpactDistanceTruthMerger',

@@ -1,6 +1,26 @@
-import FWCore.ParameterSet.Config as cms # pyright: ignore[reportMissingImports]
+import FWCore.ParameterSet.Config as cms 
 
-from CaloML.SimTruth.common_cff import merging_params # pyright: ignore[reportMissingImports]
+from CaloML.SimTruth.common_cff import merging_params, raw_hgcal_simhits 
+
+def setupCalibratedHGCalSimHits(process):
+    import SimCalorimetry.HGCalSimProducers.hgcalDigitizer_cfi as digiparam
+    import RecoLocalCalo.HGCalRecProducers.HGCalUncalibRecHit_cfi as recoparam
+    import RecoLocalCalo.HGCalRecProducers.HGCalRecHit_cfi as recocalibparam
+    import L1Trigger.L1THGCal.hgcalLayersCalibrationCoefficients_cfi as layercalibparam
+
+
+    process.CalibratedHGCalSimHits = cms.EDProducer("CalibratedHGCalSimHitProducer",
+        src = raw_hgcal_simhits,
+        keV2fC = digiparam.hgceeDigitizer.digiCfg.keV2fC,
+        fcPerMip = recoparam.HGCalUncalibRecHit.HGCEEConfig.fCPerMIP,
+        layerWeights = layercalibparam.triggerWeights.weights,
+        thicknessCorrections = recocalibparam.HGCalRecHit.thicknessCorrection
+    )
+    process.CalibratedHGCalSimHitTask = cms.Task(
+        process.CalibratedHGCalSimHits
+    )
+    process.schedule.associate(process.CalibratedHGCalSimHitTask)
+    return process
 
 def setupL1THGCalSimHits(process):
     process.TCSimHits = cms.EDProducer("TriggerCellSimHitsProducer",

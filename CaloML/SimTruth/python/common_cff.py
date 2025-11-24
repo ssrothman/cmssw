@@ -1,4 +1,4 @@
-import FWCore.ParameterSet.Config as cms # pyright: ignore[reportMissingImports]
+import FWCore.ParameterSet.Config as cms 
 
 rechits = {
     'HGCAL' : {
@@ -55,6 +55,12 @@ rechits = {
     }
 }
 
+raw_hgcal_simhits = cms.VInputTag(
+    'g4SimHits:HGCHitsEE',
+    'g4SimHits:HGCHitsHEfront',
+    'g4SimHits:HGCHitsHEback'
+)
+
 merging_params = {
     #geometry from https://cms-docdb.cern.ch/cgi-bin/PublicDocDB/RetrieveFile?docid=13251&filename=20210803%20HGCAL%20PARAMETER%20DRAWING.pdf&version=11
     'HGCAL' : cms.PSet(
@@ -63,9 +69,7 @@ merging_params = {
         overlapThreshold = cms.double(0.2),
         distanceTol = cms.double(0.1),
         simhits = cms.VInputTag(
-            'g4SimHits:HGCHitsEE',
-            'g4SimHits:HGCHitsHEfront',
-            'g4SimHits:HGCHitsHEback'
+            'CalibratedHGCalSimHits'
         )
     ),
 

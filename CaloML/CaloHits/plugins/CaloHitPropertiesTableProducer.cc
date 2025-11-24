@@ -34,7 +34,7 @@ template <typename T>
 class CaloHitPropertiesTableProducer : public edm::stream::EDProducer<> {
 public:
   CaloHitPropertiesTableProducer(edm::ParameterSet const& params)
-      : name_(params.getParameter<std::string>("name")),
+      : name_(params.getParameter<std::string>("name")), 
         doc_(params.getParameter<std::string>("doc")),
         cut_(params.getParameter<std::string>("cut"), true) {
     produces<nanoaod::FlatTable>();

@@ -24,6 +24,7 @@
     <use name="RecoHGCal/GraphReco" />
     <use name="RecoParticleFlow/PFTruthProducer" />
     <use name="PhysicsTools/NanoAOD" />
+    <use name="L1Trigger/L1THGCal" />
     <use name="hepmc" />
     <use name="heppdt" />
     <flags EDM_PLUGIN="1" />

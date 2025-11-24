@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <numeric>
 
 //#include "FWCore/Framework/interface/Handle.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
@@ -16,6 +17,9 @@
 #include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/Track/interface/SimTrack.h"
+
+#include "CaloML/DataFormats/interface/SimTrackInfo.h"
+#include "CaloML/DataFormats/interface/MergedSimClusterInfo.h"
 
 namespace CaloML {
 
@@ -108,6 +112,48 @@ inline SimCluster makeMergedSimCluster(const SimTrack& mergedTrack,
     }
     return newcluster;
 }
+
+inline CaloML::MergedSimClusterInfo mergeSimClusterInfos(
+        const std::vector<CaloML::MergedSimClusterInfo>& simclusterinfos,
+        const std::vector<uint32_t>& component) {
+
+    CaloML::MergedSimClusterInfo mergedInfo;
+
+    for (uint32_t idx : component){
+        const auto& info = simclusterinfos[idx];
+        mergedInfo.pdgids.insert(
+            mergedInfo.pdgids.end(),
+            info.pdgids.begin(),
+            info.pdgids.end()
+        );
+        mergedInfo.energies.insert(
+            mergedInfo.energies.end(),
+            info.energies.begin(),
+            info.energies.end()
+        );
+        mergedInfo.simTrackInfos.insert(
+            mergedInfo.simTrackInfos.end(),
+            info.simTrackInfos.begin(),
+            info.simTrackInfos.end()
+        );
+    }
+
+    //sort descending by energy
+    std::vector<size_t> indices(mergedInfo.energies.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::sort(indices.begin(), indices.end(),[&mergedInfo](size_t a, size_t b){
+        return mergedInfo.energies[a] > mergedInfo.energies[b];
+    });
+
+    CaloML::MergedSimClusterInfo sortedInfo;
+    for(size_t idx : indices){
+        sortedInfo.pdgids.push_back(mergedInfo.pdgids[idx]);
+        sortedInfo.energies.push_back(mergedInfo.energies[idx]);
+        sortedInfo.simTrackInfos.push_back(mergedInfo.simTrackInfos[idx]);
+    }
+
+    return sortedInfo;
+} 
 
 } // namespace CaloML
 

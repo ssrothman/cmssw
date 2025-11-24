@@ -44,6 +44,7 @@ private:
 
     edm::EDGetToken simtracks_token_;
     edm::EDGetToken simvertices_token_;
+    edm::EDGetToken simtrack_infos_token_;
     std::vector<edm::EDGetToken> simhits_tokens_;
 
     double caloR_;
@@ -71,6 +72,7 @@ SimTreeTruthMerger::SimTreeTruthMerger(const edm::ParameterSet& conf)
 }
 
 void SimTreeTruthMerger::beginRun(const edm::Run&, const edm::EventSetup& es) {
+    //noop
 }
 
 uint32_t SimTreeTruthMerger::recursive_find_parent(

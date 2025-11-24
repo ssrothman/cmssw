@@ -47,6 +47,7 @@ private:
             const std::set<uint32_t>& detIds2);
 
     edm::EDGetToken simclusters_token_;
+    edm::EDGetToken simclusterinfos_token_;
     std::vector<edm::EDGetToken> simhits_tokens_;
 
     double overlapThreshold_;
@@ -57,6 +58,7 @@ private:
 
 HitOverlapTruthMerger::HitOverlapTruthMerger(const edm::ParameterSet& conf)
     : simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simclusters"))),
+      simclusterinfos_token_(consumes<std::vector<CaloML::MergedSimClusterInfo>>(conf.getParameter<edm::InputTag>("simclusterInfos"))),
       overlapThreshold_(conf.getParameter<double>("overlapThreshold")),
       verbose_(conf.getParameter<int>("verbose")) 
 {
@@ -67,6 +69,7 @@ HitOverlapTruthMerger::HitOverlapTruthMerger(const edm::ParameterSet& conf)
 
     produces<std::vector<SimCluster>>("mergedSimClusters");
     produces<std::vector<SimTrack>>("mergedSimTracks"); 
+    produces<std::vector<CaloML::MergedSimClusterInfo>>("mergedSimClusterInfos");
 }
 
 double HitOverlapTruthMerger::computeOverlap(
@@ -116,6 +119,11 @@ void HitOverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) 
     edm::Handle<std::vector<SimCluster>> simclusters_h;
     evt.getByToken(simclusters_token_, simclusters_h);
     const auto& simclusters = *simclusters_h;
+
+    // Get the simcluster infos
+    edm::Handle<std::vector<CaloML::MergedSimClusterInfo>> simclusterinfos_h;
+    evt.getByToken(simclusterinfos_token_, simclusterinfos_h);
+    const auto& simclusterinfos = *simclusterinfos_h;
 
     auto totalEnergies = CaloML::buildTotalEnergies(simhits_handles);
 
@@ -203,23 +211,28 @@ void HitOverlapTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) 
 
     auto mergedClusters = std::make_unique<std::vector<SimCluster>>();
     auto mergedTracks = std::make_unique<std::vector<SimTrack>>();
+    auto mergedClusterInfos = std::make_unique<std::vector<CaloML::MergedSimClusterInfo>>();
 
     for (const auto& component : components) {
         if (component.size() == 1) {
             mergedClusters->push_back(simclusters[component[0]]);
-            continue;
-        }
+            mergedClusterInfos->push_back(simclusterinfos[component[0]]);
+            mergedTracks->push_back(simclusters[component[0]].g4Tracks()[0]);
+        } else {
+            SimTrack mergedTrack = CaloML::mergeTracksFromComponent(simclusters, component);
+            auto mergedHitEnergies = CaloML::computeMergedHitEnergiesForComponent(simclusters, component, totalEnergies);
+            SimCluster newcluster = CaloML::makeMergedSimCluster(mergedTrack, mergedHitEnergies, totalEnergies);
+            CaloML::MergedSimClusterInfo mergedInfo = CaloML::mergeSimClusterInfos(simclusterinfos, component);
 
-        SimTrack mergedTrack = CaloML::mergeTracksFromComponent(simclusters, component);
-        auto mergedHitEnergies = CaloML::computeMergedHitEnergiesForComponent(simclusters, component, totalEnergies);
-        SimCluster newcluster = CaloML::makeMergedSimCluster(mergedTrack, mergedHitEnergies, totalEnergies);
-        
-        mergedClusters->push_back(newcluster);
-        mergedTracks->push_back(mergedTrack);
+            mergedClusters->push_back(newcluster);
+            mergedTracks->push_back(mergedTrack);
+            mergedClusterInfos->push_back(mergedInfo);
+        }
     }
 
     evt.put(std::move(mergedClusters), "mergedSimClusters");
     evt.put(std::move(mergedTracks), "mergedSimTracks");
+    evt.put(std::move(mergedClusterInfos), "mergedSimClusterInfos");
 }
 
 DEFINE_FWK_MODULE(HitOverlapTruthMerger);

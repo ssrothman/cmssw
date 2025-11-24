@@ -40,21 +40,14 @@ public:
     void beginRun(const edm::Run&, const edm::EventSetup&) override;
 
 private:
-    double impactDistance(
-            const SimTrack& track1,
-            const SimTrack& track2,
-            const SimVertex& vertex1,
-            const SimVertex& vertex2);
-
     edm::EDGetToken simclusters_token_;
-    edm::EDGetToken simvertices_token_;
+    edm::EDGetToken simclusterinfos_token_;
     std::vector<edm::EDGetToken> simhits_tokens_;
 
     double caloR_;
     double caloZ_;
-    edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magfield_token_;
-    BaseParticlePropagator propagator_;
-    double distanceTol_;
+
+    double distanceTol_, dRTol_, dEtaTol_, dPhiTol_;
 
     int verbose_;
 };
@@ -62,11 +55,13 @@ private:
 
 ImpactDistanceTruthMerger::ImpactDistanceTruthMerger(const edm::ParameterSet& conf)
     : simclusters_token_(consumes<std::vector<SimCluster>>(conf.getParameter<edm::InputTag>("simclusters"))),
-      simvertices_token_(consumes<std::vector<SimVertex>>(conf.getParameter<edm::InputTag>("simvertices"))),
+      simclusterinfos_token_(consumes<std::vector<CaloML::MergedSimClusterInfo>>(conf.getParameter<edm::InputTag>("simclusterInfos"))),
       caloR_(conf.getParameter<double>("caloR")),
       caloZ_(conf.getParameter<double>("caloZ")),
-      magfield_token_(esConsumes<MagneticField, IdealMagneticFieldRecord, edm::Transition::BeginRun>()),
       distanceTol_(conf.getParameter<double>("distanceTol")),
+      dRTol_(conf.getParameter<double>("dRTol")),
+      dEtaTol_(conf.getParameter<double>("dEtaTol")),
+      dPhiTol_(conf.getParameter<double>("dPhiTol")),
       verbose_(conf.getParameter<int>("verbose")) 
 {
     std::vector<edm::InputTag> simhits_tags = conf.getParameter<std::vector<edm::InputTag>>("simhits");
@@ -75,65 +70,57 @@ ImpactDistanceTruthMerger::ImpactDistanceTruthMerger(const edm::ParameterSet& co
     }
 
     produces<std::vector<SimCluster>>("mergedSimClusters");
-    produces<std::vector<SimTrack>>("mergedSimTracks"); 
-
-    propagator_.setPropagationConditions(
-        caloR_, caloZ_
-    );
+    produces<std::vector<SimTrack>>("mergedSimTracks");
+    produces<std::vector<CaloML::MergedSimClusterInfo>>("mergedSimClusterInfos");
 }
 
 void ImpactDistanceTruthMerger::beginRun(const edm::Run&, const edm::EventSetup& es) {
-    edm::ESHandle<MagneticField> magfield;
-    magfield = es.getHandle(magfield_token_);
-    propagator_.setMagneticField(magfield->inTesla(GlobalPoint(0,0,0)).z());
+    //noop
 }
 
-double ImpactDistanceTruthMerger::impactDistance(
-        const SimTrack& track1,
-        const SimTrack& track2,
-        const SimVertex& vertex1,
-        const SimVertex& vertex2) {
+static double impactDistance(
+        const CaloML::SimTrackInfo& info1,
+        const CaloML::SimTrackInfo& info2) {
 
-    RawParticle track1P(
-        track1.momentum().Px(),
-        track1.momentum().Py(),
-        track1.momentum().Pz(),
-        track1.momentum().E(),
-        track1.charge()
-    );
-    track1P.setVertex(
-        vertex1.position().X(),
-        vertex1.position().Y(),
-        vertex1.position().Z(),
-        0.0
-    );
-    propagator_.setParticle(track1P);
-    propagator_.propagate();
-    track1P = propagator_.particle();
-
-    RawParticle track2P(
-        track2.momentum().Px(),
-        track2.momentum().Py(),
-        track2.momentum().Pz(),
-        track2.momentum().E(),
-        track2.charge()
-    );
-    track2P.setVertex(
-        vertex2.position().X(),
-        vertex2.position().Y(),
-        vertex2.position().Z(),
-        0.0
-    );
-    propagator_.setParticle(track2P);
-    propagator_.propagate();
-    track2P = propagator_.particle();
-
-    double dx = track1P.vertex().X() - track2P.vertex().X();
-    double dy = track1P.vertex().Y() - track2P.vertex().Y();
-    double dz = track1P.vertex().Z() - track2P.vertex().Z();
+    double dx = info1.caloImpact.X() - info2.caloImpact.X();
+    double dy = info1.caloImpact.Y() - info2.caloImpact.Y();
+    double dz = info1.caloImpact.Z() - info2.caloImpact.Z();
     double R = std::sqrt(dx*dx + dy*dy + dz*dz);
     return R;
 }
+
+static double impactDR(
+        const CaloML::SimTrackInfo& info1,
+        const CaloML::SimTrackInfo& info2) {
+
+    double dR = reco::deltaR(
+        info1.caloImpact.eta(),
+        info1.caloImpact.phi(),
+        info2.caloImpact.eta(),
+        info2.caloImpact.phi()
+    );
+    return dR;
+}
+
+static double impactDEta(
+        const CaloML::SimTrackInfo& info1,
+        const CaloML::SimTrackInfo& info2) {
+
+    double dEta = std::abs(info1.caloImpact.eta() - info2.caloImpact.eta());
+    return dEta;
+}
+
+static double impactDPhi(
+        const CaloML::SimTrackInfo& info1,
+        const CaloML::SimTrackInfo& info2) {
+
+    double dPhi = reco::deltaPhi(
+        info1.caloImpact.phi(),
+        info2.caloImpact.phi()
+    );
+    return dPhi;
+}
+
 
 void ImpactDistanceTruthMerger::produce(edm::Event& evt, const edm::EventSetup& es) {
     // Get the simhits (needed for energy maps)
@@ -148,10 +135,10 @@ void ImpactDistanceTruthMerger::produce(edm::Event& evt, const edm::EventSetup& 
     evt.getByToken(simclusters_token_, simclusters_h);
     const auto& simclusters = *simclusters_h;
 
-    // Get the simvertices
-    edm::Handle<std::vector<SimVertex>> simvertices_h;
-    evt.getByToken(simvertices_token_, simvertices_h);
-    const auto& simvertices = *simvertices_h;
+    // Get the simcluster infos
+    edm::Handle<std::vector<CaloML::MergedSimClusterInfo>> simclusterinfos_h;
+    evt.getByToken(simclusterinfos_token_, simclusterinfos_h);
+    const auto& simclusterinfos = *simclusterinfos_h;
 
     auto totalEnergies = CaloML::buildTotalEnergies(simhits_handles);
 
@@ -160,24 +147,30 @@ void ImpactDistanceTruthMerger::produce(edm::Event& evt, const edm::EventSetup& 
     for (size_t i=0; i<simclusters.size(); ++i){
         for(size_t j=i+1; j<simclusters.size(); ++j){
             // Only attempt distance-based merging if both clusters have a single generator particle
-            if (simclusters[i].genParticles().size() == 1 && 
-                simclusters[j].genParticles().size() == 1) {
+            double R = impactDistance(
+                simclusterinfos[i].simTrackInfos[0],
+                simclusterinfos[j].simTrackInfos[0]
+            );
+            double dR = impactDR(
+                simclusterinfos[i].simTrackInfos[0],
+                simclusterinfos[j].simTrackInfos[0]
+            );
+            double dEta = impactDEta(
+                simclusterinfos[i].simTrackInfos[0],
+                simclusterinfos[j].simTrackInfos[0]
+            );
+            double dPhi = impactDPhi(
+                simclusterinfos[i].simTrackInfos[0],
+                simclusterinfos[j].simTrackInfos[0]
+            );
 
-                const auto& track1 = simclusters[i].g4Tracks()[0];
-                const auto& track2 = simclusters[j].g4Tracks()[0];
+            bool passR = R < distanceTol_;
+            bool passDR = dR < dRTol_;
+            bool passDEtaPhi = (dEta < dEtaTol_) && (dPhi < dPhiTol_);
 
-                if (track1.vertIndex() < 0 || track2.vertIndex() < 0) continue;
-
-                double R = impactDistance(
-                    track1, track2,
-                    simvertices[track1.vertIndex()],
-                    simvertices[track2.vertIndex()]
-                );
-
-                if (R < distanceTol_) {
-                    adjacencies[i].insert(j);
-                    adjacencies[j].insert(i);
-                }
+            if (passR || passDR || passDEtaPhi) {
+                adjacencies[i].insert(j);
+                adjacencies[j].insert(i);
             }
         }
     }
@@ -233,23 +226,28 @@ void ImpactDistanceTruthMerger::produce(edm::Event& evt, const edm::EventSetup& 
 
     auto mergedClusters = std::make_unique<std::vector<SimCluster>>();
     auto mergedTracks = std::make_unique<std::vector<SimTrack>>();
+    auto mergedClusterInfos = std::make_unique<std::vector<CaloML::MergedSimClusterInfo>>();
 
     for (const auto& component : components) {
         if (component.size() == 1) {
             mergedClusters->push_back(simclusters[component[0]]);
-            continue;
+            mergedClusterInfos->push_back(simclusterinfos[component[0]]);
+            mergedTracks->push_back(simclusters[component[0]].g4Tracks()[0]);
+        } else {
+            SimTrack mergedTrack = CaloML::mergeTracksFromComponent(simclusters, component);
+            auto mergedHitEnergies = CaloML::computeMergedHitEnergiesForComponent(simclusters, component, totalEnergies);
+            SimCluster newcluster = CaloML::makeMergedSimCluster(mergedTrack, mergedHitEnergies, totalEnergies);
+            CaloML::MergedSimClusterInfo mergedInfo = CaloML::mergeSimClusterInfos(simclusterinfos, component);
+            
+            mergedClusterInfos->push_back(mergedInfo);
+            mergedClusters->push_back(newcluster);
+            mergedTracks->push_back(mergedTrack);
         }
-
-        SimTrack mergedTrack = CaloML::mergeTracksFromComponent(simclusters, component);
-        auto mergedHitEnergies = CaloML::computeMergedHitEnergiesForComponent(simclusters, component, totalEnergies);
-        SimCluster newcluster = CaloML::makeMergedSimCluster(mergedTrack, mergedHitEnergies, totalEnergies);
-        
-        mergedClusters->push_back(newcluster);
-        mergedTracks->push_back(mergedTrack);
     }
 
     evt.put(std::move(mergedClusters), "mergedSimClusters");
     evt.put(std::move(mergedTracks), "mergedSimTracks");
+    evt.put(std::move(mergedClusterInfos), "mergedSimClusterInfos");
 }
 
 DEFINE_FWK_MODULE(ImpactDistanceTruthMerger);
