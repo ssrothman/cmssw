@@ -42,7 +42,8 @@ def setupSimTruth(process, subdet, verbose=0):
         cms.EDProducer("SimClusterInfoBuilder",
             simclusters = cms.InputTag('SimTreeTruthMerger%s:mergedSimClusters'%subdet),     
             simhits = cms.VInputTag('SimTreeTruthMerger%s:relabeledSimHits'%subdet),
-            simtrackinfos = cms.InputTag('SimTreeMergedTrackInfo%s'%subdet),
+            simtracks = cms.InputTag('SimTreeTruthMerger%s:relabeledSimTracks'%subdet),
+            simtrackInfos = cms.InputTag('SimTreeMergedTrackInfo%s'%subdet),
             verbose = cms.int32(verbose)
         )
     )
@@ -53,11 +54,15 @@ def setupSimTruth(process, subdet, verbose=0):
             simvertices = cms.InputTag('g4SimHits'),
             simhits = cms.VInputTag('SimTreeTruthMerger%s:relabeledSimHits'%subdet),
             simclusters = cms.InputTag('SimTreeTruthMerger%s:mergedSimClusters'%subdet),
+            simclusterInfos = cms.InputTag('SimTreeMergedClusterInfo%s'%subdet),
 
             caloR = params.caloR,
             caloZ = params.caloZ,
 
             distanceTol = params.distanceTol,
+            dRTol = cms.double(0.0),
+            dEtaTol = cms.double(0.0),
+            dPhiTol = cms.double(0.0),
 
             verbose = cms.int32(verbose)
         )
@@ -69,6 +74,7 @@ def setupSimTruth(process, subdet, verbose=0):
             'HitOverlapTruthMerger',
             simhits = cms.VInputTag('SimTreeTruthMerger%s:relabeledSimHits'%subdet),
             simclusters = cms.InputTag('ImpactDistanceTruthMerger%s:mergedSimClusters'%subdet),
+            simclusterInfos = cms.InputTag('InpactDistanceTruthMerger%s'%subdet),
 
             overlapThreshold = params.overlapThreshold,
 
@@ -76,6 +82,8 @@ def setupSimTruth(process, subdet, verbose=0):
         )
     )
 
+    producers += [getattr(process, 'SimTreeMergedTrackInfo%s'%subdet)]
+    producers += [getattr(process, 'SimTreeMergedClusterInfo%s'%subdet)]
     producers += [getattr(process, 'SimTreeTruthMerger%s'%subdet)]
     producers += [getattr(process, 'ImpactDistanceTruthMerger%s'%subdet)]
     producers += [getattr(process, 'HitOverlapTruthMerger%s'%subdet)]
