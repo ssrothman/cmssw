@@ -255,7 +255,7 @@ L1TGlobalProducer::L1TGlobalProducer(const edm::ParameterSet& parSet)
   m_l1GtTmAlgoCacheID = 0ULL;
   m_l1GtTmVetoAlgoCacheID = 0ULL;
 
-  m_currentLumi = 0;
+  //m_currentLumi = 0;
 
   // Set default, initial, dummy prescale factor table
   std::vector<std::vector<double>> temp_prescaleTable;
