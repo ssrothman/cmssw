@@ -11,6 +11,7 @@ from L1Trigger.L1THGCal.l1tHGCalConcentratorProducer_cfi import autoEncoder_conc
 fcPerMip = recoparam.HGCalUncalibRecHit.HGCEEConfig.fCPerMIP
 keV2fC = digiparam.hgceeDigitizer.digiCfg.keV2fC
 thicknessCorrections = recocalibparam.HGCalRecHit.thicknessCorrection
+layerWeights = layercalibparam.triggerWeights.weights
 
 ntuple_event = cms.PSet(
     NtupleName = cms.string('HGCalTriggerNtupleEvent')
